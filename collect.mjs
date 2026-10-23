@@ -497,17 +497,56 @@ if (!AIOS_FILE) {
   console.log(`[collect] AIOS 活动库：${AIOS_FILE}`);
 }
 
+/* Devpost 的 submission_period_dates 有三种真实写法，旧实现只认第一种，
+ * 结果 20/65 个活动日期解析成 null、被标成「未知」，白白丢掉 30% 的数据：
+ *   "Oct 05 - Nov 12, 2026"      年月都在后面
+ *   "Oct 05 - 27, 2026"          结束月省略（同月）
+ *   "Jul 16, 2026 - Jan 15, 2027" 两端各带年份，跨年
+ * 统一按「从左到右，缺年份继承上一个」处理，跨年靠月序回退纠正。 */
 function parseDevpostDates(s) {
-  const m = String(s || '').match(/^([A-Z][a-z]{2}) (\d{1,2}) - ([A-Z][a-z]{2}) (\d{1,2}), (\d{4})$/);
-  if (!m) return { start: null, end: null };
-  const months = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-  const [, m1, d1, m2, d2, y] = m;
-  let y1 = Number(y);
-  if (months[m1] > months[m2]) y1 -= 1;
-  return {
-    start: new Date(Date.UTC(y1, months[m1], Number(d1))).toISOString().slice(0, 10),
-    end: new Date(Date.UTC(Number(y), months[m2], Number(d2))).toISOString().slice(0, 10),
-  };
+  const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+  const str = String(s || '');
+  const iso = (y, mo, d) => new Date(Date.UTC(y, mo, d)).toISOString().slice(0, 10);
+
+  // 拆出所有 (月份, 日, 年份?) 片段，按出现顺序
+  const re = /\b([A-Z][a-z]{2})\.?\s+(\d{1,2})(?:,\s*(\d{4}))?/g;
+  const parts = [];
+  let m;
+  while ((m = re.exec(str))) {
+    const mo = MONTHS[m[1]];
+    if (mo == null) continue;
+    parts.push({ mo, day: Number(m[2]), year: m[3] ? Number(m[3]) : null });
+  }
+  if (!parts.length) return { start: null, end: null };
+
+  // 末尾单独的年份（"Oct 05 - Nov 12, 2026" 的年份会挂到最后一段上）
+  const tail = str.match(/,\s*(\d{4})\s*$/);
+  const tailYear = tail ? Number(tail[1]) : null;
+
+  // "Oct 05 - 27, 2026"：只有孤立的日号，结束日继承起点的月
+  if (parts.length === 1) {
+    const bare = str.match(/-\s*(\d{1,2})(?:,\s*(\d{4}))?\s*$/);
+    if (!bare) return { start: null, end: null };
+    const y = Number(bare[2]) || parts[0].year || tailYear;
+    if (y == null) return { start: null, end: null };
+    const a = parts[0];
+    return { start: iso(y, a.mo, a.day), end: iso(y, a.mo, Number(bare[1])) };
+  }
+
+  const a = { ...parts[0] };
+  const b = { ...parts[1] };
+  // 年份补全：自身 > 尾随年份 > 另一端
+  if (b.year == null) b.year = tailYear ?? a.year;
+  if (a.year == null) a.year = b.year ?? tailYear;
+  if (a.year == null && b.year == null) return { start: null, end: null };
+
+  // 跨年纠正：起点月晚于终点月且只有终点带年份，说明起点在上一年
+  let y1 = a.year;
+  const y2 = b.year;
+  if (y1 == null) y1 = y2;
+  if (y2 != null && a.mo > b.mo && y1 >= y2) y1 = y2 - 1;
+
+  return { start: iso(y1, a.mo, a.day), end: iso(y2 ?? y1, b.mo, b.day) };
 }
 
 async function fetchDevpost() {

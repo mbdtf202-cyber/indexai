@@ -86,7 +86,9 @@ button,input,select{font:inherit; color:inherit}
 .hero .kpis{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
   border:0; border-top:1px solid var(--ink); border-bottom:1px solid var(--line);
   margin-top:clamp(26px,3.4vw,44px)}
-.kpi{background:var(--panel); padding:14px 16px}
+.kpi{background:var(--panel); padding:16px 14px; text-align:center}
+.kpi .n small{margin-left:0}
+.kpi .u{display:block; margin-top:2px}
 .kpi .n{font-family:var(--mono); font-size:26px; font-weight:500; letter-spacing:-.03em; line-height:1.15}
 .kpi .n small{font-size:12px; color:var(--faint); margin-left:4px; letter-spacing:0}
 .kpi .k{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
@@ -390,6 +392,7 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .card dd{margin:0}
 .card .foot{margin-top:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap;
   padding-top:9px; border-top:var(--rule); position:relative}
+.card .foot > a:last-child:not(:only-child){margin-left:auto}
 .card .foot a{font-family:var(--mono); font-size:11.5px; color:var(--dim); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
 .card .foot a:hover{color:var(--accent)}
 .mchips{display:flex; flex-wrap:wrap; gap:4px}
@@ -427,7 +430,7 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .idx .bar i{position:absolute; left:0; top:0; bottom:0; background:var(--good)}
 .idx .bar i.over{background:var(--bad)}
 .idx .num{font-family:var(--mono); font-size:12px}
-.status{font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; border:1px solid var(--line2); padding:0 5px; border-radius:2px; color:var(--dim)}
+.status{text-align:center; font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; border:1px solid var(--line2); padding:0 5px; border-radius:2px; color:var(--dim)}
 .status.ok{border-color:var(--good); color:var(--good)}
 .status.stale{border-color:var(--warn); color:var(--warn)}
 .status.off{border-color:var(--line); color:var(--faint)}
@@ -523,7 +526,7 @@ footer.foot a:hover{color:var(--accent)}
   .rtable td:nth-child(2),.rtable th:nth-child(2){width:15%}
   .rtable td:nth-child(3),.rtable th:nth-child(3){width:33%}
   .rtable td:nth-child(4),.rtable th:nth-child(4){width:16%}
-  .rtable .status{font-size:8px; padding:0 3px}
+  .rtable .status{text-align:center; font-size:8px; padding:0 3px}
   .rtable td.num{font-size:12px; white-space:normal}
   .rtable td .tag.warn{display:block; margin-top:2px; width:max-content}
   .nav{font-size:12px; white-space:nowrap; flex:0 0 auto; padding:9px 8px}
@@ -559,7 +562,7 @@ footer.foot a:hover{color:var(--accent)}
 .home-sub{margin:0; font-size:13.5px; line-height:1.65; color:var(--dim); max-width:52ch}
 .home-sub strong{color:var(--ink); font-weight:600}
 .home-facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); margin-top:24px; border-top:var(--rule)}
-.home-facts>div{background:var(--panel); padding:12px 12px 10px; display:flex; flex-direction:column; gap:3px; min-width:0}
+.home-facts>div{background:var(--panel); padding:14px 12px 12px; display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; text-align:center}
 .home-facts .fk{font-size:11.5px; letter-spacing:.06em; color:var(--faint); text-transform:uppercase; font-family:var(--mono)}
 .home-facts .fv{font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
 .home-facts .fd{font-size:11.5px; color:var(--faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -2510,9 +2513,9 @@ const MOTION = (() => {
         <li><strong>聚合层</strong>（${c.aggregator} 条）：OpenRouter 实时目录，含缓存读写价。</li>
         <li><strong>官方直连层</strong>（${c.direct} 条 / ${directVendors.length} 家）：官方定价页人工核实，保留原币数字。</li>
         <li><strong>免费层</strong>（${c.offers} 条）：免费额度、免费模型、赠送金，标注门槛与期限。</li>
-        <li><strong>订阅层</strong>（${c.subs} 档）：官方订阅月费，只收官网读得到的数字。</li>
+        <li><strong>订阅层</strong>（${c.subs} 档官方 / ${c.subsRegions} 组区价 / ${c.subsThird} 条挂单）：官方档位取 App Store 美国区的公开内购明码，一档一行、带购买链接；区价覆盖 49 个国家；挂单来自公开平台，只作行情，不推荐。</li>
         <li><strong>中转层</strong>（${c.relays} 站在册 / ${c.relaysLive} 站公开价目）：读取 OneAPI/NewAPI 的价目接口，按倍率换算。</li>
-        <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.events} 条收录）：Devpost 公开接口（分页 5 页）+ Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。</li>
+        <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.eventsPast} 条已结束 / ${c.events} 条收录）：Devpost 公开接口（分页 5 页）+ Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。状态一律按截止日期判定，不照抄数据源的 status 字段。</li>
         <li><strong>工具箱</strong>（${c.resources || 0} 个）：人工精选的 skill / MCP / CLI，星数、更新时间、许可每天从 GitHub API 校准；归档的会被标出来。</li>
         <li><strong>评测层</strong>（${c.bench} 个模型）：Vals Index 的公开分数，每次采集存一份用于对比。</li>
         <li><strong>情报层</strong>（${c.news || 0} 条要闻 / ${c.signals} 条一手信号）：公开新闻源按价格、模型、融资、政策、安全分类打分，每天留 8 条；X 与官方博客只收抓到正文的。</li>
@@ -2557,6 +2560,10 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
         <li>中转站价目是<strong>接口披露价</strong>，不等于你充值后的实际单价；未公开价目的站点只登记不猜价。</li>
         <li>免费额度随时会变，卡片上的日期是核实日期，链接指向官方页。</li>
       </ul>
+
+      <h2>采集可靠性</h2>
+      <p>每次采集结束都会跑一遍<strong>分层健康检查</strong>：任一数据层为空、或相对上次缩水超过阈值，采集直接失败、不写 <code>data.json</code>，绝不用残缺数据覆盖线上。单项数据源临时挂掉时，沿用上一版并在页面顶部标出来。</p>
+      <p class="mono" style="color:var(--faint);font-size:11.5px">本次采集：${(d.meta.collect || []).map(x => `${esc(x.layer)}=${esc(x.status)}`).join(" · ") || "—"}${d.meta.health && d.meta.health.warn && d.meta.health.warn.length ? `<br>警告：${d.meta.health.warn.map(esc).join("；")}` : ""}</p>
 
       <h2>来源（${c.sources}）</h2>
       <table class="srcs"><tbody>${d.sources.map(s => `<tr><td class="u"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></td><td style="width:64px">${esc(s.type)}</td><td style="width:40px;text-align:right">${s.refs}</td></tr>`).join("")}</tbody></table>
@@ -2626,7 +2633,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
 
   /* ── render ── */
   function render() {
-    renderNav(); renderHero(); renderKpis();
+    renderNav(); renderHero(); renderKpis(); renderHealth();
     const v = $("#view");
     if (state.tab === "home") v.innerHTML = viewHome();
     else if (state.tab === "free") v.innerHTML = viewFree();
@@ -2757,6 +2764,38 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
   }
 
   /* ── boot ── */
+  /* 数据健康横幅：只在「数据旧了 / 某层缺了」时出现。
+     以前站点无论数据多旧、某一层空没空，看起来都一模一样，用户没法判断这份数据还算不算数。 */
+  function renderHealth() {
+    const el = $("#healthbar");
+    if (!el) return;
+    const meta = state.data.meta || {};
+    const c = meta.counts || {};
+    const issues = [];
+    const gen = Date.parse(meta.generated_at || "");
+    if (Number.isFinite(gen)) {
+      const h = (Date.now() - gen) / 3600000;
+      if (h > 48) issues.push({ bad: true, t: `数据已 ${Math.floor(h / 24)} 天未更新（最后采集 ${meta.date || "?"}）` });
+      else if (h > 30) issues.push({ bad: false, t: `数据 ${Math.round(h)} 小时未更新，接近日更上限` });
+    } else {
+      issues.push({ bad: true, t: "生成时间缺失，无法判断数据新鲜度" });
+    }
+    // 某层空掉：只在真的空时提，不重复 health.mjs 的全部阈值
+    if (!(c.subs > 0)) issues.push({ bad: true, t: "官方订阅档位为空，订阅页只有第三方挂单" });
+    if (!(c.aaModels > 0)) issues.push({ bad: false, t: "Artificial Analysis 智能指数这一层本次没采到" });
+    if (!(c.orApps > 0)) issues.push({ bad: false, t: "OpenRouter 应用榜本次没采到" });
+    if ((meta.collect || []).some((x) => x.status === "stale")) {
+      const layers = meta.collect.filter((x) => x.status === "stale").map((x) => x.layer);
+      issues.push({ bad: false, t: `${layers.join(" / ")} 沿用了上一次的数据` });
+    }
+    if (!issues.length) { el.hidden = true; el.innerHTML = ""; return; }
+    const bad = issues.some((i) => i.bad);
+    el.hidden = false;
+    el.dataset.level = bad ? "bad" : "warn";
+    el.innerHTML = `<b>${bad ? "这份数据需要留意" : "数据说明"}</b>` +
+      (issues.length === 1 ? `：${esc(issues[0].t)}` : `<ul>${issues.map((i) => `<li>${esc(i.t)}</li>`).join("")}</ul>`);
+  }
+
   async function boot() {
     const theme = localStorage.getItem("fr.theme");
     if (theme === "dark") {
