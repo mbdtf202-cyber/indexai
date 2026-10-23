@@ -775,67 +775,62 @@ async function fetchBench(prev) {
 // 只收真正在用的：skill、MCP、CLI。星数与更新时间每天从 GitHub 拉一遍，
 // 归档/停更的会被标出来，不静默留在榜上。
 const CURATED_RESOURCES = [
-  // —— Agent Skill ——
-  { id: 'baoyu-design', repo: 'JimLiu/baoyu-design', kind: 'skill', title: 'baoyu-design',
-    why: '把 Claude 的设计能力搬进本地 Agent：设计方法论 + 工艺标准，产出单文件 HTML，能在 Cursor / Claude Code 里直接跑。' },
-  { id: 'huashu-design', repo: 'alchaincyf/huashu-design', kind: 'skill', title: '花叔 Design 3.0',
-    why: '一句话拿回能交付的设计：网页 / App 原型 / 可编辑稿。中文语境下最完整的 agent 设计 skill。' },
-  { id: 'superpowers', repo: 'obra/superpowers', kind: 'skill', title: 'Superpowers',
-    why: 'Agent 的软件开发方法论框架：把「怎么想、怎么拆、怎么验」写进 skill，而不是靠提示词临场发挥。' },
-  { id: 'anthropics-skills', repo: 'anthropics/skills', kind: 'skill', title: 'Anthropic 官方 Skills',
-    why: '官方 Agent Skills 仓库，格式与最佳实践的源头。写自己的 skill 前先看这里。' },
-  { id: 'agent-skills', repo: 'addyosmani/agent-skills', kind: 'skill', title: 'addyosmani / agent-skills',
-    why: '生产级工程 skill 集合：代码审查、重构、测试，按真实工程流程切分，不是玩具 demo。' },
-  { id: 'taste-skill', repo: 'Leonxlnx/taste-skill', kind: 'skill', title: 'Taste',
-    why: '给编码 Agent 装审美：艺术指导、排版、留白。专治「功能对但难看」。' },
-  { id: 'archify', repo: 'tt-a1i/archify', kind: 'skill', title: 'Archify',
-    why: '把想法、计划或代码库直接变成可交互原型，省掉从需求到可点页面的那一跳。' },
-  { id: 'last30days', repo: 'mvanhorn/last30days-skill', kind: 'skill', title: 'last30days',
-    why: '跨平台近 30 天调研：Reddit / X / YouTube 一起扫。做选题和竞品分析时比搜索引擎准。' },
-  { id: 'prompt-master', repo: 'nidhinjs/prompt-master', kind: 'skill', title: 'Prompt Master',
-    why: '帮你把模糊需求写成精确提示词，减少来回试错。' },
-  { id: 'dev-browser', repo: 'SawyerHood/dev-browser', kind: 'skill', title: 'Dev Browser',
-    why: '给 Agent 一双手：真实浏览器操作，自己点、自己读、自己截图验证。' },
-  { id: 'huashu-art-motion', repo: 'alchaincyf/huashu-art-motion', kind: 'skill', title: '花叔 Art Motion',
-    why: '35 种艺术风格 + 9 种解说语法的动画 skill，用代码让画面动起来。' },
-  { id: 'huashu-skills', repo: 'alchaincyf/huashu-skills', kind: 'skill', title: '花叔 Skills 总目录',
-    why: '52 个中文 skill 的索引：16 旗舰 + 14 人物视角 + 22 内置。找中文 skill 从这里进。' },
-  { id: 'huashu-md-html', repo: 'alchaincyf/huashu-md-html', kind: 'skill', title: '花叔 MD ⇄ HTML',
-    why: '万物转 md、md 转精美 html、html 转 md，三向流水线，管道里最实用的一环。' },
-  { id: 'alirezarezvani-skills', repo: 'alirezarezvani/claude-skills', kind: 'skill', title: '380 Skills 合集',
-    why: '380 个 Claude Code skills 与插件，覆盖面最广的一套；当成字典查，不要整包装。' },
-  { id: 'jeffallan-skills', repo: 'Jeffallan/claude-skills', kind: 'skill', title: '全栈 67 Skills',
-    why: '面向全栈开发的 67 个专用 skill，切分细，适合按项目类型挑。' },
+  // ── 设计 ──
+  { id: 'baoyu-design', repo: 'JimLiu/baoyu-design', use: 'design', title: 'baoyu-design',
+    why: '把 Claude 的设计方法论和工艺标准搬进本地 Agent：先确认方向再动手，产出单文件 HTML，能在 Cursor / Claude Code 里跑。' },
+  { id: 'huashu-design', repo: 'alchaincyf/huashu-design', use: 'design', title: '花叔 Design 3.0',
+    why: '中文语境下最完整的 agent 设计 skill：一句话拿回可交付的网页 / App 原型 / 可编辑稿。' },
+  { id: 'anatomy', repo: 'wheresryan22/anatomy', use: 'design', title: 'Anatomy',
+    why: '机器与复杂系统的等距交互插图，直接生成带 WebGL 效果的 SVG。技术讲解配图终于不用手画。' },
+  { id: 'gzh-design-skill', repo: 'isjiamu/gzh-design-skill', use: 'design', title: '公众号排版',
+    why: 'Markdown 一键变成能直接粘进公众号编辑器的 HTML：6 套主题 + 主题生成器 + 双关卡校验，不用再手动调间距。' },
+  { id: 'ip-as-logo', repo: 's1dashu/ip-as-logo-skill', use: 'design', title: 'IP as Logo',
+    why: '生成极简、圆润、能直接上公司的吉祥物 IP。做品牌第一版不需要插画师。' },
+  { id: 'scroll-craft', repo: 'nateherkai/scroll-craft', use: 'design', title: 'Scroll Craft',
+    why: '做高端滚动叙事网站的完整工作流：引擎 + 参考 + 验证工具，不是给你一段 CSS 就完事。' },
+  { id: 'effective-html', repo: 'plannotator/effective-html', use: 'design', title: 'Effective HTML',
+    why: '线框、原型、图表、图解——专注「有用的 HTML 制品」，输出自包含、能直接给人看。' },
+  { id: 'taste-skill', repo: 'Leonxlnx/taste-skill', use: 'design', title: 'Taste',
+    why: '给编码 Agent 装审美：艺术指导、排版、留白。专治「功能全对但就是难看」。' },
 
-  // —— MCP ——
-  { id: 'playwright-mcp', repo: 'microsoft/playwright-mcp', kind: 'mcp', title: 'Playwright MCP',
-    why: '微软官方 MCP：让模型直接操作浏览器，可访问性树驱动，比截图识别稳。' },
-  { id: 'github-mcp', repo: 'github/github-mcp-server', kind: 'mcp', title: 'GitHub MCP',
-    why: 'GitHub 官方 MCP，仓库、Issue、PR 全都能读能写，接进 Agent 就是原生 git 助手。' },
-  { id: 'fastmcp', repo: 'PrefectHQ/fastmcp', kind: 'mcp', title: 'FastMCP',
-    why: '写 MCP server 最快的 Python 框架，几十行起一个能用的服务。' },
-  { id: 'next-ai-draw-io', repo: 'DayuanJiang/next-ai-draw-io', kind: 'mcp', title: 'next-ai-draw-io',
-    why: '用对话画 draw.io 图，改完还能导出。架构图、流程图不用手拖了。' },
-  { id: 'huashu-chrome', repo: 'alchaincyf/huashu-chrome', kind: 'mcp', title: '花叔 Chrome',
-    why: '让 Agent 操控你自己的 Chrome，带着全部登录态——需要登录才能看的页面也能读。' },
+  // ── 写作 ──
+  { id: 'sepia', repo: 'Nanako0129/sepia', use: 'writing', title: 'Sepia',
+    why: '去 AI 味不去词汇，而是修叙事架构——虚构先补故事结构，专业文本按场景换规则。有行为评测跑在 CI 上。' },
+  { id: 'simple-english', repo: 'AminBlg/SimpleEnglish', use: 'writing', title: 'SimpleEnglish',
+    why: '用 ASD-STE100 航空维修手册那套受控语言写文档，1983 年用到现在，就是怕人误读。技术文档的降噪器。' },
+  { id: 'answer-me-with-html', repo: 'QingYunA/answer-me-with-html', use: 'writing', title: 'Answer me with HTML',
+    why: '复杂问题别用一屏终端文字回答，生成一页能读的 HTML：可离线、单文件、带讲解视频。' },
 
-  // —— 工具 ——
-  { id: 'magpie', repo: 'yetone/magpie', kind: 'tool', title: 'Magpie',
-    why: '一个入口调所有模型：Codex 走 DeepSeek、Claude Code 走别的供应商，配置一次到处能用。' },
-  { id: 'headroom', repo: 'headroomlabs-ai/headroom', kind: 'tool', title: 'Headroom',
-    why: '把工具输出、日志、RAG 片段先压一遍再进上下文，长任务省钱最直接的一招。' },
-  { id: 'nanobot', repo: 'HKUDS/nanobot', kind: 'tool', title: 'Nanobot',
-    why: '超轻量自托管个人 Agent，能跑在自己机器上，数据不出门。' },
-  { id: 'activepieces', repo: 'activepieces/activepieces', kind: 'tool', title: 'Activepieces',
-    why: '开源自动化平台，自带 ~400 个 MCP server，把 AI 接进工作流最省事的路子。' },
+  // ── 内容 ──
+  { id: 'dashi-ppt', repo: 'chuspeeism/dashi-ppt-skill', use: 'content', title: 'Dashi PPT',
+    why: '生成浏览器里可直接编辑的演示稿，导出 HTML / PDF / PPTX。改字不用回到代码。' },
+  { id: 'shuohao-skills', repo: 'eternityspring/shuohao-skills', use: 'content', title: '硕昊短剧',
+    why: 'AI 短剧全链路：拆角色、排大纲、出场景道具设定、写剧本、切分镜。中文内容生产里少见的完整流水线。' },
+  { id: 'huashu-art-motion', repo: 'alchaincyf/huashu-art-motion', use: 'content', title: '花叔 Art Motion',
+    why: '35 种艺术风格 + 9 种解说语法的动画 skill，用代码让画面动起来，不是套模板。' },
 
-  // —— 清单 ——
-  { id: 'awesome-mcp', repo: 'punkpeye/awesome-mcp-servers', kind: 'list', title: 'Awesome MCP Servers',
-    why: 'MCP 生态总目录，找现成 server 先扫这里。' },
-  { id: 'awesome-claude-skills', repo: 'ComposioHQ/awesome-claude-skills', kind: 'list', title: 'Awesome Claude Skills',
-    why: 'Claude Skills 精选清单，社区维护，更新勤。' },
+  // ── 工程 ──
+  { id: 'security-audit', repo: 'cloudflare/security-audit-skill', use: 'engineering', title: 'Security Audit',
+    why: 'Cloudflare 出的多阶段安全审计 skill：每个结论都要独立验证、可机器读取，不是让模型自由发挥编漏洞。' },
+
+  // ── 调研 ──
+  { id: 'last30days', repo: 'mvanhorn/last30days-skill', use: 'research', title: 'last30days',
+    why: '跨 Reddit / X / YouTube 扫近 30 天讨论。做选题和竞品分析时，比搜索引擎给的是一手体感。' },
+  { id: 'geo-sleuth', repo: 'Oldcircle/geo-sleuth', use: 'research', title: 'Geo Sleuth',
+    why: '看照片猜地点，而且把推理过程摊开：OSM 几何、等高线天际线、卫星图、街景逐条对。OSINT 里最硬的一类活。' },
+  { id: 'social-media-research', repo: 'ScrapeCreators/social-media-research-skills', use: 'research', title: '社媒研究',
+    why: 'TikTok / IG / YouTube / Reddit / X / LinkedIn 的异常贴挖掘、评论采矿、竞品拆解、广告库比对。' },
+
+  // ── 工具 ──
+  { id: 'magpie', repo: 'yetone/magpie', use: 'tool', title: 'Magpie',
+    why: '一个入口调所有模型：Codex 走 DeepSeek、Claude Code 走别的供应商，配一次到处能用。省钱不用改工作流。' },
+  { id: 'headroom', repo: 'headroomlabs-ai/headroom', use: 'tool', title: 'Headroom',
+    why: '工具输出、日志、RAG 片段先压一遍再进上下文。长任务省 token 最直接的一招。' },
+  { id: 'genoffice', repo: 'genspark-ai/genoffice', use: 'tool', title: 'GenOffice',
+    why: '开源 AI Office：Docs / Sheets / Slides / PDF 全带内置 agent，还有 CLI 和 skill 接口。' },
 ];
 
+const USE_LABEL = { design: '设计', writing: '写作', content: '内容', engineering: '工程', research: '调研', tool: '工具' };
 const KIND_LABEL = { skill: 'Skill', mcp: 'MCP', tool: '工具', list: '清单' };
 
 async function fetchResources() {
@@ -845,7 +840,7 @@ async function fetchResources() {
 
   const out = [];
   for (const item of CURATED_RESOURCES) {
-    const row = { ...item, kindLabel: KIND_LABEL[item.kind] || item.kind };
+    const row = { ...item, useLabel: USE_LABEL[item.use] || item.use };
     try {
       const res = await fetch(`https://api.github.com/repos/${item.repo}`, { headers });
       if (!res.ok) {
@@ -871,7 +866,8 @@ async function fetchResources() {
     }
     await new Promise((r) => setTimeout(r, 90));
   }
-  return out.sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));
+  // 按人工排序（谁更值得先看），不按星数
+  return out;
 }
 
 /* ────────────────────────── 主流程 ────────────────────────── */

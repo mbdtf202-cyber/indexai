@@ -551,7 +551,7 @@ footer.foot a:hover{color:var(--accent)}
     subs: { k: "SUBSCRIPTIONS", t: "订阅价，官网上写多少<br>就是多少。", s: "ChatGPT、Claude、Copilot 各档月费，按当日汇率折人民币；第三方挂单只当行情看，不推荐。" },
     relays: { k: "RELAYS", t: "中转站的公开价目，<br>每天探一遍。", s: "读 OneAPI / NewAPI 的价目接口，按倍率换算成每百万 token。需要登录才能看的价格不采，也不替它猜。" },
     events: { k: "AI EVENTS", t: "能报名、有奖、<br>给额度的 AI 活动。", s: "Devpost 开放中的黑客松 + Luma 的 AI 场次，加上本地 AIOS 收录的活动，按截止日期排；过期的单独归档。" },
-    tools: { k: "TOOLKIT", t: "好用的东西，<br>不堆。", s: "只收真正在用的 skill、MCP 和 CLI。星数、更新时间、许可每天从 GitHub 校准；归档或停更会直接标出来，不留在榜上凑数。" },
+    tools: { k: "TOOLKIT", t: "好用的东西，<br>不堆。", s: "只收稀缺的：解决具体问题、别处不好找、作者在维护。人尽皆知的（Playwright、GitHub MCP 这类）不收。星数只作参考，排序按使用价值。" },
     bench: { k: "BENCHMARKS", t: "同一批题目，<br>谁在退步。", s: "Vals Index 的公开分数，每次采集存一份；分数掉了就标出来，不解释成「版本优化」。" },
     signals: { k: "INTELLIGENCE", t: "AI 圈在发生什么，<br>挑过再给你。", s: "每日要闻按价格、模型、融资、政策、安全分类打分精选；下面是 X 与官方的价格一手信号，只收抓到正文的。" },
     method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "五层数据、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
@@ -1157,18 +1157,18 @@ footer.foot a:hover{color:var(--accent)}
     const all = state.data.resources || [];
     if (!all.length) return `<div class="empty"><b>工具箱还没入库</b>运行 <code>node collect.mjs</code>。</div>`;
 
-    const kinds = [...new Set(all.map(r => r.kind))];
-    const list = all.filter(r => state.toolKind === "all" || r.kind === state.toolKind);
-    const kindCount = {};
-    for (const r of all) kindCount[r.kind] = (kindCount[r.kind] || 0) + 1;
+    const uses = [...new Set(all.map(r => r.use))];
+    const list = all.filter(r => state.toolKind === "all" || r.use === state.toolKind);
+    const useCount = {};
+    for (const r of all) useCount[r.use] = (useCount[r.use] || 0) + 1;
 
     return `
       <div class="controls">
         <div class="chips" role="group" aria-label="类型">
           <button class="chip" data-toolkind="all" aria-pressed="${state.toolKind === "all"}">全部 ${all.length}</button>
-          ${kinds.map(k => `<button class="chip" data-toolkind="${k}" aria-pressed="${state.toolKind === k}">${esc(all.find(r => r.kind === k)?.kindLabel || k)} <b style="opacity:.55;font-weight:400">${kindCount[k]}</b></button>`).join("")}
+          ${uses.map(k => `<button class="chip" data-toolkind="${k}" aria-pressed="${state.toolKind === k}">${esc(all.find(r => r.use === k)?.useLabel || k)} <b style="opacity:.55;font-weight:400">${useCount[k]}</b></button>`).join("")}
         </div>
-        <span class="spacer"></span><span class="eyebrow">按星数排 · 每天校准</span>
+        <span class="spacer"></span><span class="eyebrow">编辑排序 · 不是按星数</span>
       </div>
 
       <div class="tgrid">
@@ -1180,7 +1180,7 @@ footer.foot a:hover{color:var(--accent)}
             </div>
             <p class="why">${esc(r.why)}</p>
             <div class="tm">
-              <span class="tag ${r.kind === "skill" ? "free" : ""}">${esc(r.kindLabel)}</span>
+              <span class="tag free">${esc(r.useLabel)}</span>
               ${r.license && r.license !== "NOASSERTION" ? `<span>${esc(r.license)}</span>` : ""}
               ${r.updated ? `<span>${esc(r.updated)} 更新</span>` : ""}
               ${r.archived ? `<span class="tag warn">已归档</span>` : ""}
@@ -1189,7 +1189,7 @@ footer.foot a:hover{color:var(--accent)}
           </a>`).join("")}
       </div>
 
-      <div class="tfoot"><span>入选标准：在真实工作流里用得上、持续维护、有明确边界；不收「100 个工具合集」式的注水清单。</span>
+      <div class="tfoot"><span>入选标准：解决的问题要具体、别处不好找、作者在认真维护。人尽皆知的不收——每个 agent 都内置的东西，放上来没有信息量。</span>
         <span class="spacer"></span><a href="https://github.com/mbdtf202-cyber/indexai" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">提一个 ↗</a></div>`;
   }
 

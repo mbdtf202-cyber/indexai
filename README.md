@@ -58,7 +58,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 | 活动（111 条 / 88 开放中） | Devpost 分页 + Luma 发现流 + 本地 AIOS 活动库，按类型/地区打标 | 每次自动 |
 | 评测（16） | Vals Index 公开分数 | 每次自动，存快照比 Δ |
 | 情报（24 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
-| 工具箱（26 个） | 人工精选 skill / MCP / CLI + GitHub API 校准星数 | 每次自动 |
+| 工具箱（21 个） | 人工精选稀缺 skill / CLI，按用途分类；GitHub API 校准星数与更新时间 | 每次自动 |
 
 ## 口径
 
