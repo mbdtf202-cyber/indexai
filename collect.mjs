@@ -667,6 +667,15 @@ function scoreNews(n) {
   return score;
 }
 
+const MAJOR_RE = /(融资|估值|亿美元|收购|IPO|政策|监管|法案|国务院|发布|开源|权重|降价|涨价|定价|事故|诉讼|安全报告)/;
+
+function newsImportance(n) {
+  const blob = `${n.title} ${n.summary || ''}`;
+  if (n.score >= 7) return 'major';
+  if (n.score >= 4 && MAJOR_RE.test(n.title)) return 'major';
+  return 'daily';
+}
+
 function classifyNews(n) {
   const blob = `${n.title} ${n.summary}`;
   const hit = NEWS_TOPICS.find((t) => t.re.test(blob));
@@ -674,29 +683,55 @@ function classifyNews(n) {
 }
 
 async function fetchNews() {
+  const HISTORY = 'news-history.json';
+  let fresh = [];
   try {
     const res = await fetch(AIBIJIA_NEWS, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    if (!res.ok) return [];
-    const raw = await res.text();
-    const rows = parseNewsYaml(raw).map((n) => {
-      const topic = classifyNews(n);
-      const score = scoreNews(n);
-      return { ...n, topic, topicLabel: (NEWS_TOPICS.find((t) => t.id === topic) || {}).label || '其他', score };
-    });
-    // 每天保留当日 top 8，再整体按时间倒序
-    const byDate = new Map();
-    for (const r of rows) {
-      const k = r.date || '';
-      if (!byDate.has(k)) byDate.set(k, []);
-      byDate.get(k).push(r);
+    if (res.ok) {
+      const raw = await res.text();
+      fresh = parseNewsYaml(raw).map((n) => {
+        const topic = classifyNews(n);
+        const score = scoreNews(n);
+        return {
+          ...n,
+          topic,
+          topicLabel: (NEWS_TOPICS.find((t) => t.id === topic) || {}).label || '其他',
+          score,
+          importance: newsImportance({ ...n, score }),
+        };
+      });
     }
-    const picked = [];
-    for (const [d, list] of byDate) {
-      picked.push(...list.sort((a, b) => b.score - a.score).slice(0, 8));
-    }
-    // 日期倒序优先，同一天内按精选分倒序
-    return picked.sort((a, b) => (b.date || '').localeCompare(a.date || '') || b.score - a.score || `${b.time || ''}`.localeCompare(`${a.time || ''}`));
-  } catch { return []; }
+  } catch { /* 源挂了就用历史 */ }
+
+  // 读历史，合并去重，让时间跨度逐日长起来
+  let hist = [];
+  try { hist = JSON.parse(await readFile(HISTORY, 'utf8')); } catch { /* 首次没有 */ }
+
+  const map = new Map();
+  const keyOf = (n) => n.url || `${n.date || ''}|${n.title || ''}`;
+  for (const n of [...fresh, ...hist]) {
+    const k = keyOf(n);
+    if (!k) continue;
+    if (!map.has(k)) map.set(k, n);
+  }
+  const merged = [...map.values()];
+
+  // 每天保留分数最高的 20 条，其余归档丢弃
+  const byDate = new Map();
+  for (const r of merged) {
+    const k = r.date || '';
+    if (!byDate.has(k)) byDate.set(k, []);
+    byDate.get(k).push(r);
+  }
+  const kept = [];
+  for (const [, list] of byDate) {
+    kept.push(...list.sort((a, b) => b.score - a.score).slice(0, 20));
+  }
+
+  try { await writeFile(HISTORY, JSON.stringify(kept.sort((a, b) => (b.date || '').localeCompare(a.date || ''))), 'utf8'); } catch { /* 只读环境忽略 */ }
+
+  return kept.sort((a, b) =>
+    (b.date || '').localeCompare(a.date || '') || b.score - a.score || `${b.time || ''}`.localeCompare(`${a.time || ''}`));
 }
 
 function buildSubsRegions(apple) {

@@ -43,6 +43,19 @@ jobs:
           [ -f _headers ] && cp _headers dist/ || true
           du -sh dist
 
+      # 新闻历史要跟着仓库走，才能逐日累积出「近一周 / 近一月 / 近一年」的跨度
+      - name: 提交新闻历史
+        run: |
+          if [ -n "$(git status --porcelain news-history.json)" ]; then
+            git config user.name "indexai-bot"
+            git config user.email "bot@users.noreply.github.com"
+            git add news-history.json
+            git commit -m "data: news history $(date -u +%F)"
+            git push
+          else
+            echo "no history change"
+          fi
+
       - name: 发布到 Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
