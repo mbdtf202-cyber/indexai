@@ -7,6 +7,15 @@
 <meta name="description" content="每天跟踪：能免费用的 AI 额度、各家 token 挂牌价（含缓存命中）、官方订阅价与第三方中转站报价。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23F7F5EF'/%3E%3Crect x='7' y='7' width='18' height='18' fill='%23C2410C'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<meta name="theme-color" content="#16a34a" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0e0c" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="IndexAI">
+<meta property="og:title" content="IndexAI · AI 的价、量、场，一个入口看完">
+<meta property="og:description" content="免费额度、token 单价、订阅区价、中转站报价、AI 活动、精选工具箱、评测与要闻——八层数据每天自动采集。">
+<meta name="twitter:card" content="summary">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -456,7 +465,7 @@ footer.foot a:hover{color:var(--accent)}
   .home-foot{font-size:9.5px; gap:6px}
 
   .topnav{scroll-snap-type:x proximity}
-  .nav{scroll-snap-align:center; font-size:11px; padding:8px 5.5px; letter-spacing:-.01em}
+  .nav{scroll-snap-align:center; font-size:10.5px; padding:8px 3.8px; letter-spacing:-.015em}
   .nav sup{display:none}
   .nav[aria-selected="true"]::after{left:6px; right:6px; bottom:1px}
 
@@ -481,13 +490,18 @@ footer.foot a:hover{color:var(--accent)}
   .tcard .repoch{display:none}
   .topnav{-webkit-mask-image:linear-gradient(to right, #000 92%, transparent); mask-image:linear-gradient(to right, #000 92%, transparent)}
 }
+
+.bootmsg{padding:96px 0;text-align:center;color:var(--faint);font-family:var(--mono);font-size:11px;letter-spacing:.08em}
+.bootmsg .spin{display:inline-block;width:12px;height:12px;border:1.5px solid var(--line2);border-top-color:var(--accent);border-radius:50%;margin-right:9px;vertical-align:-2px;animation:bootspin .8s linear infinite}
+@keyframes bootspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.bootmsg .spin{animation:none}}
 </style>
 </head>
 <body>
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#free" aria-label="IndexAI">
+    <a class="brand" href="#home" aria-label="IndexAI">
       <i class="glyph" aria-hidden="true"></i>
       <b>IndexAI</b><span>PRICE&nbsp;·&nbsp;FREE&nbsp;·&nbsp;BENCH</span>
     </a>
@@ -503,20 +517,17 @@ footer.foot a:hover{color:var(--accent)}
 <section class="hero" id="hero">
   <div class="wrap">
     <div>
-      <div class="eyebrow" id="heroKicker">FREE FIRST · THEN PRICE</div>
-      <h1 id="heroTitle">先找能<em>免费用</em>的，再挑最便宜的。</h1>
-      <p id="heroSub">每天盯三件事：哪些通道还在送额度、同样 token 谁家挂牌更便宜、缓存命中之后真实成本是多少。价格全部来自官方定价页或站点公开价目接口，带来源与核实日期。</p>
-      <div class="jump">
-        <a href="#compare">直接比价 <b>↗</b></a>
-        <a href="#relays">中转站行情 <b>↗</b></a>
-        <a href="#subs">订阅怎么买 <b>↗</b></a>
-      </div>
+      <div class="eyebrow" id="heroKicker">INDEX AI</div>
+      <h1 id="heroTitle">AI 的价、量、场，<br>一个入口看完。</h1>
+      <p id="heroSub">免费额度、token 单价、订阅区价、中转报价、活动、工具箱与评测——八层数据同一套口径，每天自动采集。</p>
     </div>
     <div class="kpis" id="kpis"></div>
   </div>
 </section>
 
-<main class="wrap" id="view" role="tabpanel" tabindex="-1"></main>
+<main class="wrap" id="view" role="tabpanel" tabindex="-1">
+  <div class="bootmsg"><span class="spin"></span>正在读取 data.json…</div>
+</main>
 
 <div class="wrap"><footer class="foot">
   <span>数据每日采集 · <code>node collect.mjs</code></span>
@@ -630,23 +641,89 @@ footer.foot a:hover{color:var(--accent)}
 
   function renderKpis() {
     const d = state.data, c = d.meta.counts;
-    const paid = d.models.filter(m => !m.free && m.input != null);
-    const minIn = paid.reduce((a, b) => (a && a.input <= b.input ? a : b), null);
+    const offers = d.offers || [];
+    const events = (d.events || []).filter(e => e.status !== "past");
+    const evKind = {};
+    for (const e of events) evKind[e.kind] = (evKind[e.kind] || 0) + 1;
+    const res = d.resources || [];
+    const useCount = {};
+    for (const r of res) useCount[r.use] = (useCount[r.use] || 0) + 1;
+    const news = d.news || [];
+    const sig = d.signals || [];
+    const live = (d.relays || []).filter(r => r.status === "ok");
     const best = d.meta.bestCacheDiscount;
-    const liveRelays = d.relays.filter(r => r.status === "ok");
-    const cheapestSonnet = liveRelays
+    const cheapestSonnet = live
       .map(r => ({ r, p: r.prices?.sonnet55 }))
       .filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly)
       .sort((a, b) => a.p.input - b.p.input)[0];
-    const cells = [
-      ["免费额度", c.offers, `国际 ${d.offers.filter(o => o.region === "GLOBAL").length} · 国内 ${d.offers.filter(o => o.region === "CN").length}`],
-      ["可计价模型", c.models, `${c.vendors} 家厂商 · 直连 ${c.direct} 条`],
-      ["最大缓存折扣", best ? best.pct + "%" : "—", best ? d.models.find(m => m.id === best.id)?.name || "" : ""],
-      [cheapestSonnet ? "Sonnet 5.5 最低中转价" : "最低付费输入", cheapestSonnet ? "$" + money(cheapestSonnet.p.input) : "$" + money(minIn?.input),
-        cheapestSonnet ? cheapestSonnet.r.name + " · /1M input" : (minIn ? `${minIn.vendor} · ${minIn.name}` : "—")]
-    ];
-    $("#kpis").innerHTML = cells.map(([k, n, s]) => `
+    const paid = (d.models || []).filter(m => !m.free && m.input != null);
+    const minIn = paid.reduce((a, b) => (a && a.input <= b.input ? a : b), null);
+    const benchRows = d.bench?.rows || [];
+
+    // 每个页面只挂跟自己相关的数字，不再全局重复同一组
+    const cellsByTab = {
+      home: [],
+      free: [
+        ["免费额度", c.offers, `${offers.filter(o => o.region === "GLOBAL").length} 国际 · ${offers.filter(o => o.region === "CN").length} 国内`],
+        ["赠送金", offers.filter(o => o.category === "api-credit").length, "注册即送额度"],
+        ["免费模型", offers.filter(o => o.category === "api-free-models").length, "可直接调 API"],
+        ["长期有效", offers.filter(o => String(o.free_scope || "").includes("长期")).length, "不靠限时活动"],
+      ],
+      compare: [
+        ["可计价模型", c.models, `${c.vendors} 家厂商`],
+        ["官方直连", c.direct, "人工核实定价页"],
+        ["带缓存价", c.withCache, "命中/写入分开列"],
+        ["最大缓存折扣", best ? best.pct + "%" : "—", best ? best.id : ""],
+      ],
+      subs: [
+        ["官方档位", c.subs, "官网能直接读到的月费"],
+        ["区价套餐", c.subsRegions, `${c.subsRegionsRaw} 条国家价`],
+        ["第三方挂单", c.subsThird, "带商品直链"],
+        ["最低区价", (d.subsRegions || []).length ? "¥" + Math.min(...d.subsRegions.map(g => g.cheapest)) : "—", "App Store 折人民币"],
+      ],
+      relays: [
+        ["在册站点", c.relays, "公开价目接口"],
+        ["有价目", c.relaysLive, "其余需登录，不猜"],
+        ["报价条数", c.relayQuotes, "按旗舰模型对齐"],
+        ["Sonnet 5.5 最低", cheapestSonnet ? "$" + money(cheapestSonnet.p.input) : "—", cheapestSonnet ? cheapestSonnet.r.name : ""],
+      ],
+      events: [
+        ["开放中", c.eventsOpen, `共收录 ${c.events} 条`],
+        ["黑客松", evKind.hackathon || 0, "有奖有截止日"],
+        ["Meetup", evKind.meetup || 0, "社区场次"],
+        ["会议 / 峰会", evKind.conference || 0, "行业大会"],
+      ],
+      tools: [
+        ["收录", c.resources || 0, "人工精选，非按星数"],
+        ["设计", useCount.design || 0, "视觉与排版"],
+        ["工程", useCount.engineering || 0, "安全与构建"],
+        ["调研", useCount.research || 0, "情报与 OSINT"],
+      ],
+      bench: [
+        ["收录模型", benchRows.length, "Vals Index 公开分"],
+        ["最高分", benchRows.length ? benchRows[0].score.toFixed(2) : "—", benchRows.length ? benchRows[0].model : ""],
+        ["数据日期", d.bench?.as_of || "—", "每次采集存快照"],
+        ["有变化", benchRows.filter(r => r.delta != null).length, "与上次对比"],
+      ],
+      signals: [
+        ["要闻", news.length, "近三天精选"],
+        ["一手信号", sig.length, "X 与官方博客"],
+        ["分类", new Set(news.map(n => n.topic)).size, "价格 / 模型 / 政策…"],
+        ["最近更新", (news[0]?.date || "").slice(5) || "—", news[0]?.time || ""],
+      ],
+      method: [
+        ["登记来源", c.sources, "每条数据可回溯"],
+        ["数据层", 8, "额度 / 价 / 订阅 / 中转 / 活动 / 工具箱 / 评测 / 情报"],
+        ["去重丢弃", d.meta.dedupe?.unpriced_dropped ?? 0, "无价条目直接剔"],
+        ["更新频率", "每日", "UTC 01:00"],
+      ],
+    };
+
+    const cells = cellsByTab[state.tab] || cellsByTab.free;
+    const el = $("#kpis");
+    el.innerHTML = cells.map(([k, n, s]) => `
       <div class="kpi"><div class="k">${esc(k)}</div><div class="n">${esc(n)}</div><div class="s" title="${esc(s)}">${esc(s)}</div></div>`).join("");
+    el.style.display = cells.length ? "" : "none";
   }
 
   function renderHero() {
@@ -838,6 +915,7 @@ footer.foot a:hover{color:var(--accent)}
       { id: "subs", n: c.subsRegionsRaw, u: "条区价", t: "订阅", d: "官方 + 各区 + 挂单" },
       { id: "relays", n: c.relaysLive, u: "站有价目", t: "中转站", d: "接口能读到价才算" },
       { id: "events", n: c.eventsOpen, u: "个开放", t: "AI 活动", d: "黑客松 / 会议 / meetup" },
+      { id: "tools", n: c.resources || 0, u: "个精选", t: "工具箱", d: "稀缺 skill / CLI" },
       { id: "bench", n: c.bench, u: "个模型", t: "评测", d: "同一批题目的分数" },
       { id: "signals", n: (c.news || 0) + c.signals, u: "条信息", t: "情报", d: "要闻 + X 一手" }
     ];
@@ -847,7 +925,7 @@ footer.foot a:hover{color:var(--accent)}
         <div class="home-lead">
           <div class="kicker">TODAY · ${esc(d.meta.date)} · 每日采集</div>
           <h2 class="home-h">AI 的价、量、场，<br>一个入口看完。</h2>
-          <p class="home-sub">白嫖额度、token 单价、订阅区价、中转站报价、活动与评测——七层数据同一套口径，每天自动重采一遍。</p>
+          <p class="home-sub">白嫖额度、token 单价、订阅区价、中转报价、活动、工具箱与评测——八层数据同一套口径，每天自动重采一遍。</p>
           <div class="home-facts">
             <div><span class="fk">今日最低 Sonnet</span><span class="fv">${best ? "$" + best.p.input.toFixed(2) : "—"}</span><span class="fd">${best ? esc(best.r.name) + " · /1M 输入" : ""}</span></div>
             <div><span class="fk">缓存最狠</span><span class="fv">${cache ? cache.pct + "%" : "—"}</span><span class="fd">${cache ? esc(cache.id) : ""}</span></div>
@@ -884,7 +962,7 @@ footer.foot a:hover{color:var(--accent)}
         <a class="tway" href="#relays"><span class="tn">03</span><h4>官方太贵就走中转</h4><p>${c.relaysLive} 个站有公开价目、${c.relayQuotes} 条报价；接口披露价，不含充值折扣，差 3 倍以上会标「口径?」。</p><span class="tl">看中转行情 ↗</span></a>
       </div>
 
-      <div class="shead"><h2>七层入口</h2><span class="desc">同一个口径下的七类数据，每块都能单独点开。</span></div>
+      <div class="shead"><h2>八层入口</h2><span class="desc">同一个口径下的八类数据，每块都能单独点开。</span></div>
       <div class="entries">
         ${entries.map(e => `
           <a class="ecard" href="#${e.id}">
@@ -1478,7 +1556,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
 
   /* ── render ── */
   function render() {
-    renderNav(); renderHero();
+    renderNav(); renderHero(); renderKpis();
     const v = $("#view");
     if (state.tab === "home") v.innerHTML = viewHome();
     else if (state.tab === "free") v.innerHTML = viewFree();
@@ -1605,7 +1683,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
       $("#densBtn").setAttribute("aria-pressed", "true");
     }
     try {
-      const res = await fetch("data.json", { cache: "no-store" });
+      const res = await fetch("data.json");
       if (!res.ok) throw new Error(res.status);
       state.data = await res.json();
     } catch (e) {

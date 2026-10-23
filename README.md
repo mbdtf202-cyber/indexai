@@ -6,9 +6,10 @@ AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中
 
 | 文件 | 作用 |
 |---|---|
-| `index.html` | 站点本体（单文件、无构建，浅色默认） |
+| `index.html` | 站点本体（单文件、无构建，默认浅色，首屏总览） |
 | `collect.mjs` | 采集 / 归一 / 去重 / 探测，产出 `data.json` |
-| `serve.mjs` | 零依赖静态服务器（launchd 常驻用，`node serve.mjs 4311`） |
+| `serve.mjs` | 零依赖静态服务器（本地预览用，`node serve.mjs 4311`） |
+| `favicon.svg` | 站点图标 |
 | `data.json` | 站点唯一数据源（每次运行覆盖） |
 | `README.md` | 这份说明 |
 
