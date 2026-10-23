@@ -1006,6 +1006,40 @@ async function fetchAA() {
   }
 }
 
+
+/* ────────────────────────── Hacker News：民间公开讨论度 ────────────────────────── */
+const HN_API = 'https://hn.algolia.com/api/v1/search';
+
+async function fetchHNSignal(names) {
+  const out = [];
+  for (const name of names) {
+    if (!name || name.length < 4) continue;   // 太短的词没有区分度
+    try {
+      // 只搜标题，避免 API/Raspberry Pi 这类词把无关帖算进来
+      const url = `${HN_API}?query=${encodeURIComponent('"' + name + '"')}&tags=story&hitsPerPage=30&restrictSearchableAttributes=title`;
+      const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+      if (!res.ok) continue;
+      const j = await res.json();
+      const hits = j.hits || [];
+      const heat = hits.reduce((n, h) => n + (h.points || 0), 0);
+      const talk = hits.reduce((n, h) => n + (h.num_comments || 0), 0);
+      const top = hits.sort((a, b) => (b.points || 0) - (a.points || 0))[0];
+      out.push({
+        name,
+        mentions: j.nbHits || 0,
+        heat,
+        talk,
+        topTitle: top?.title || '',
+        topPoints: top?.points || 0,
+        topComments: top?.num_comments || 0,
+        topUrl: top?.url || (top?.objectID ? `https://news.ycombinator.com/item?id=${top.objectID}` : ''),
+      });
+      await new Promise((r) => setTimeout(r, 120));  // 对公共接口客气一点
+    } catch { /* 单个失败不影响整体 */ }
+  }
+  return out.sort((a, b) => b.heat - a.heat);
+}
+
 /* ────────────────────────── 主流程 ────────────────────────── */
 async function main() {
   let prev = null;
@@ -1013,6 +1047,10 @@ async function main() {
 
   const fx = await fetchFx(prev?.meta?.fx);
   const [devpost, aios, luma, aibijia, news, resources, openrouter, aaModels] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources(), fetchOpenRouter(), fetchAA()]);
+
+// 民间讨论：拿使用量前 18 的工具名去 HN 查公开帖
+const hnTargets = openrouter.apps.slice(0, 18).map((a) => a.title).filter(Boolean);
+const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
   const bench = await fetchBench(prev?.bench);
 
   const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
@@ -1107,6 +1145,7 @@ async function main() {
   if (resources.length) addSrc('https://api.github.com/repos', 'toolkit', 'GitHub 精选');
   if (openrouter.apps.length) addSrc('https://openrouter.ai/rankings', 'adoption', 'OpenRouter 实际调用量');
   if (aaModels.length) addSrc(AA_URL, 'bench', 'Artificial Analysis 智能指数');
+  if (hnSignals.length) addSrc('https://hn.algolia.com/api', 'community', 'Hacker News 公开讨论');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
   addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
@@ -1142,6 +1181,7 @@ async function main() {
         orApps: openrouter.apps.length,
         orModels: openrouter.models.length,
         aaModels: aaModels.length,
+        hnSignals: hnSignals.length,
         relays: relays.length,
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
@@ -1165,6 +1205,7 @@ async function main() {
     orApps: openrouter.apps,
     orModels: openrouter.models,
     aaModels,
+    hnSignals,
     relays,
     events: [...devpost, ...luma, ...aios].map((e) => ({ ...e, kind: eventKind(e), region: eventRegion(e) })),
     bench,

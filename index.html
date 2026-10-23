@@ -224,7 +224,12 @@ td .val{color:#0f7b4f; font-weight:500}
 /* ── 团队在用（应用榜） ── */
 td .vend{color:var(--faint); font-size:11px; margin-left:8px}
 .applist{display:flex; flex-direction:column; gap:1px; margin-bottom:var(--sect)}
-.approw{display:grid; grid-template-columns:clamp(140px,18vw,240px) 150px 1fr 58px;
+.apphead{display:grid; grid-template-columns:clamp(120px,15vw,200px) 132px 1fr 54px 92px;
+  gap:12px; padding:0 0 6px; border-bottom:1px solid var(--ink); margin-bottom:2px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.apphead span:nth-child(4),.apphead span:nth-child(5){text-align:right}
+@media (max-width:760px){.apphead{display:none}}
+.approw{display:grid; grid-template-columns:clamp(120px,15vw,200px) 132px 1fr 54px 92px;
   align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line);
   text-decoration:none; color:inherit}
 .approw:hover{background:var(--panel2)}
@@ -235,7 +240,9 @@ td .vend{color:var(--faint); font-size:11px; margin-left:8px}
 .ar-t{height:5px; background:var(--panel3); position:relative}
 .ar-t i{display:block; height:100%; background:var(--ink); opacity:.7}
 .ar-v{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--faint); font-variant-numeric:tabular-nums}
-@media (max-width:760px){.approw{grid-template-columns:1fr 62px}.ar-c,.ar-t{display:none}}
+.ar-hn{font-family:var(--mono); font-size:11px; text-align:right; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums}
+.approw:hover .ar-hn{color:var(--ink)}
+@media (max-width:760px){.approw{grid-template-columns:1fr 58px}.ar-c,.ar-t,.ar-hn{display:none}}
 
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
@@ -2328,14 +2335,19 @@ const MOTION = (() => {
           </tbody>
         </table>
       </div>` : `
-      <p class="tnote">按 OpenRouter 实际处理的 token 量排，反映开发者真正把哪些工具接进了工作流。</p>
+      <p class="tnote">左列是按 OpenRouter 实际 token 消耗排的使用量；右列是 Hacker News 上标题含该工具名的帖子数与评论数。</p>
+      <div class="apphead"><span>工具</span><span>分类</span><span></span><span>用量</span><span>民间声量</span></div>
       <div class="applist">
-        ${apps.map(a => `<a class="approw" href="https://openrouter.ai/apps/${esc(a.slug || "")}" target="_blank" rel="noopener">
+        ${apps.map(a => {
+          const hn = (state.data.hnSignals || []).find(h => h.name.toLowerCase() === String(a.title).toLowerCase());
+          return `<a class="approw" href="https://openrouter.ai/apps/${esc(a.slug || "")}" target="_blank" rel="noopener">
           <span class="ar-n">${esc(a.title)}</span>
           <span class="ar-c">${(a.categories || []).slice(0, 2).map(c => `<i>${esc(c)}</i>`).join("")}</span>
           <span class="ar-t"><i style="width:${Math.max(3, Math.min(100, (Math.log10(Math.max(a.tokens, 1)) / Math.log10(6e13)) * 100)).toFixed(1)}%"></i></span>
           <span class="ar-v">${(a.tokens / 1e12).toFixed(1)}T</span>
-        </a>`).join("")}
+          <span class="ar-hn" title="${hn ? esc(hn.topTitle) : ""}">${hn ? kfmt(hn.mentions) + " 帖 · " + kfmt(hn.talk) + " 评" : "—"}</span>
+        </a>`;
+        }).join("")}
       </div>`}
 
       <div class="tfoot"><span>${tab === "official" ? "官方基准取自 Vals Index 的公开总分；价格下降标黄，可能是版本回退或渠道掺水。" : tab === "community" ? "口碑分是按实际调用量归一化的相对值，不等于质量评价，只说明有人在用。" : "分类与描述来自 OpenRouter 的公开应用目录。"}</span></div>`;
