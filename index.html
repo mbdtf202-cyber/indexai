@@ -6,9 +6,9 @@
 <title>IndexAI · 免费额度、模型价格、中转站与评测索引</title>
 <meta name="description" content="每天跟踪：能免费用的 AI 额度、各家 token 挂牌价（含缓存命中）、官方订阅价与第三方中转站报价。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="favicon.svg">
-<meta name="theme-color" content="#16a34a" media="(prefers-color-scheme: light)">
+<link rel="icon" href="favicon.svg?v=3" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg?v=3">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0d0e0c" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="IndexAI">
@@ -68,14 +68,14 @@ button,input,select{font:inherit; color:inherit}
 .brand:hover .glyph{fill:var(--accent)}
 .brand b{font-size:15px; font-weight:700; letter-spacing:-.01em}
 .brand span{font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; color:var(--faint)}
-.topnav{overflow-x:auto; scrollbar-width:none; display:flex; align-items:center; gap:2px; margin-left:8px; overflow:auto; scrollbar-width:none}
+.topnav{overflow-x:auto; scrollbar-width:none; display:flex; align-items:center; gap:0; margin-left:6px; overflow:auto; scrollbar-width:none}
 .topnav::-webkit-scrollbar-x{display:none}
-.nav{appearance:none; border:0; background:none; padding:5px 8px; cursor:pointer; white-space:nowrap;
+.nav{appearance:none; border:0; background:none; padding:5px 6px; cursor:pointer; white-space:nowrap;
   font-size:13px; color:var(--dim); border-radius:3px; position:relative;
   display:inline-flex; align-items:baseline; gap:3px; line-height:1.5}
 .nav:hover{color:var(--ink); background:var(--panel2)}
 .nav[aria-selected="true"]{color:var(--ink); font-weight:600}
-.nav[aria-selected="true"]::after{content:""; position:absolute; left:8px; right:8px; bottom:-1px; height:2px; background:var(--accent)}
+.nav[aria-selected="true"]::after{content:""; position:absolute; left:6px; right:6px; bottom:-1px; height:2px; background:var(--accent)}
 .nav sup{font-family:var(--mono); font-size:11px; color:var(--faint); line-height:1; vertical-align:baseline; letter-spacing:0}
 .top .right{margin-left:auto; display:flex; align-items:center; gap:10px; align-self:center}
 .stamp{font-family:var(--mono); font-size:11.5px; color:var(--faint); white-space:nowrap}
@@ -708,11 +708,12 @@ footer.foot a:hover{color:var(--accent)}
 
 .newsrow{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
   border-top:1px solid var(--ink); margin-bottom:var(--sect)}
-.newsrow .ncard{border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:16px 18px 20px 0}
+.newsrow .ncard{border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:18px 16px 20px}
 .newsrow .ncard:nth-child(4n){border-right:0; padding-right:0}
-.ncard{background:transparent; padding:16px 18px 18px 0; display:flex; flex-direction:column; gap:8px; transition:background .22s}
+.ncard{background:transparent; padding:18px 16px 20px; display:flex; flex-direction:column; gap:8px;
+  text-align:center; align-items:center; transition:background .22s}
 .ncard:hover{background:var(--panel2)}
-.nmeta{display:flex; align-items:baseline; gap:10px; font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--faint); order:2}
+.nmeta{display:flex; align-items:baseline; justify-content:center; gap:10px; font-family:var(--mono); font-size:11.5px; letter-spacing:.03em; color:var(--faint); order:2}
 .ntopic{color:var(--accent); font-weight:500}
 .ncard h3{margin:0; font-size:15px; line-height:1.42; font-weight:500; letter-spacing:-.012em; order:0}
 .ncard h3 a{color:inherit; text-decoration:none}
@@ -751,9 +752,11 @@ footer.foot a:hover{color:var(--accent)}
 
 .threeways{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; background:transparent;
   border-top:1px solid var(--ink); border-bottom:1px solid var(--line); margin-bottom:var(--sect)}
-.threeways .tway{border-right:1px solid var(--line); padding:18px 22px 22px 0}
+.threeways .tway{border-right:1px solid var(--line); padding:22px 20px 24px; text-align:center; align-items:center}
 .threeways .tway:last-child{border-right:0}
-.tway{position:relative; background:var(--panel); padding:18px 20px 20px; text-decoration:none; color:inherit; display:block; transition:background .16s}
+.tway{position:relative; background:var(--panel); padding:22px 20px 24px; text-decoration:none; color:inherit;
+  display:flex; flex-direction:column; text-align:center; transition:background .16s}
+.tway h4, .tway p, .tway .tl{margin-inline:auto}
 .tway:hover{background:var(--panel2)}
 .tway .tn{font-family:var(--mono); font-size:11.5px; color:var(--accent); letter-spacing:.1em}
 .tway h4{margin:6px 0 8px; font-size:14.5px; font-weight:600; letter-spacing:-.005em}
@@ -1405,7 +1408,11 @@ const MOTION = (() => {
       .sort((a, b) => a.low - b.low)[0];
     const paid = (d.models || []).filter(m => !m.free && m.input != null);
     const minIn = paid.reduce((a, b) => (a && a.input <= b.input ? a : b), null);
+    // 评测层已升级成多榜结构（catalog + stats），不再有单一 rows
     const benchRows = d.bench?.rows || [];
+    const benchStats = d.bench?.stats || {};
+    const benchCat = d.bench?.catalog || [];
+    const benchSources = d.bench?.sources || [];
 
     // 每个页面只挂跟自己相关的数字，不再全局重复同一组
     const cellsByTab = {
@@ -1451,10 +1458,10 @@ const MOTION = (() => {
         ["调研", useCount.research || 0, "情报与 OSINT"],
       ],
       bench: [
-        ["收录模型", benchRows.length, "Vals Index 公开分"],
-        ["最高分", benchRows.length ? benchRows[0].score.toFixed(2) : "—", benchRows.length ? benchRows[0].model : ""],
+        ["收录模型", benchStats.models || benchRows.length, benchStats.boards ? `${benchStats.boards} 个榜` : "Vals Index 公开分"],
+        ["分数条目", benchStats.rows ? kfmt(benchStats.rows) : (benchRows.length ? benchRows.length : "—"), `${benchSources.filter(x => x.ok).length}/${benchSources.length || 0} 源正常`],
         ["数据日期", d.bench?.as_of || "—", "每次采集存快照"],
-        ["有变化", benchRows.filter(r => r.delta != null).length, "与上次对比"],
+        ["榜单", benchStats.boards || benchCat.length, "9 个公开源"],
       ],
       signals: [
         ["归档", ni.n || 0, `跨度 ${ni.span || 0} 天`],
@@ -2763,12 +2770,16 @@ const MOTION = (() => {
     if (!cat.length) return [];
     const want = state.benchPicks;
     if (want && want.length) return want.filter((id) => benchBoards()[id]);
-    // 默认：每组挑一个代表
-    const seen = new Set();
+    // 默认：综合智能打头，再按能力组各挑一个代表
     const picks = [];
+    const seen = new Set();
+    const lead = cat.find((c) => c.id === "aa__intelligenceindex")
+      || cat.find((c) => /综合智能|intelligence/i.test(c.name) && !c.sub)
+      || cat.find((c) => c.group === "general" && !c.sub);
+    if (lead) { picks.push(lead.id); seen.add(lead.id); }
     for (const g of (state.data.bench.groups || [])) {
-      const first = cat.find((c) => c.group === g.id && !c.sub);
-      if (first && !seen.has(first.id)) { picks.push(first.id); seen.add(first.id); }
+      const first = cat.find((c) => c.group === g.id && !c.sub && !seen.has(c.id));
+      if (first) { picks.push(first.id); seen.add(first.id); }
     }
     return picks;
   }
@@ -2791,18 +2802,18 @@ const MOTION = (() => {
   // 价格匹配：batch / preview / 带日期的变体都归一到同一个 key，会撞名。
   // 所以先排除 batch（半价批处理，不代表常规挂牌价），再按「完全相等 → 前缀」逐级退让。
   const isBatch = (n) => /\b(batch|batches)\b/i.test(String(n || ""));
-  function priceFor(name, models) {
+  function modelFor(name, models) {
     const key = bnorm(name);
     if (!key) return null;
     const pool = models.filter((m) => m.input > 0 && !isBatch(m.name));
     const exact = pool.filter((m) => bnorm(m.name) === key);
     if (exact.length) {
       // 同为完全匹配时，取名字最长（信息最具体）的那条
-      return exact.sort((a, b) => String(b.name).length - String(a.name).length)[0].input;
+      return exact.sort((a, b) => String(b.name).length - String(a.name).length)[0];
     }
-    const pre = pool.find((m) => bnorm(m.name).startsWith(key)) || pool.find((m) => key.startsWith(bnorm(m.name)));
-    return pre ? pre.input : null;
+    return pool.find((m) => bnorm(m.name).startsWith(key)) || pool.find((m) => key.startsWith(bnorm(m.name))) || null;
   }
+  const priceFor = (name, models) => modelFor(name, models)?.input ?? null;
 
   // 总表：并集所有模型，按「上榜数 → 平均分位」排
   function buildBenchTable(ids) {
@@ -2852,7 +2863,7 @@ const MOTION = (() => {
       <div class="controls">
         <div class="chips" role="group" aria-label="维度">
           <button class="chip" data-benchgroup="all" aria-pressed="${group === "all"}">全部 ${cat.length}</button>
-          ${groups.map((g) => {
+          ${[...groups].sort((a, b) => (a.id === "general" ? -1 : b.id === "general" ? 1 : 0)).map((g) => {
             const n = cat.filter((c) => c.group === g.id).length;
             return `<button class="chip" data-benchgroup="${g.id}" aria-pressed="${group === g.id}">${esc(g.name)} ${n}</button>`;
           }).join("")}
@@ -2899,7 +2910,9 @@ const MOTION = (() => {
             ${cols.map((c) => `<th class="num bp-col" title="${esc(c.board.note || "")}">
               <b>${esc(c.board.name)}</b><span>${esc(c.board.updated || "")}</span>
             </th>`).join("")}
-            <th class="num hidesm" style="width:74px">输入价</th>
+            <th class="num" style="width:70px">输入</th>
+            <th class="num hidesm" style="width:70px">输出</th>
+            <th class="num hidesm" style="width:70px">缓存读</th>
           </tr></thead>
           <tbody>
           ${show.map((r) => `<tr>
@@ -2914,10 +2927,13 @@ const MOTION = (() => {
                 ${cell.rank ? `<span class="brank">#${cell.rank}</span>` : ""}
               </td>`;
             }).join("")}
-            <td class="num hidesm">${(() => {
-              const p = priceFor(r.model, models);
-              return p ? "$" + money(p) : '<span class="dim">—</span>';
-            })()}</td>
+            ${(() => {
+              const m = modelFor(r.model, models);
+              const cell = (v) => v != null && v > 0 ? "$" + money(v) : '<span class="dim">—</span>';
+              return `<td class="num">${cell(m?.input)}</td>
+                <td class="num hidesm">${cell(m?.output)}</td>
+                <td class="num hidesm">${cell(m?.cache_read)}</td>`;
+            })()}
           </tr>`).join("")}
           </tbody>
         </table>
@@ -3422,7 +3438,7 @@ const MOTION = (() => {
         <header class="rt-head">
           <p class="rt-eyebrow">TIMELINE · ${msAll.length} 个节点</p>
           <h2>从 ChatGPT 上线到今天<br><em>${meta.length} 个时代</em>　<em>${msAll.filter(e => e.tier === "era").length} 次改道</em></h2>
-          <p class="rt-sub">${longest ? `最长的静默是 ${longest.days} 天——${esc(longest.from.title)} 到 ${esc(longest.to.title)}。` : ""}脊线按真实时间比例画，高度是分量；形状区分类别——<b class="rt-key k-price">■ 价格</b> <b class="rt-key k-use">▲ 用法</b> <b class="rt-key k-turn">◆ 转向</b> <span class="rt-key k-cap">● 能力</span>。</p>
+          <p class="rt-sub">${longest ? `<span title="${esc(longest.from.d + " " + longest.from.title + " → " + longest.to.d + " " + longest.to.title)}">最长的静默 ${longest.days} 天 ${esc(longest.from.d.slice(2, 7))} → ${esc(longest.to.d.slice(2, 7))}</span>。` : ""}脊线按真实时间比例画，高度是分量；形状区分类别——<b class="rt-key k-price">■ 价格</b> <b class="rt-key k-use">▲ 用法</b> <b class="rt-key k-turn">◆ 转向</b> <span class="rt-key k-cap">● 能力</span>。</p>
         </header>
 
         <figure class="rt-fig">
