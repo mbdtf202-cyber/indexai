@@ -1186,6 +1186,22 @@ function regionFromCountryCode(cc) {
   return EV_COUNTRY_REGION[String(cc).trim().toUpperCase()] || null;
 }
 
+/* 英文国名 → region：给 Devfolio 这类只给国名、不给 ISO 码的源用。
+ * 用 ^...$ 全匹配，避免 "India" 被 "Indiana" 之类的城市名误命中。 */
+const EV_COUNTRY_NAME_RULES = [
+  ['us', /^(United States|United States of America|USA|US)$/i],
+  ['uk', /^(United Kingdom|UK|England|Scotland|Wales|Northern Ireland|Great Britain)$/i],
+  ['cn', /^(China|Hong Kong|Macao|Macau|Taiwan)$/i],
+  ['jp', /^Japan$/i], ['kr', /^(South Korea|Korea)$/i], ['sg', /^Singapore$/i],
+  ['in', /^India$/i], ['ca', /^Canada$/i], ['au', /^(Australia|New Zealand)$/i],
+  ['ae', /^(United Arab Emirates|UAE)$/i],
+  ['eu', /^(Germany|France|Netherlands|Switzerland|Spain|Italy|Portugal|Sweden|Finland|Denmark|Norway|Poland|Czechia|Czech Republic|Austria|Belgium|Ireland|Hungary|Romania|Bulgaria|Luxembourg|Estonia|Latvia|Lithuania|Greece|Croatia|Slovenia|Slovakia|Serbia|Ukraine|Turkey|Türkiye)$/i],
+  ['middle-east', /^(Israel|Saudi Arabia|Qatar|Jordan|Lebanon|Kuwait|Bahrain|Oman)$/i],
+  ['latam', /^(Brazil|Mexico|Argentina|Chile|Colombia|Peru|Uruguay|Paraguay|Ecuador|Costa Rica|Panama)$/i],
+  ['africa', /^(Nigeria|Kenya|South Africa|Egypt|Ghana|Morocco|Tunisia|Uganda|Tanzania|Rwanda|Ethiopia)$/i],
+  ['asia', /^(Philippines|Indonesia|Vietnam|Thailand|Malaysia|Sri Lanka|Nepal|Bangladesh|Cambodia|Myanmar|Pakistan)$/i],
+];
+
 /* 限速：这里是**实测**出来的硬约束，不是拍脑袋。
  * 2026-10-24 实测：
  *   - 并发 8 + 80ms 节流 → 216 个 geo job 里 167 个失败（403/429）
@@ -1320,31 +1336,7 @@ async function fetchLuma() {
     // 泛词（machine / human / club / brunch / deep alone）一律不进词表 ——
     // "Machine Cinema" / "Paramount Machine Tour" / "Deep Chats" / "Sunday Brunch" 是纯噪音，
     // 被筛掉是对的。宁可少收，不要污染。
-    const re = new RegExp([
-      // 通用 AI 词
-      '\\bAI\\b', '\\bA\\.I\\.', '\\bLLMs?\\b', '\\bGPT-?\\d?', '\\bChatGPT\\b', '\\bClaude\\b',
-      '\\bGemini\\b', '\\bCopilot\\b', '\\bLlama\\b', '\\bLLaMA\\b', '\\bMistral\\b', '\\bGemma\\b',
-      '\\bSora\\b', '\\bQwen\\b', '\\bKimi\\b', '\\bDeepSeek\\b', '\\bMidjourney\\b', '\\bRunway\\b',
-      // 厂商 / 平台
-      '\\bOpenAI\\b', '\\bAnthropic\\b', '\\bDeepMind\\b', 'Hugging ?Face', '\\bCohere\\b',
-      '\\bPerplexity\\b', '\\bStability AI\\b', '\\bNvidia\\b', '\\bNVIDIA\\b',
-      // 中文
-      '模型', '人工智能', '机器学习', '大模型', '智能体', '通义', '豆包', '文心', '生成式',
-      // 英文 ML 语义
-      'machine learning', 'deep learning', 'neural\\s?(?:net|network)', 'generative',
-      'stable diffusion', '\\bdiffusion\\b', '\\bRAG\\b', '\\bagentic\\b', '\\bAI agents?\\b',
-      '\\binference\\b', '\\bfine-?tun', '\\bprompt(?:ing|s)?\\b', '\\bvector (?:db|database)\\b',
-      '\\bembeddings?\\b', '\\bLLM\\b', '\\btransformer model',
-      // 活动形态（AI 场次常用的命名）
-      'hackathon', '黑客松', 'ハッカソン', 'ハック', '\\bdevday\\b', '\\bdev ?day\\b', '\\bdevfest\\b',
-      '\\bhacksprint\\b', '\\bhack ?sprint\\b', '\\bbuild night\\b', '\\bvibe cod',
-      // 注意：单独的 eval / showcase / agents 太宽（"Showcase" 是什么展都会用的词），
-      // 只在跟 AI 词同现时才有意义，所以这里都收窄成组合形态
-      '\\bmodel eval', '\\bAI showcase',
-      // 多语言 AI 词根（日/意/西/德/法）
-      '生成AI', 'AI 活用', 'intelligen\\w*', 'artificiali', 'inteligencia', '\\bIA\\b', '\\bKI\\b',
-      'künstliche', '\\bIA génér', '\\bML\\b',
-    ].join('|'), 'i');
+    const re = AI_EVENT_RE;
     const out = [];
     for (const ev of byId.values()) {
       const name = ev.name || '';
@@ -1385,6 +1377,209 @@ async function fetchLuma() {
     return [];
   }
 }
+
+/* ══════════════════════ Devfolio（第 4 个活动源） ══════════════════════
+ * 公开 API，无认证、无 key、无 Cookie：
+ *   https://api.devfolio.co/api/hackathons?page=N&limit=50
+ * 返回 { result: [...], count: 2038, pages: 41 }，第 42 页起为空（实测 2026-10-24）。
+ *
+ * 取舍：这个源历史 2038 条，但**未截止的只有 35 条，其中 AI 相关 9 条**。
+ * 量小，但它是唯一一个给出「完整字段 + 真实奖池金额 + 报名人数」的黑客松源，
+ * 而且这 9 条在 Devpost / Luma 上都没有 —— 所以作为**补充源**收下，不追求量。
+ *
+ * 注意 themes 是**对象数组** `[{uuid,name,verified}]`，直接 join 会得到 "[object Object]"，
+ * 必须从 t.name 取（实测踩过）。
+ *
+ * 过滤：**绝不能放宽**。这个源的主体是通用黑客松（No Restrictions 主题占绝大多数），
+ * 不做 AI 过滤会往站里灌几百条无关活动，比少收 9 条糟得多。宁可少收。
+ * ═══════════════════════════════════════════════════════════════════════ */
+const DV_API = 'https://api.devfolio.co/api/hackathons';
+const DV_MAX_PAGES = 45;      // 实测 41 页到底，留 4 页余量防源端多一页时漏
+const DV_LIMIT = 50;
+
+async function devfolioPage(page, attempt = 0) {
+  const url = `${DV_API}?page=${page}&limit=${DV_LIMIT}`;
+  try {
+    netStat.requests += 1;
+    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      return devfolioPage(page, attempt + 1);
+    }
+    throw e;
+  }
+}
+
+/* 活动 AI 相关性词表：Luma 与 Devfolio 共用同一份，避免两个源口径漂移。
+ * 词表的取舍说明见下方 fetchLuma 内的原始注释（哪些泛词被刻意排除）。 */
+const AI_EVENT_RE = new RegExp([
+    // 通用 AI 词
+    '\\bAI\\b', '\\bA\\.I\\.', '\\bLLMs?\\b', '\\bGPT-?\\d?', '\\bChatGPT\\b', '\\bClaude\\b',
+    '\\bGemini\\b', '\\bCopilot\\b', '\\bLlama\\b', '\\bLLaMA\\b', '\\bMistral\\b', '\\bGemma\\b',
+    '\\bSora\\b', '\\bQwen\\b', '\\bKimi\\b', '\\bDeepSeek\\b', '\\bMidjourney\\b', '\\bRunway\\b',
+    // 厂商 / 平台
+    '\\bOpenAI\\b', '\\bAnthropic\\b', '\\bDeepMind\\b', 'Hugging ?Face', '\\bCohere\\b',
+    '\\bPerplexity\\b', '\\bStability AI\\b', '\\bNvidia\\b', '\\bNVIDIA\\b',
+    // 中文
+    '模型', '人工智能', '机器学习', '大模型', '智能体', '通义', '豆包', '文心', '生成式',
+    // 英文 ML 语义
+    'machine learning', 'deep learning', 'neural\\s?(?:net|network)', 'generative',
+    'stable diffusion', '\\bdiffusion\\b', '\\bRAG\\b', '\\bagentic\\b', '\\bAI agents?\\b',
+    '\\binference\\b', '\\bfine-?tun', '\\bprompt(?:ing|s)?\\b', '\\bvector (?:db|database)\\b',
+    '\\bembeddings?\\b', '\\bLLM\\b', '\\btransformer model',
+    // 活动形态（AI 场次常用的命名）
+    'hackathon', '黑客松', 'ハッカソン', 'ハック', '\\bdevday\\b', '\\bdev ?day\\b', '\\bdevfest\\b',
+    '\\bhacksprint\\b', '\\bhack ?sprint\\b', '\\bbuild night\\b', '\\bvibe cod',
+    // 注意：单独的 eval / showcase / agents 太宽（"Showcase" 是什么展都会用的词），
+    // 只在跟 AI 词同现时才有意义，所以这里都收窄成组合形态
+    '\\bmodel eval', '\\bAI showcase',
+    // 多语言 AI 词根（日/意/西/德/法）
+    '生成AI', 'AI 活用', 'intelligen\\w*', 'artificiali', 'inteligencia', '\\bIA\\b', '\\bKI\\b',
+    'künstliche', '\\bIA génér', '\\bML\\b',
+  ].join('|'), 'i');
+
+/* Devfolio 的 AI 相关判定。两路任一命中即算：
+ *   1) themes 里明确列了 AI / 数据 / 机器学习主题
+ *   2) name / tagline / desc 命中 **Devfolio 专用**的 AI 词表（见下）
+ *
+ * 为什么不能直接复用 AI_EVENT_RE（踩过）：
+ * 那份词表里含 'hackathon' / '黑客松' / 'devfest' 这类「活动形态词」——
+ * 对 Luma 是对的（那些查询本身就是 query=AI 调的，活动形态词只是收窄用），
+ * 但 Devfolio 里 95% 的活动名字里就带 Hackathon，一命中就全收进来。
+ * 实测直接复用 → 35 条未截止几乎全过（25 条），全是印度高校通用黑客松，站内被污染。
+ * 所以这里只认**语义上的 AI 词**，不认活动形态词。
+ *
+ * 刻意**不接受** "No Restrictions" —— 那是「不限主题」，不代表跟 AI 有关。
+ * 实测这就是 35 条里只剩 9 条的关键。 */
+const DV_AI_THEME = /\bAI\b|\bA\.?I\.?\b|machine ?learning|deep ?learning|\bML\b|\bLLM|data ?science|neural|generative|computer vision|\bNLP\b/i;
+
+// Devfolio 专用的 AI 语义词表：只有真正的 AI 词，没有任何活动形态词
+const DV_AI_RE = new RegExp([
+  '\\bAI\\b', '\\bA\\.I\\.', '\\bLLMs?\\b', '\\bGPT-?\\d?', '\\bChatGPT\\b', '\\bClaude\\b',
+  '\\bGemini\\b', '\\bCopilot\\b', '\\bLlama\\b', '\\bMistral\\b', '\\bGemma\\b', '\\bQwen\\b',
+  '\\bDeepSeek\\b', '\\bMidjourney\\b', '\\bOpenAI\\b', '\\bAnthropic\\b', '\\bDeepMind\\b',
+  'Hugging ?Face', '\\bCohere\\b', '\\bPerplexity\\b', '\\bStability AI\\b',
+  'machine learning', 'deep learning', 'neural\\s?(?:net|network)', '\\bgenerative ai\\b',
+  'stable diffusion', '\\bdiffusion model', '\\bRAG\\b', '\\bagentic\\b',
+  '\\bcomputer vision\\b', '\\bNLP\\b', '\\bML\\b', '\\bGenAI\\b',
+  '人工智能', '机器学习', '大模型', '智能体', '深度学习',
+].join('|'), 'i');
+
+function devfolioIsAI(h) {
+  const themes = (h.themes || []).map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
+  if (themes.some((t) => DV_AI_THEME.test(t))) return true;
+  // desc 只看前 600 字：Devfolio 的 desc 是完整 markdown 规则书，
+  // 通篇可能多处提到 AI 是泛泛而谈；截断后命中更接近「这场活动的主旨」。
+  const hay = `${h.name || ''} ${h.tagline || ''} ${String(h.desc || '').slice(0, 600)}`;
+  return DV_AI_RE.test(hay);
+}
+
+/* 奖池：prizes 是对象数组，每项有 currency + amount + name。
+ * 不同货币不能直接相加，所以只取「最常见的那一种货币」求和，其余额度不参与，
+ * 并在有多个币种时拼一句提示 —— 不把 ₹ 和 $ 加成一个假数字。 */
+function devfolioPrize(prizes) {
+  const rows = (prizes || [])
+    .map((p) => ({ amount: Number(p?.amount), currency: (p?.currency || '').toUpperCase() || null }))
+    .filter((p) => Number.isFinite(p.amount) && p.amount > 0);
+  if (!rows.length) return null;
+  const byCur = {};
+  for (const r of rows) { const k = r.currency || '?'; byCur[k] = (byCur[k] || 0) + r.amount; }
+  const [cur, sum] = Object.entries(byCur).sort((a, b) => b[1] - a[1])[0];
+  const symbol = { USD: '$', INR: '₹', EUR: '€', GBP: '£' }[cur] || '';
+  const n = Math.round(sum).toLocaleString('en-US');
+  const others = Object.keys(byCur).length - 1;
+  return `${symbol}${n}${cur && cur !== '?' && !symbol ? ` ${cur}` : ''}${others > 0 ? ` 等 ${others + 1} 种币种` : ''}`;
+}
+
+async function fetchDevfolio() {
+  const today = new Date().toISOString().slice(0, 10);
+  const all = [];
+  let total = null;
+  let pagesHint = null;
+
+  for (let page = 1; page <= DV_MAX_PAGES; page += 1) {
+    let j;
+    try {
+      j = await devfolioPage(page);
+    } catch (e) {
+      console.warn(`[collect] devfolio p${page} 放弃：${e.message}`);
+      break;
+    }
+    if (total == null && Number.isFinite(j?.count)) total = Number(j.count);
+    if (pagesHint == null && Number.isFinite(j?.pages)) pagesHint = Number(j.pages);
+    const list = j?.result || [];
+    if (!list.length) break;                       // 实测第 42 页到底
+    all.push(...list);
+    if (pagesHint != null && page >= pagesHint) break;
+  }
+
+  // 去重（uuid），并丢掉已截止的：这个源 2038 条里 2003 条是历史活动，收进来只会污染
+  const seen = new Set();
+  const live = [];
+  for (const h of all) {
+    const k = h?.uuid || h?.slug;
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    const end = String(h.ends_at || '').slice(0, 10);
+    const start = String(h.starts_at || '').slice(0, 10);
+    // 没有截止日的不猜（跟 eventStatus 的 unknown 口径一致），也不收
+    const last = end || start;
+    if (!last || last < today) continue;
+    live.push(h);
+  }
+
+  const ai = live.filter(devfolioIsAI);
+  const rows = ai.map((h) => {
+    const start = String(h.starts_at || '').slice(0, 10);
+    const end = String(h.ends_at || '').slice(0, 10);
+    const cityCountry = [h.city, h.country].filter(Boolean).join(', ');
+    const row = {
+      id: `devfolio-${h.uuid || h.slug}`,
+      title: h.name || '',
+      url: h.slug ? `https://${h.slug}.devfolio.co/` : null,
+      dates: [start, end].filter(Boolean).join(' → ') || null,
+      start: start || null,
+      end: end || null,
+      location: h.is_online ? '线上' : (h.location || cityCountry || '线下'),
+      org: h.hackathon_brand?.name || '',
+      prize: devfolioPrize(h.prizes),
+      regs: Number(h.participants_count || 0),
+      themes: (h.themes || []).map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean),
+      source: 'Devfolio',
+      // country 是英文国名（"India" / "Germany"），交给 eventRegion 的国名正则；
+      // 这里不塞两位码 —— Devfolio 给的是国名不是 ISO 码，硬凑容易错。
+      countryName: h.country || null,
+    };
+    const tag = String(h.tagline || '').replace(/\s+/g, ' ').trim();
+    row.summary = tag ? tag.slice(0, 280) : null;
+    row.status = eventStatus(row);
+    return row;
+  });
+
+  console.log(`[collect] devfolio ${all.length} 条历史（共 ${total ?? '?'}）→ 未截止 ${live.length} → AI 相关 ${rows.length}`);
+  return rows;
+}
+
+/* ══════════════════ 已实测排除的活动源（别再试了） ══════════════════
+ * 这些都是 2026-10-24 实际跑过、有明确失败原因的，写在这里免得后来人重复踩：
+ *
+ * - Eventbrite：结构其实最好（列表页内嵌 jsonld ItemList，每页 20 个完整 Event 对象，
+ *   日期/地点/票价全齐），但 **429 限速极严，且是长效封禁**：连续请求后退避 20 秒仍 429。
+ *   不适合每日自动采集。若将来要用，必须降到极低频（单城市单次）并接受随时被挡。
+ * - 活动行 huodongxing：列表页有真实中文 AI 活动（实测「大模型安全与备案政策宣讲会」），
+ *   但**列表页不含日期字段**，日期只在详情页 —— 要 N 条就 N 次详情请求，成本高且易被封。
+ *   TODO：若要做，先找是否有带日期的接口，否则不做。
+ * - OpenAI 官网活动页：403（Cloudflare 拦截无头请求）。
+ * - Kaggle /api/v1/competitions/list：401，需要账号认证 —— 与项目「不注册账号」的边界冲突。
+ * - MLH：302 重定向到一个已失效的页面。
+ * - dev.events：有干净的 iCal，但实测 AI 相关度只有 2/30，价值太低不值得占一层。
+ * - mlcontests.com：RSS 里只有 1 条博客，根本不是活动清单。
+ * - HuggingFace /api/events：401。
+ * - meetup.com GraphQL：`keywordSearch` 字段已不存在（schema 变更），旧查询直接报错。
+ * ═══════════════════════════════════════════════════════════════════ */
 
 
 /* 活动类型与地区：从标题 / 主题 / 场地推断，前端用来做细分筛选 */
@@ -1435,6 +1630,11 @@ function eventKind(e) {
   // 名字起得再随意（"Build With AI: Basics" / "Life After Code"）也仍然是 hackathon 性质。
   // 这个兜底只对 Devpost 生效，别的源不乱套。
   if (e.source === 'Devpost') return 'hackathon';
+  /* Devfolio 同理：它的 API 里 type 字段固定是 'HACKATHON'，整个站就是黑客松平台。
+   * 但名字常常不带 hackathon（"Unbuilt" / "AgentVerse" / "Cognition 2026"），
+   * 主题又常是 "No Restrictions"，上面几条规则都命中不了 —— 实测 13 条里 7 条落 other。
+   * 那是**源性质**决定的，不是推断失灵，所以给它跟 Devpost 同样的兜底。 */
+  if (e.source === 'Devfolio') return 'hackathon';
   return 'other';
 }
 
@@ -1486,6 +1686,13 @@ function eventRegion(e) {
   if (byCountry) return byCountry;
 
   if (e.geoCityFallback) return e.geoCityFallback;
+
+  // Devfolio 给的是英文国名（"India" / "Germany"），不是 ISO 两位码，
+  // 单独走一次国名正则，比把国名塞进 loc 再靠城市名命中更靠谱
+  if (e.countryName) {
+    const byName = EV_COUNTRY_NAME_RULES.find(([, re]) => re.test(e.countryName));
+    if (byName) return byName[0];
+  }
 
   const hay = `${loc} ${e.org || ''} ${e.title || ''}`;
   for (const [code, re] of EV_REGION_RULES) {
@@ -2191,10 +2398,13 @@ async function main() {
   const T = makeTracker();
 
   // 并行拉取，每层独立记账；失败不互相拖累
-  const [devpost, aios, luma, aibijia, resources, openrouter, aaModels] = await Promise.all([
+  const [devpost, aios, luma, devfolio, aibijia, resources, openrouter, aaModels] = await Promise.all([
     T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
     T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
     T.run('luma', async () => ({ value: await fetchLuma() }), prev?.events?.filter((e) => e.source === 'Luma')),
+    // Devfolio 是补充源，只有 9 条：失败不能拖累整体，同样走 T.run 记账。
+    // 注意它没有上一版可比（首次上线），所以首跑 failed 也是合法的 —— health 里设成可选源即可。
+    T.run('devfolio', async () => ({ value: await fetchDevfolio() }), prev?.events?.filter((e) => e.source === 'Devfolio')),
     T.run('aibijia', async () => {
       const v = await fetchAibijia();
       return { value: v, valid: v.valid };
@@ -2395,6 +2605,7 @@ async function main() {
   if (hnSignals.length) addSrc('https://hn.algolia.com/api', 'community', 'Hacker News 公开讨论');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
+  if (devfolio.length) addSrc('https://api.devfolio.co/api/hackathons', 'events', 'Devfolio');
   addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
 
   const cacheDiscount = models
@@ -2404,12 +2615,23 @@ async function main() {
 
   const vendors = [...new Set(models.map((m) => m.vendor))].sort();
 
-  // 活动：状态统一由 eventStatus 按日期判定，三个来源一视同仁
-  const allEvents = foldRegions([...devpost, ...luma, ...aios].map((e) => {
+  // 活动：状态统一由 eventStatus 按日期判定，四个来源一视同仁
+  const allEvents = foldRegions([...devpost, ...luma, ...aios, ...devfolio].map((e) => {
     const row = { ...e, kind: eventKind(e), region: eventRegion(e) };
     row.status = eventStatus(row);
     return row;
   }));
+  // 限速观测点：把本次遇到的封禁次数与最长冷却写进 meta.net，随 data.json 落盘。
+  // 这个源是**有状态封禁**（实测解封要 ~3 分钟），如果哪天它把阈值调紧，
+  // 从 meta.net.blocked 抬升 + Luma 条数下降就能立刻看出是限速而不是源没数据。
+  // 放在 meta 顶层而不是塞进某一个层，因为 Devfolio 也用同一个计数器。
+  const netMeta = {
+    requests: netStat.requests,
+    blocked: netStat.blocked,
+    maxCooldownMs: netStat.maxCooldownMs,
+    lumaCities: EV_LUMA_CITIES.length,
+    lumaGeoBudgetMs: EV_LUMA_GEO_BUDGET_MS,
+  };
   const eventsOpen = allEvents.filter((e) => e.status === 'open' || e.status === 'upcoming').length;
   const eventsPast = allEvents.filter((e) => e.status === 'past').length;
   const eventsUnknown = allEvents.filter((e) => e.status === 'unknown').length;
@@ -2420,6 +2642,7 @@ async function main() {
       date: new Date().toISOString().slice(0, 10),
       brand: 'IndexAI',
       fx,
+      net: netMeta,
       collect: T.log,
       counts: {
         models: models.length,

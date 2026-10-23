@@ -36,7 +36,7 @@ export const LAYERS = {
   subsThird:     { min: 50,  warnBelow: 80,  shrink: 0.60, label: '第三方挂单' }, // 实测 209
   relays:        { min: 40,  warnBelow: 50,  shrink: 0.80, label: '中转站在册' }, // 实测 54
   relaysLive:    { min: 8,   warnBelow: 12,  shrink: 0.60, label: '中转站有价' }, // 实测 22
-  events:        { min: 243, warnBelow: 382, shrink: 0.70, label: 'AI 活动' },    // 实测 695（Devpost 192 + Luma 480 + AIOS 23）；红线取 35%，警戒 55%
+  events:        { min: 604, warnBelow: 950, shrink: 0.70, label: 'AI 活动' },    // 实测 1727（Devpost 193 + Luma 1498 + Devfolio 13 + AIOS 23）；红线 35%，警戒 55%
   news:          { min: 200, warnBelow: 800, shrink: 0.70, label: '情报归档' },   // 实测 2235
   resources:     { min: 12,  warnBelow: 16,  shrink: 0.80, label: '工具箱' },     // 实测 21
   bench:         { min: 120, warnBelow: 140, shrink: 0.75, label: '评测' },       // 实测 155
@@ -63,8 +63,8 @@ export const LAYERS = {
  *   devpost ≈ 67、luma ≈ 162、aios 维持可选。
  * 先按保守值跑，避免 collector 中途写 data.json 时误报。 */
 export const EVENT_SOURCES = {
-  devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 192；红线 35%，警戒 55%
-  luma:     { min: 168, warnBelow: 264, label: '活动源 Luma' },     // 实测 480；同上
+  devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 193；红线 35%，警戒 55%
+  luma:     { min: 524, warnBelow: 823, label: '活动源 Luma' },     // 实测 1498（含地理维度）；红线 35%，警戒 55%
   // Devfolio 只收 AI 相关的未截止场次，量小但真实（实测 9 条）。红线放到 3，防整源归零。
   devfolio: { min: 3,   warnBelow: 6,   label: '活动源 Devfolio' },
   aios:     { min: 0,   warnBelow: 0,   label: '活动源 AIOS', optional: true },
