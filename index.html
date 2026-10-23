@@ -364,7 +364,8 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .card dl{display:grid; grid-template-columns:auto 1fr; gap:5px 12px; margin:0; font-size:12px}
 .card dt{font-family:var(--mono); font-size:11.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); padding-top:3px}
 .card dd{margin:0}
-.card .foot{margin-top:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding-top:6px; border-top:var(--rule); margin-left:-17px; margin-right:-17px; padding-left:17px; padding-right:17px}
+.card .foot{margin-top:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+  padding-top:9px; border-top:var(--rule); position:relative}
 .card .foot a{font-family:var(--mono); font-size:11.5px; color:var(--dim); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
 .card .foot a:hover{color:var(--accent)}
 .mchips{display:flex; flex-wrap:wrap; gap:4px}
@@ -1374,7 +1375,7 @@ const MOTION = (() => {
               ${(o.sources && o.sources.length ? o.sources : [o.source]).slice(0, 3).map((u, i) =>
                 `<a href="${esc(u)}" target="_blank" rel="noopener">${i === 0 ? "来源" : esc(hostOf(u))} ↗</a>`).join("")}
               ${(o.entries || []).map(e => `<span class="tag">${esc(e)}</span>`).join("")}
-              <span class="tag ${o.conf === "high" ? "free" : o.conf === "low" ? "warn" : ""}" title="信源置信度">${o.conf === "high" ? "已核实" : o.conf === "low" ? "待核实" : "部分核实"}</span>
+              ${o.conf && o.conf !== "high" ? `<span class="tag ${o.conf === "low" ? "warn" : ""}" title="信源置信度">${o.conf === "low" ? "待核实" : "部分核实"}</span>` : ""}
             </div>
           </article>`).join("")}
       </div>`}`;
