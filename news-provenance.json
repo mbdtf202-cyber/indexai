@@ -1,0 +1,27 @@
+{
+ "built_at": "2026-10-23T19:47:26.983Z",
+ "sources": [
+  {
+   "kind": "live",
+   "url": "https://data.aibijia.org/news-frontline.yaml",
+   "items": 50
+  },
+  {
+   "kind": "wayback",
+   "ts": "20260817212213",
+   "url": "https://web.archive.org/web/20260817212213id_/https://data.aibijia.org/news-frontline.yaml",
+   "items": 50
+  }
+ ],
+ "stats": {
+  "n": 100,
+  "days": 11,
+  "spanDays": 73,
+  "first": "2026-08-12",
+  "last": "2026-10-24",
+  "major": 20,
+  "daily": 80,
+  "bytes": 26382,
+  "perDay": 9.1
+ }
+}

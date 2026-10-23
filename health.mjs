@@ -33,9 +33,9 @@ export const LAYERS = {
   relays:        { min: 40,  warnBelow: 50,  shrink: 0.80, label: '中转站在册', actual: 54  },
   relaysLive:    { min: 8,   warnBelow: 12,  shrink: 0.60, label: '中转站有价', actual: 22  },
   events:        { min: 40,  warnBelow: 60,  shrink: 0.70, label: 'AI 活动',   actual: 111 },
-  news:          { min: 10,  warnBelow: 15,  shrink: 0.70, label: '要闻',       actual: 49  },
+  news:          { min: 200, warnBelow: 800, shrink: 0.70, label: '情报归档',   actual: 2235 },
   resources:     { min: 12,  warnBelow: 16,  shrink: 0.80, label: '工具箱',     actual: 21  },
-  bench:         { min: 8,   warnBelow: 12,  shrink: 0.70, label: '评测',       actual: 16  },
+  bench:         { min: 120, warnBelow: 140, shrink: 0.75, label: '评测',       actual: 155 },
   signals:       { min: 8,   warnBelow: 12,  shrink: 0.70, label: '一手信号',   actual: 21  },
   aaModels:      { min: 150, warnBelow: 200, shrink: 0.70, label: 'AA 智能指数', actual: 266 },
   orApps:        { min: 10,  warnBelow: 15,  shrink: 0.60, label: 'OR 应用榜',  actual: 25  },
@@ -89,7 +89,18 @@ function semanticChecks(d) {
   const ok = rl.filter((r) => r.status === 'ok');
   if (rl.length && !ok.length) red('relays', '所有中转站探测都失败了');
 
-  // 8. 采集明细：能定位是哪一层空掉的
+  // 8. 情报：跨度塌缩比条数下降更危险——说明归档被重写而不是被追加
+  const ni = d.news;
+  if (ni && !Array.isArray(ni)) {
+    const span = Number(ni.span || 0);
+    const days = Number(ni.days || 0);
+    if (!(ni.n > 0)) red('news', '情报归档为空，情报页只剩一手信号');
+    else if (span < 30) red('news', `情报跨度只有 ${span} 天（归档应当只增不删，跨度塌缩说明被覆盖了）`);
+    else if (days < 10) issues.push({ level: 'warn', key: 'news', msg: `情报只有 ${days} 天有内容，跨度 ${span} 天，中间大量空窗` });
+    if (Number(ni.bytes || 0) > 4 * 1024 * 1024) issues.push({ level: 'warn', key: 'news', msg: `情报归档 ${(ni.bytes / 1048576).toFixed(1)}MB，超过 4MB 该收紧保留了` });
+  }
+
+  // 9. 采集明细：能定位是哪一层空掉的
   const stale = (d.meta?.collect || []).filter((c) => c.status === 'stale' || c.status === 'failed');
   if (stale.length) issues.push({ level: 'warn', key: 'collect', msg: `${stale.length} 层沿用了上一版数据：${stale.map((s) => s.layer).join(', ')}` });
 
