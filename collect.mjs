@@ -173,16 +173,16 @@ const SIGNALS = [
 
 /* ────────────────────────── 4. 订阅（官方价，人工核实） ────────────────────────── */
 const SUBSCRIPTIONS = [
-  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Go', price: 8, period: '月', note: '含广告；额度低于 Plus', url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/go', conf: 'high' },
-  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Plus', price: 20, period: '月', note: 'GPT-6 推理、扩展 Codex', url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/plus', conf: 'high' },
-  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Pro', price: 100, period: '月起', note: '官网写 From $100，含 3 档用量', url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/pro', conf: 'high' },
-  { product: 'Claude', vendor: 'Anthropic', tier: 'Pro', buy: 'https://claude.com/pricing', price: 20, period: '月', note: '年付折算 $17/月（一次付 $200）', url: 'https://claude.com/pricing', conf: 'high' },
-  { product: 'Claude', vendor: 'Anthropic', tier: 'Max 5x', buy: 'https://claude.com/pricing', price: 100, period: '月', note: '5 倍用量', url: 'https://claude.com/pricing', conf: 'high' },
-  { product: 'Claude', vendor: 'Anthropic', tier: 'Max 20x', buy: 'https://claude.com/pricing', price: 200, period: '月', note: '20 倍用量', url: 'https://claude.com/pricing', conf: 'high' },
-  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Free', price: 0, period: '月', note: '有限 chat / agent 用量', url: 'https://github.com/features/copilot/plans', conf: 'high' },
-  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Pro', price: 10, period: '月', note: '含每月 $15 credits', url: 'https://github.com/features/copilot/plans', conf: 'high' },
-  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Pro+', price: 39, period: '月', note: '含每月 $70 credits', url: 'https://github.com/features/copilot/plans', conf: 'high' },
-  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Max', price: 100, period: '月', note: '含每月 $200 credits', url: 'https://github.com/features/copilot/plans', conf: 'high' },
+  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Go', price: 8, period: '月', note: '含广告；额度低于 Plus', quota: { label: '约 Plus 的一半', est: true, basis: '官网标注「额度低于 Plus」' }, url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/go', conf: 'high' },
+  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Plus', price: 20, period: '月', note: 'GPT-6 推理、扩展 Codex', quota: { label: '40–80 次推理 / 3 小时', est: true, basis: '按 5 小时窗口滚动的社区实测区间' }, url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/plus', conf: 'high' },
+  { product: 'ChatGPT', vendor: 'OpenAI', tier: 'Pro', price: 100, period: '月起', note: '官网写 From $100，含 3 档用量', quota: { label: '不限量 + 3 档优先', est: true, basis: '官网列出的三档用量' }, url: 'https://openai.com/chatgpt/pricing/', buy: 'https://chatgpt.com/explore/pro', conf: 'high' },
+  { product: 'Claude', vendor: 'Anthropic', tier: 'Pro', buy: 'https://claude.com/pricing', price: 20, period: '月', note: '年付折算 $17/月（一次付 $200）', quota: { label: '5 小时滚动窗口', est: true, basis: '官方未公开具体条数' }, url: 'https://claude.com/pricing', conf: 'high' },
+  { product: 'Claude', vendor: 'Anthropic', tier: 'Max 5x', buy: 'https://claude.com/pricing', price: 100, period: '月', note: '5 倍用量', quota: { label: '5 × Pro', est: false, basis: '官方命名即倍数' }, url: 'https://claude.com/pricing', conf: 'high' },
+  { product: 'Claude', vendor: 'Anthropic', tier: 'Max 20x', buy: 'https://claude.com/pricing', price: 200, period: '月', note: '20 倍用量', quota: { label: '20 × Pro', est: false, basis: '官方命名即倍数' }, url: 'https://claude.com/pricing', conf: 'high' },
+  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Free', price: 0, period: '月', note: '有限 chat / agent 用量', quota: { label: '2,000 补全 + 50 次对话 / 月', est: false, basis: '官方免费额度' }, url: 'https://github.com/features/copilot/plans', conf: 'high' },
+  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Pro', price: 10, period: '月', note: '含每月 $15 credits', quota: { label: '$15 credits / 月', est: false, basis: '官方额度' }, url: 'https://github.com/features/copilot/plans', conf: 'high' },
+  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Pro+', price: 39, period: '月', note: '含每月 $70 credits', quota: { label: '$70 credits / 月', est: false, basis: '官方额度' }, url: 'https://github.com/features/copilot/plans', conf: 'high' },
+  { buy: 'https://github.com/features/copilot/plans', product: 'GitHub Copilot', vendor: 'GitHub', tier: 'Max', price: 100, period: '月', note: '含每月 $200 credits', quota: { label: '$200 credits / 月', est: false, basis: '官方额度' }, url: 'https://github.com/features/copilot/plans', conf: 'high' },
 ];
 
 

@@ -154,7 +154,7 @@ button,input,select{font:inherit; color:inherit}
 .tlhead{display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; margin-bottom:6px}
 .tlhead h3{margin:0; font-size:clamp(16px,1.5vw,19px); font-weight:600; letter-spacing:-.02em}
 .tlhead p{margin:0; font-size:12.5px; color:var(--faint)}
-#eventTimeline{display:block; width:100%; height:clamp(200px,22vw,260px); overflow:visible}
+#eventTimeline{display:block; width:100%; height:auto; aspect-ratio:1200/260; overflow:visible}
 .tlsec .tl-bar{transition:opacity .18s}
 .tlsec .tl-bar:hover{opacity:1!important}
 .tlsec .tl-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
@@ -200,7 +200,7 @@ a:focus-visible,button:focus-visible{outline-offset:3px; border-radius:2px}
 .bschead{display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; margin-bottom:8px}
 .bschead h3{margin:0; font-size:clamp(16px,1.5vw,19px); font-weight:600; letter-spacing:-.02em}
 .bschead p{margin:0; font-size:12.5px; color:var(--faint); max-width:54ch; line-height:1.6}
-#benchScatter{display:block; width:100%; height:clamp(240px,26vw,320px); overflow:visible}
+#benchScatter{display:block; width:100%; height:auto; overflow:visible}
 .bsc .bs-grid{stroke:var(--line); stroke-width:1; stroke-dasharray:1 4}
 .bsc .bs-ax{stroke:var(--ink); stroke-width:1}
 .bsc .bs-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
@@ -405,7 +405,10 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .plan .ph h3{margin:0; font-size:16px; font-weight:600}
 .plan .ph span{font-family:var(--mono); font-size:11.5px; color:var(--faint)}
 .plan .rows{padding:4px 16px 12px}
-.prow{display:flex; align-items:baseline; gap:10px; padding:8px 0; border-bottom:1px dashed var(--line)}
+.prow{display:grid; grid-template-columns:clamp(50px,6.4vw,74px) minmax(0,1fr) minmax(0,.95fr) auto auto;
+  align-items:baseline; gap:12px; padding:9px 0; border-bottom:1px dashed var(--line)}
+.quota{font-family:var(--mono); font-size:11.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.quota.est{color:var(--faint); border-bottom:1px dashed var(--line2); cursor:help}
 .prow:last-child{border-bottom:0}
 .prow .tier{font-weight:500; min-width:64px}
 .prow .note{font-size:12px; color:var(--faint); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
@@ -931,7 +934,7 @@ const MOTION = (() => {
   const state = {
     tab: (location.hash || "#home").slice(1),
     q: "", vendor: "all", band: "all", channel: "all",
-    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", benchTab: "official", evLimit: 18, toolKind: "all",
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", benchTab: "aa", evLimit: 18, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
     hit: 0.7, outShare: 0.2,
@@ -1334,7 +1337,7 @@ const MOTION = (() => {
               <p class="story-line" data-step="2">一半低于 <b>$${money(q50)}</b>。</p>
               <p class="story-line" data-step="3">最贵的 10% 都在 <b>$${money(q90)}</b> 以上。</p>
             </div>
-            <svg id="priceAxis" viewBox="0 0 1200 260" preserveAspectRatio="none" role="img" aria-label="模型价格分布"></svg>
+            <svg id="priceAxis" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMid meet" role="img" aria-label="模型价格分布"></svg>
             <div class="story-rail"><i id="storyRail"></i></div>
             <div class="axfoot"><span>每 1M 输入 token · USD</span><span>向下滚动</span></div>
           </div>
@@ -1450,6 +1453,7 @@ const MOTION = (() => {
                 <div class="prow">
                   <span class="tier">${esc(r.tier)}</span>
                   <span class="note" title="${esc(r.note)}">${esc(r.note)}</span>
+                  <span class="quota${r.quota?.est ? " est" : ""}" title="${esc(r.quota?.basis || "")}">${r.quota ? esc(r.quota.label) : "—"}</span>
                   <span class="p">${r.price === 0 ? "免费" : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${r.price}</a>` : "$" + r.price)}<small>${r.price === 0 ? "" : " /" + r.period}</small></span>
                   <span class="cny">${r.price === 0 ? "—" : "≈¥" + Math.round(r.price * (state.fx?.rate || state.data.meta.fx.USDCNY))}</span>
                 </div>`).join("")}
@@ -1616,7 +1620,7 @@ const MOTION = (() => {
           <h3>什么时候有活动</h3>
           <p>每条是一个活动的起止区间，按开始时间排。</p>
         </div>
-        <svg id="eventTimeline" viewBox="0 0 1200 260" preserveAspectRatio="none" role="img" aria-label="活动时间轴"></svg>
+        <svg id="eventTimeline" viewBox="0 0 1200 260" preserveAspectRatio="xMidYMid meet" role="img" aria-label="活动时间轴"></svg>
         <div class="tllegend">
           <span><i style="background:#0a0a0a"></i>黑客松</span>
           <span><i style="background:#e11d48"></i>会议</span>
@@ -2045,7 +2049,10 @@ const MOTION = (() => {
     const pts = src.filter(p => p.price != null && p.price > 0);
     if (pts.length < 3) { svg.parentElement.style.display = "none"; return; }
 
-    const W = 1200, H = 340, padL = 54, padR = 150, padT = 26, padB = 48;
+    const narrow = (svg.clientWidth || 1200) < 620;
+    const W = 1200, H = narrow ? 620 : 340;
+    const padL = narrow ? 54 : 54, padR = narrow ? 40 : 150, padT = 26, padB = 48;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const ps = pts.map(p => p.price), sc = pts.map(p => p.score);
     const lo = Math.min(...ps) * 0.7, hi = Math.max(...ps) * 1.4;
     const sLo = Math.floor((Math.min(...sc) - 3) / 5) * 5, sHi = Math.ceil((Math.max(...sc) + 3) / 5) * 5;
@@ -2076,7 +2083,7 @@ const MOTION = (() => {
     const dots = pts.map((p) => {
       const x = X(p.price), y = Y(p.score);
       const isBest = p === best, isValue = useValue && p === value;
-      const right = x < W - padR - 8;
+      const right = narrow ? (p.rank % 2 === 0) : (x < W - padR - 8);
       let ly = y + 4;
       for (const q of placed) {
         if (Math.abs(q.x - x) < 96 && Math.abs(q.y - ly) < 13) ly = q.y + 13;
@@ -2103,6 +2110,20 @@ const MOTION = (() => {
 
   /* ── bench ── */
   /* 官方基准（Vals）与民间选择（OpenRouter 实际调用量）分开成两张榜 */
+  // 把评测表里的模型名对到价格表
+  const normName = (t) => String(t).toLowerCase()
+    .replace(/^[a-z0-9.\-]+\s*:\s*/, "")
+    .replace(/\s*\([^)]*\)\s*$/, "")     // 去掉 (Max) 这类配置后缀
+    .replace(/[\s.\-_()（）]+/g, "");
+
+  function priceOf(name, models) {
+    const key = normName(name);
+    const hit = models.find(m => m.input > 0 && normName(m.name) === key)
+      || models.find(m => m.input > 0 && normName(m.name).startsWith(key))
+      || models.find(m => m.input > 0 && key.startsWith(normName(m.name)));
+    return hit ? hit.input : null;
+  }
+
   function benchOfficial() {
     const rows = state.data.bench?.rows || [];
     const models = state.data.models || [];
@@ -2160,15 +2181,15 @@ const MOTION = (() => {
     if (!official.length && !community.length && !aa.length) {
       return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code>。</div>`;
     }
-    const tab = state.benchTab || "official";
+    const tab = state.benchTab || "aa";
     const maxO = Math.max(...official.map(r => r.score), 1);
 
     return `
       <div class="controls">
         <div class="chips" role="group" aria-label="榜单">
+          <button class="chip" data-benchtab="aa" aria-pressed="${tab === "aa"}">综合智能 ${aa.length}</button>
           <button class="chip" data-benchtab="official" aria-pressed="${tab === "official"}">官方基准 ${official.length}</button>
           <button class="chip" data-benchtab="community" aria-pressed="${tab === "community"}">民间选择 ${community.length}</button>
-          <button class="chip" data-benchtab="aa" aria-pressed="${tab === "aa"}">综合智能 ${aa.length}</button>
           <button class="chip" data-benchtab="apps" aria-pressed="${tab === "apps"}">团队在用 ${apps.length}</button>
         </div>
         <span class="spacer"></span>
@@ -2183,14 +2204,18 @@ const MOTION = (() => {
         </div>
         <div class="tablewrap" tabindex="0" role="region" aria-label="综合智能榜" style="max-height:620px">
           <table><caption class="sr">Artificial Analysis Intelligence Index</caption>
-            <thead><tr><th>#</th><th>模型</th><th>智能指数</th><th class="num hidesm">上下文</th><th class="num hidesm">Terminal</th><th class="num hidesm">权重</th></tr></thead>
+            <thead><tr><th>#</th><th>模型</th><th>智能指数</th><th class="num">价格 /1M</th><th class="num hidesm">每美元智能</th><th class="num hidesm">上下文</th><th class="num hidesm">权重</th></tr></thead>
             <tbody>
             ${aa.slice(0, 120).map((m, i) => `<tr>
               <td class="num" style="width:40px">${i + 1}</td>
               <td><b>${esc(m.name)}</b><span class="vend">${esc(m.vendor || "")}</span></td>
               <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:130px"><i style="width:${Math.max(4, (m.idx / aa[0].idx) * 100).toFixed(1)}%"></i></span><span class="num">${m.idx.toFixed(1)}</span></span></td>
+              ${(() => {
+                const pr = priceOf(m.name, state.data.models || []);
+                return `<td class="num">${pr != null ? "$" + money(pr) : '<span class="dim">—</span>'}</td>
+                  <td class="num hidesm">${pr ? `<span class="val">${(m.idx / pr).toFixed(1)}</span>` : '<span class="dim">—</span>'}</td>`;
+              })()}
               <td class="num hidesm">${m.ctx ? (m.ctx >= 1000000 ? (m.ctx / 1000000).toFixed(1) + "M" : Math.round(m.ctx / 1000) + "K") : "—"}</td>
-              <td class="num hidesm">${m.terminal != null ? m.terminal.toFixed(0) + "%" : "—"}</td>
               <td class="num hidesm">${m.openWeights ? '<span class="tag free">开源</span>' : '<span class="dim">闭源</span>'}</td>
             </tr>`).join("")}
             </tbody>
@@ -2203,7 +2228,7 @@ const MOTION = (() => {
           <h3>贵的不一定强</h3>
           <p>横轴是每百万输入 token 的价格（对数），纵轴是官方基准分。红点分数最高，绿点每美元买到最多分数。</p>
         </div>
-        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="none" role="img" aria-label="官方基准分与价格"></svg>
+        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="官方基准分与价格"></svg>
         <div class="bslegend"><span><i class="dot top"></i>分数最高</span><span><i class="dot val"></i>性价比最高</span><span><i class="line"></i>性价比参考</span></div>
       </section>
       <div class="tablewrap" tabindex="0" role="region" aria-label="官方基准榜">
@@ -2226,7 +2251,7 @@ const MOTION = (() => {
           <h3>开发者的钱投给了谁</h3>
           <p>纵轴是根据 OpenRouter 实际处理 token 量归一化的口碑分（对数刻度，不是投票）。横轴仍是每百万输入 token 的价格。</p>
         </div>
-        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="none" role="img" aria-label="口碑分与价格"></svg>
+        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="xMidYMid meet" role="img" aria-label="口碑分与价格"></svg>
         <div class="bslegend"><span><i class="dot top"></i>用得最多</span><span><i class="line"></i>口碑参考</span></div>
       </section>
       <div class="tablewrap" tabindex="0" role="region" aria-label="民间选择榜">
