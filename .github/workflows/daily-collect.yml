@@ -64,24 +64,26 @@ jobs:
       - name: 组装发布目录
         run: |
           mkdir -p dist
-          cp index.html data.json dist/
+          # news-archive.json 是情报页的真实数据源（data.json 里只有索引），必须一起发
+          cp index.html data.json bench.json news-archive.json dist/
           for f in favicon.svg logo-preview.html directions.html _headers; do
             [ -f "$f" ] && cp "$f" dist/ || true
           done
           du -sh dist
 
-      # 新闻历史要跟着仓库走，才能逐日累积出「近一周 / 近一月 / 近一年」的跨度。
-      # data.json 不提交（每天 700 KB，一年会撑爆仓库），只上传到 Pages。
-      - name: 提交新闻历史
+      # 情报归档必须跟着仓库走：跨度是一天一天攒出来的，仓库丢了就再也补不回来
+      # （源站只给最近约 7 天）。data.json 不提交，它每天 700 KB 且随时可重建。
+      - name: 提交情报归档
         run: |
-          if [ -n "$(git status --porcelain news-history.json)" ]; then
+          touch news-archive.json
+          if [ -n "$(git status --porcelain news-archive.json news-seed.json)" ]; then
             git config user.name "indexai-bot"
             git config user.email "bot@users.noreply.github.com"
-            git add news-history.json
-            git commit -m "data: news history $(date -u +%F)"
+            git add news-archive.json news-seed.json
+            git commit -m "data: news archive $(date -u +%F)"
             git push
           else
-            echo "新闻历史无变化"
+            echo "情报归档无变化"
           fi
 
       # 先验 token 再部署：权限不对时给出可操作的报错，而不是 wrangler 的裸 10000
