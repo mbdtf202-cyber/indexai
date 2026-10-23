@@ -13,7 +13,7 @@
  */
 
 import { writeFile, readFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
 import {
@@ -878,12 +878,49 @@ async function fetchFx(prev) {
 /* ────────────────────────── 7. AI 活动 ────────────────────────── */
 /* AIOS 活动库：可选层，本地有就用、没有就跳过。
  * 以前是一个写死的绝对路径（还重复了一段 Desktop/AIOS），换机器或上 CI 必然读不到，
- * 而且读不到时没有任何提示。现在按候选顺序探测，都不在就明确说一句「跳过」。 */
+ * 而且读不到时没有任何提示。现在按候选顺序探测，都不在就明确说一句「跳过」。
+ *
+ * 实测（2026-10）：真正有那 23 条的文件是
+ *   ~/Desktop/AIOS/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json
+ * 而 ~/Desktop/AIOS/.artifacts/... 并不存在。原实现把这一条排在最前，一旦有人
+ * 补上这个浅路径就会读到错的文件；同时没有任何递归查找兜底，换个目录就静默丢整层。
+ * 现在的顺序：显式 env → 已知实证路径 → 递归 glob 取最新的一份。 */
+const AIOS_HOME = `${process.env.HOME || ''}/Desktop/AIOS`;
 const AIOS_CANDIDATES = [
   process.env.AIOS_OPPORTUNITIES,
-  `${process.env.HOME || ''}/Desktop/AIOS/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
-  `${process.env.HOME || ''}/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
+  `${AIOS_HOME}/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
+  `${AIOS_HOME}/.artifacts/production-receipts/local-current/api-opportunities.json`,
 ].filter(Boolean);
+
+/* 递归找 api-opportunities.json，取 mtime 最新的一个。
+ * 目录层级很深（.artifacts/production-receipts/local-current/…），只认浅路径迟早再翻车。 */
+function globAiosFile(root, { maxDepth = 8, maxDirs = 400 } = {}) {
+  if (!root || !existsSync(root)) return null;
+  const queue = [{ dir: root, depth: 0 }];
+  let visited = 0;
+  const hits = [];
+  const SKIP = new Set(['node_modules', '.git', 'Corpus', 'caches', 'Cache']);
+  while (queue.length && visited < maxDirs) {
+    const { dir, depth } = queue.shift();
+    visited += 1;
+    let ents;
+    try { ents = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const d of ents) {
+      const p = `${dir}/${d.name}`;
+      if (d.isDirectory()) {
+        if (depth + 1 > maxDepth || SKIP.has(d.name)) continue;
+        queue.push({ dir: p, depth: depth + 1 });
+      } else if (d.name === 'api-opportunities.json') {
+        try { hits.push({ p, m: statSync(p).mtimeMs }); } catch { /* 读不到就算了 */ }
+      }
+    }
+    // 一旦在较浅的层级里找到，就不再往深处挖
+    if (hits.length && depth >= 2) break;
+  }
+  if (!hits.length) return null;
+  hits.sort((a, b) => b.m - a.m);
+  return hits[0].p;
+}
 
 function resolveAiosFile() {
   for (const p of AIOS_CANDIDATES) {
@@ -891,7 +928,7 @@ function resolveAiosFile() {
       if (existsSync(p)) return p;
     } catch { /* 下一个 */ }
   }
-  return null;
+  return globAiosFile(AIOS_HOME);
 }
 const AIOS_FILE = resolveAiosFile();
 if (!AIOS_FILE) {
@@ -927,9 +964,18 @@ function parseDevpostDates(s) {
   const tailYear = tail ? Number(tail[1]) : null;
 
   // "Oct 05 - 27, 2026"：只有孤立的日号，结束日继承起点的月
+  // 单日活动（"Oct 23, 2026"）走同一个分支但**没有** `-`，旧实现拿不到 bare 就直接
+  // return null，把 37 条源里明明带日期的活动判成「未知」。实测 Devpost 192 条里
+  // 单日格式就有 37 条，占 19%，一批真实活动因此从 open/upcoming 里消失。
   if (parts.length === 1) {
     const bare = str.match(/-\s*(\d{1,2})(?:,\s*(\d{4}))?\s*$/);
-    if (!bare) return { start: null, end: null };
+    if (!bare) {
+      // 单日活动：start = end = 当天
+      const y = parts[0].year ?? tailYear;
+      if (y == null) return { start: null, end: null };
+      const day = iso(y, parts[0].mo, parts[0].day);
+      return { start: day, end: day };
+    }
     const y = Number(bare[2]) || parts[0].year || tailYear;
     if (y == null) return { start: null, end: null };
     const a = parts[0];
@@ -952,21 +998,61 @@ function parseDevpostDates(s) {
   return { start: iso(y1, a.mo, a.day), end: iso(y2 ?? y1, b.mo, b.day) };
 }
 
+/* Devpost：**必须按 status 分组全翻**。
+ * 实测 2026-10-24：
+ *   status[]=open     meta.total_count=59   每页被服务器压到 9 条  → 需 7 页
+ *   status[]=upcoming meta.total_count=133  每页 9 条              → 需 15 页
+ * 旧实现只拉 open、且只翻 5 页，实收 45 条，另外 133 个未开始的活动一条没进。
+ * 现在按 EV_DEVPOST_STATUS 逐个 status 翻到 entries 为空或收满 total_count，
+ * 页上限 EV_DEVPOST_MAX_PAGES 兜底防失控（服务器分页行为变了也不会无限翻）。 */
+const EV_DEVPOST_STATUS = ['open', 'upcoming'];
+const EV_DEVPOST_MAX_PAGES = 40;
+
+async function devpostPage(status, page, attempt = 0) {
+  const url = `https://devpost.com/api/hackathons?status[]=${status}&limit=24&page=${page}`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } catch (e) {
+    // 翻到深页偶发 5xx/超时，退避重试一次，别把整页数据丢掉
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      return devpostPage(status, page, attempt + 1);
+    }
+    throw e;
+  }
+}
+
 async function fetchDevpost() {
   const all = [];
-  for (const page of [1, 2, 3, 4, 5]) {
-    try {
-      const res = await fetch(`https://devpost.com/api/hackathons?status[]=open&limit=24&page=${page}`, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-      if (!res.ok) break;
-      const j = await res.json();
-      const list = j.hackathons || [];
+  const stats = {};
+  for (const status of EV_DEVPOST_STATUS) {
+    let total = null;
+    let got = 0;
+    for (let page = 1; page <= EV_DEVPOST_MAX_PAGES; page += 1) {
+      let j;
+      try {
+        j = await devpostPage(status, page);
+      } catch (e) {
+        console.warn(`[collect] devpost ${status} p${page} 放弃：${e.message}`);
+        break;
+      }
+      if (total == null && Number.isFinite(j?.meta?.total_count)) total = Number(j.meta.total_count);
+      const list = j?.hackathons || [];
       if (!list.length) break;
       all.push(...list);
-    } catch { break; }
+      got += list.length;
+      // 收满 total_count 就停；total 缺失时靠 entries 为空自然结束
+      if (total != null && got >= total) break;
+    }
+    stats[status] = { total, got };
   }
+  console.log(`[collect] devpost 分状态：${Object.entries(stats).map(([k, v]) => `${k} ${v.got}/${v.total ?? '?'}`).join(' · ')}`);
+
   const seen = new Set();
   return all
-    .filter((h) => { if (seen.has(h.id)) return false; seen.add(h.id); return true; })
+    .filter((h) => { if (!h?.id || seen.has(h.id)) return false; seen.add(h.id); return true; })
     .map((h) => {
       const d = parseDevpostDates(h.submission_period_dates);
       const row = {
@@ -977,40 +1063,147 @@ async function fetchDevpost() {
         regs: h.registrations_count || 0,
         themes: (h.themes || []).map((t) => t.name), source: 'Devpost',
       };
+      // 摘要：源里没有正文字段，用「主题 + 奖池 + 报名数」拼一条可读的一句话，前端只展示一行
+      row.summary = devpostSummary(row);
       row.status = eventStatus(row);   // 按日期判，不再一律 open
       return row;
     });
 }
 
-/* Luma 公开发现流：按 AI 关键词过滤，补 Devpost 覆盖不到的 meetup / 社区场 */
+/* Devpost 的 API 不返回描述正文，能代表“这场活动是什么”的只有 themes / prize / regs。
+ * 拼成一句话，长度控制在 280 字符内，跟 Luma 的 summary 字段同形态。 */
+function devpostSummary(row) {
+  const bits = [];
+  if (row.regs) bits.push(`${row.regs.toLocaleString('en-US')} 人已报名`);
+  if (row.prize) bits.push(`奖池 ${row.prize}`);
+  const th = (row.themes || []).filter(Boolean).slice(0, 4);
+  if (th.length) bits.push(th.join(' / '));
+  const s = bits.join(' · ').replace(/\s+/g, ' ').trim();
+  return s ? s.slice(0, 280) : null;
+}
+
+/* Luma 公开发现流：单 query 上限 50 且 has_more 恒为 false，**不是数据只有 50 条，是查询被截断**。
+ * 实测 2026-10-24：单个 query 返回 50 条 has_more:false；多关键词并集按 api_id 去重 600+。
+ * 旧实现只查 query=AI → 只拿到 50 条里过原始正则的那 43 条，占真实量的 1/10。
+ * 现在并发查 EV_LUMA_QUERIES，按 api_id 去重。
+ *
+ * 另外实测：带空格/中文的 query 会偶发 HTTP 500（LLM、大模型、Machine Learning 都中过），
+ * 重试一次即可拿到 50 条 —— 这是源端抖动，不是查询无效，所以必须重试而不是当空结果收下。 */
+const EV_LUMA_QUERIES = [
+  'AI', 'LLM', 'Agent', 'Agentic', 'Machine Learning', 'Deep Learning', 'Neural Network',
+  'OpenAI', 'GPT', 'ChatGPT', 'Claude', 'Anthropic', 'Gemini', 'Copilot', 'Mistral', 'Llama',
+  'Stable Diffusion', 'Generative AI', 'RAG', 'AI Startup', 'AI Meetup', 'AI Summit',
+  'AI Workshop', 'AI Hackathon', 'AI Tools', 'AI Agents',
+  '大模型', '智能体', '人工智能', '机器学习',
+];
+const EV_LUMA_CONCURRENCY = 8;
+
+async function lumaQuery(q, attempt = 0) {
+  const url = `https://api.lu.ma/discover/get-paginated-events?limit=50&query=${encodeURIComponent(q)}`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = await res.json();
+    return j.entries || [];
+  } catch (e) {
+    if (attempt < 2) {
+      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
+      return lumaQuery(q, attempt + 1);
+    }
+    console.warn(`[collect] luma query "${q}" 放弃：${e.message}`);
+    return [];
+  }
+}
+
 async function fetchLuma() {
   try {
-    const res = await fetch('https://api.lu.ma/discover/get-paginated-events?limit=50&query=AI', {
-      headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' },
-    });
-    if (!res.ok) return [];
-    const j = await res.json();
-    const re = /(\bAI\b|LLM|GPT|Claude|Gemini|agent|模型|人工智能|machine learning|大模型|智能体)/i;
+    const byId = new Map();
+    let failedQueries = 0;
+    let cursor = 0;
+
+    // 小并发池：一口气发 30 个请求容易被源端 5xx，8 路足够快也不会自我限流
+    const worker = async () => {
+      while (cursor < EV_LUMA_QUERIES.length) {
+        const q = EV_LUMA_QUERIES[cursor++];
+        const entries = await lumaQuery(q);
+        if (!entries.length) failedQueries += 1;
+        for (const entry of entries) {
+          const ev = entry?.event || entry;
+          const id = ev?.api_id;
+          if (!id || !ev?.url || byId.has(id)) continue;
+          byId.set(id, ev);
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(EV_LUMA_CONCURRENCY, EV_LUMA_QUERIES.length) }, worker));
+
+    // 关键词本身已经是 AI 相关，这里只做一次轻过滤把明显无关的挡掉：命中任一 AI 词即收。
+    //
+    // 实测复盘（2026-10-24，并集 1099 条）：旧正则漏掉 570 条，其中真实 AI 活动约 52 条，
+    // 最直接的两个 bug：
+    //   1) `\bAI\b` 匹配不到 `OpenAI` —— `N` 到 `A` 之间不是词边界。而 OpenAI Student
+    //      Collective / OpenAI DevDay / OpenAI Forum 是大批量真实活动，一个词表漏一项就是几十条。
+    //   2) 厂商名、模型名、AI 工程语义（devday / devfest / vibe coding / inference / eval）全不在词表。
+    //
+    // 另一条实测结论：**calendar 名在这批数据里全是空的**（454 条里 org 有值的 0 条），
+    // 所以「用主办方兜底识别」在当前源上不成立；识别只能靠 title + 地址。
+    // 泛词（machine / human / club / brunch / deep alone）一律不进词表 ——
+    // "Machine Cinema" / "Paramount Machine Tour" / "Deep Chats" / "Sunday Brunch" 是纯噪音，
+    // 被筛掉是对的。宁可少收，不要污染。
+    const re = new RegExp([
+      // 通用 AI 词
+      '\\bAI\\b', '\\bA\\.I\\.', '\\bLLMs?\\b', '\\bGPT-?\\d?', '\\bChatGPT\\b', '\\bClaude\\b',
+      '\\bGemini\\b', '\\bCopilot\\b', '\\bLlama\\b', '\\bLLaMA\\b', '\\bMistral\\b', '\\bGemma\\b',
+      '\\bSora\\b', '\\bQwen\\b', '\\bKimi\\b', '\\bDeepSeek\\b', '\\bMidjourney\\b', '\\bRunway\\b',
+      // 厂商 / 平台
+      '\\bOpenAI\\b', '\\bAnthropic\\b', '\\bDeepMind\\b', 'Hugging ?Face', '\\bCohere\\b',
+      '\\bPerplexity\\b', '\\bStability AI\\b', '\\bNvidia\\b', '\\bNVIDIA\\b',
+      // 中文
+      '模型', '人工智能', '机器学习', '大模型', '智能体', '通义', '豆包', '文心', '生成式',
+      // 英文 ML 语义
+      'machine learning', 'deep learning', 'neural\\s?(?:net|network)', 'generative',
+      'stable diffusion', '\\bdiffusion\\b', '\\bRAG\\b', '\\bagentic\\b', '\\bAI agents?\\b',
+      '\\binference\\b', '\\bfine-?tun', '\\bprompt(?:ing|s)?\\b', '\\bvector (?:db|database)\\b',
+      '\\bembeddings?\\b', '\\bLLM\\b', '\\btransformer model',
+      // 活动形态（AI 场次常用的命名）
+      'hackathon', '黑客松', 'ハッカソン', 'ハック', '\\bdevday\\b', '\\bdev ?day\\b', '\\bdevfest\\b',
+      '\\bhacksprint\\b', '\\bhack ?sprint\\b', '\\bbuild night\\b', '\\bvibe cod',
+      // 注意：单独的 eval / showcase / agents 太宽（"Showcase" 是什么展都会用的词），
+      // 只在跟 AI 词同现时才有意义，所以这里都收窄成组合形态
+      '\\bmodel eval', '\\bAI showcase',
+      // 多语言 AI 词根（日/意/西/德/法）
+      '生成AI', 'AI 活用', 'intelligen\\w*', 'artificiali', 'inteligencia', '\\bIA\\b', '\\bKI\\b',
+      'künstliche', '\\bIA génér', '\\bML\\b',
+    ].join('|'), 'i');
     const out = [];
-    const seen = new Set();
-    for (const entry of j.entries || []) {
-      const ev = entry.event || entry;
+    for (const ev of byId.values()) {
       const name = ev.name || '';
-      const desc = String(ev.description_mirror || ev.description || '');
-      if (!re.test(`${name} ${desc}`)) continue;
-      if (!ev.url || seen.has(ev.api_id)) continue;
-      seen.add(ev.api_id);
+      const cal = ev.calendar?.name || '';
+      const addressText = [ev.geo_address_info?.city, ev.geo_address_info?.country, ev.geo_address_info?.address]
+        .filter(Boolean).join(' ');
+      // calendar 名照旧参与匹配（现在为空，但源一旦补上就能自动生效）
+      const hay = `${name} ${cal} ${addressText}`;
+      if (!re.test(hay)) continue;
       const start = String(ev.start_at || '').slice(0, 10);
+      const geo = ev.geo_address_info || {};
       const row = {
         id: `luma-${ev.api_id}`, title: name, url: `https://lu.ma/${ev.url}`,
         dates: start, start, end: String(ev.end_at || '').slice(0, 10),
-        location: ev.location_type === 'online' ? '线上' : (ev.geo_address_info?.city || '线下'),
+        // 城市 + 国家都留着：eventRegion 要按国家判，只存城市名会让东京/首尔的场次落 other
+        location: ev.location_type === 'online'
+          ? '线上'
+          : [geo.city || geo.region, geo.country].filter(Boolean).join(', ') || '线下',
         org: ev.calendar?.name || 'Luma', prize: null, regs: ev.guest_count || 0,
         themes: [], source: 'Luma',
       };
+      // 发现流条目**不含 description/summary 字段**（2026-10-24 实测：event 对象里
+      // 没有 description、description_mirror，/event/get 详情接口对发现流的 api_id 返回 400）。
+      // 所以没有正文可截，summary 置 null，前端遇到 null 就不渲染那一行，别造假数据。
+      row.summary = null;
       row.status = eventStatus(row);   // 按日期判
       out.push(row);
     }
+    console.log(`[collect] luma ${EV_LUMA_QUERIES.length} 个关键词 → 去重 ${byId.size} 条 → AI 过滤后 ${out.length} 条${failedQueries ? `（${failedQueries} 个查询无结果）` : ''}`);
     return out;
   } catch (e) {
     console.error(`[collect] luma 失败：${e.message}`);
@@ -1038,27 +1231,112 @@ function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
   return 'open';
 }
 
+/* 活动类型：从标题 / 主题 / 场地 / 主办推断。
+ * 规则按「越具体越先判」排，先命中先归类；都不命中才落 other（兜底，不追求 0）。
+ *
+ * 实测复盘（2026-10-24，620 条）：旧逻辑把 126 个 Devpost 活动打成 other，占 20%，
+ * 原因是 Devpost 的活动名不用 hackathon 这个字，而是 Hacks / HackSprint / -Thon /
+ * Datathon / Databowl / Design Jam…，主题里又写着 "Machine Learning/AI"。
+ * 这里补上这些真实写法（都是线上数据里实际出现过的后缀，不是猜的）。 */
 function eventKind(e) {
-  const b = `${e.title || ''} ${(e.themes || []).join(' ')} ${e.dates || ''}`;
-  if (/hackathon|hack\b|黑客松|challenge|jam|competition|竞赛|大赛|hack ?day/i.test(b)) return 'hackathon';
-  if (/summit|conference|大会|峰会|forum|expo|展会|convention|symposium/i.test(b)) return 'conference';
-  if (/film festival|award|prize|评选|awards/i.test(b)) return 'award';
-  if (/workshop|工作坊|training|tutorial|bootcamp|课程|讲座|seminar/i.test(b)) return 'workshop';
-  if (/meetup|聚会|community|salon|drinks|networking|night|party|talk|session|panel|forum/i.test(b)) return 'meetup';
+  const b = `${e.title || ''} ${(e.themes || []).join(' ')} ${e.dates || ''} ${e.org || ''} ${e.kindHint || ''}`;
+
+  // 竞赛 / 黑客松：hack day、hackweek、-thon、datathon、data bowl、jam、挑战赛都算
+  // 注意 "-thon" 要写成带连字符或词尾，否则会误吃 marathon/marathon-like 的词
+  if (/hackathon|hack ?day|hackweek|hack ?week|hacks?\b|hacksprint|hack ?sprint|黑客松|challenge|datathon|data ?bowl|\bjam\b|competition|contest|竞赛|大赛|挑战赛|kaggle|sprint|\bthon\b|-thon\b|\bchip\b hack/i.test(b)) return 'hackathon';
+  // 大展会 / 峰会 / 大会
+  if (/summit|conference|convention|symposium|大会|峰会|论坛|forum|expo|展会|博览|world congress|tech week|conference week|con\b/i.test(b)) return 'conference';
+  // 奖项 / 评选
+  if (/award|prize|评选|颁奖|film festival/i.test(b)) return 'award';
+  // 工作坊 / 课程 / 训练营
+  if (/workshop|工作坊|training|tutorial|bootcamp|训练营|课程|讲座|seminar|masterclass|course|lesson|lab session|study group|paper club|reading group|class\b/i.test(b)) return 'workshop';
+  // 演示日 / 路演 / 展会型
+  if (/demo ?day|roadshow|路演|showcase|pitch ?day|pitch night|launch day|exhibition|开放日|open day|design jam/i.test(b)) return 'demo';
+  // 聚会 / 社区场 / networking
+  if (/meetup|聚会|community|salon|drinks|networking|night|party|talk|session|panel|roundtable|dinner|coffee|brunch|happy hour|gathering|沙龙|圆桌/i.test(b)) return 'meetup';
   // Luma 以社区活动为主，没命中关键词的按 meetup 归
   if (e.source === 'Luma') return 'meetup';
+  // Devpost 上的活动几乎都是提交型开发活动：有提交期、有奖池、有报名数，
+  // 名字起得再随意（"Build With AI: Basics" / "Life After Code"）也仍然是 hackathon 性质。
+  // 这个兜底只对 Devpost 生效，别的源不乱套。
+  if (e.source === 'Devpost') return 'hackathon';
   return 'other';
 }
 
+/* 地区：location + org + 标题联合判断。
+ * 旧实现只看 location，而 Luma 的 location 之前只存了城市名（不带国家），
+ * Devpost 常常只给学校名（"University of Florida"），结果大量真实地区被吞成 other。
+ *
+ * 实测复盘（2026-10-24）：other 140 条里 80 条是 Devpost 的**校园/场馆名**，
+ * 名字里没有国家但校名本身就说明国家（McMaster=加拿大、NC State=美国）。
+ * 所以这里除了城市/国家，还认大学与州的缩写 —— 都是线上数据里实际出现过的。
+ * 仍然保留 other 兜底：Luma 有 44 条 geo 完全空着（location 只有「线下」），
+ * 那是源缺数据，不猜。 */
+const EV_REGION_RULES = [
+  // 中文区（含港澳台）
+  ['cn', /中国|上海|北京|深圳|杭州|广州|成都|南京|武汉|西安|苏州|厦门|重庆|天津|香港|澳门|台北|台灣|台湾|\bChina\b|Shanghai|Beijing|Shenzhen|Hangzhou|Guangzhou|Chengdu|Nanjing|\bWuhan\b|\bXiamen\b|Suzhou|Chongqing|Tianjin|Hong ?Kong|Macau|Macao|Taipei|Taiwan/i],
+  ['jp', /日本|东京|東京|大阪|京都|名古屋|福冈|札幌|横滨|\bJapan\b|Tokyo|Shibuya|Chiyoda|Minato|Meguro|Osaka|Kyoto|Nagoya|Fukuoka|Sapporo|Yokohama/i],
+  ['kr', /韩国|韓國|首尔|首爾|서울|부산|Seoul|Korea|Busan/i],
+  ['sg', /新加坡|Singapore|Singapur/i],
+  ['in', /印度|班加罗尔|孟买|新德里|海得拉巴|浦那|金奈|科钦|\bIndia\b|Bangalore|Bengaluru|Mumbai|New Delhi|Delhi|Hyderabad|Pune|Chennai|Kochi|Coimbatore|Tamil ?Nadu|ISLAMABAD|Pakistan/i],
+  ['ae', /迪拜|杜拜|阿布扎比|阿聯酋|阿联酋|\bDubai\b|Abu Dhabi|\bUAE\b|United Arab Emirates/i],
+  ['uk', /英国|英國|伦敦|倫敦|曼彻斯特|爱丁堡|牛津|剑桥|\bUK\b|\bU\.K\.|United Kingdom|England|London|Manchester|Edinburgh|Cambridge|Oxford|Bristol|Glasgow/i],
+  // 欧洲（含实测出现的小国：匈牙利/罗马尼亚/保加利亚/卢森堡/土耳其）
+  ['eu', /欧洲|歐盟|德国|法国|荷兰|西班牙|意大利|葡萄牙|瑞典|芬兰|丹麦|挪威|瑞士|波兰|捷克|奥地利|比利时|爱尔兰|匈牙利|罗马尼亚|保加利亚|卢森堡|土耳其|柏林|巴黎|阿姆斯特丹|慕尼黑|巴塞罗那|米兰|斯德哥尔摩|赫尔辛基|苏黎世|维也纳|布达佩斯|布加勒斯特|索菲亚|Europe|Germany|Berlin|Munich|France|Paris|Netherlands|Amsterdam|Spain|Barcelona|Madrid|Italy|Milan|Portugal|Lisbon|Sweden|Stockholm|Finland|Helsinki|Turku|Denmark|Copenhagen|Norway|Oslo|Switzerland|Zurich|Poland|Warsaw|Czech|Prague|Austria|Vienna|Belgium|Brussels|Ireland|Dublin|Hungary|Budapest|Romania|Bucure[sș]ti|Bulgaria|Sofia|Luxembourg|T[uü]rkiye|Turkey|Istanbul|Volkshochschule/i],
+  ['ca', /加拿大|多伦多|溫哥華|温哥华|蒙特利尔|渥太华|滑铁卢|卡尔加里|温莎|\bCanada\b|Toronto|Vancouver|Montreal|Ottawa|Waterloo|Calgary|Windsor|Manitoba|McMaster|Sheridan|Hazel McCallion|Bayview Yards/i],
+  ['au', /澳大利亚|澳洲|悉尼|墨爾本|墨尔本|布里斯班|珀斯|\bAustralia\b|Sydney|Melbourne|Brisbane|Perth|Wellington|New Zealand|Auckland/i],
+  // 美国：城市 + 州名/缩写 + 实测出现的高校与园区
+  ['us', /美国|美國|纽约|紐約|旧金山|舊金山|西雅图|西雅圖|硅谷|洛杉矶|芝加哥|奥斯汀|波士顿|圣地亚哥|华盛顿|迈阿密|丹佛|亚特兰大|匹兹堡|费城|休斯顿|达拉斯|凤凰城|波特兰|纳什维尔|夏洛特|底特律|辛辛那提|坦帕|奥兰多|拉斯维加斯|罗利|安娜堡|盖恩斯维尔|沃斯堡|明尼阿波利斯|圣路易斯|堪萨斯城|盐湖城|圣安东尼奥|哥伦布|印第安纳波利斯|密尔沃基|布法罗|罗切斯特|纽黑文|纽瓦克|泽西城|长滩|奥克兰|萨克拉门托|弗雷斯诺|图森|阿尔伯克基|俄克拉荷马城|塔尔萨|孟菲斯|新奥尔良|伯明翰|杰克逊维尔|塔拉哈西|诺克斯维尔|路易斯维尔|列克星敦|代顿|托莱多|阿克伦|兰辛|麦迪逊|林肯|奥马哈|得梅因|普罗维登斯|哈特福德|波特兰缅因|\bUS\b|\bUSA\b|United States|New York|San Francisco|San Jose|Seattle|Silicon Valley|Los Angeles|Chicago|Austin|Boston|San Diego|Washington|Miami|Denver|Atlanta|Pittsburgh|Philadelphia|Houston|Dallas|Phoenix|Portland|Nashville|Charlotte|Detroit|Cincinnati|Tampa|Orlando|Las Vegas|Raleigh|Ann Arbor|Gainesville|Fort Worth|Arlington|Plano|Irving|Frisco|Minneapolis|St\.? Louis|Kansas City|Salt Lake|San Antonio|Columbus|Indianapolis|Milwaukee|Buffalo|Rochester|New Haven|Newark|Jersey City|Long Beach|Oakland|Sacramento|Fresno|Tucson|Albuquerque|Oklahoma City|Tulsa|Memphis|New Orleans|Birmingham|Jacksonville|Tallahassee|Knoxville|Louisville|Lexington|Dayton|Toledo|Akron|Lansing|Madison|Lincoln|Omaha|Des Moines|Providence|Hartford|Stanford|Berkeley|Cal Hacks|MIT|Harvard|CMU|Cornell|Princeton|Yale|Columbia University|NYU|UCLA|UC Berkeley|UC Riverside|UC San Diego|University of California|UCF|UGA|UNC|NC State|Penn State|Pennovation|Purdue|Georgia Tech|Michigan State|Central Michigan|MSU|Ohio State|Rutgers|Columbia|Northwestern|Illinois|Texas A&M|Texas A＆M|A&M|UT Dallas|UT Austin|University of Florida|Florida State|Virginia Tech|West Virginia|WPI|RPI|SJSU|San Jose State|Cal Poly|Arizona State|ASU|Embry-Riddle|Kent State|Binghamton|Towson|Lehman|GSU|Georgia State|Baylor|Rice University|Duke|Vanderbilt|Clemson|Auburn|Alabama|Oklahoma|Kansas|Nebraska|Iowa|Minnesota|Wisconsin|Indiana|Missouri|Tennessee|Kentucky|Arkansas|Mississippi|Louisiana|Colorado|Utah|Nevada|Oregon|Idaho|Montana|Wyoming|Alaska|Hawaii|\bNYC\b|New York City/i],
+  ['latam', /巴西|墨西哥|阿根廷|智利|哥伦比亚|秘鲁|巴拉圭|乌拉圭|Brazil|Brasil|S[aã]o Paulo|Rio|Mexico|M[eé]xico|\bCDMX\b|Guadalajara|Argentina|Buenos Aires|Chile|Santiago|Colombia|Bogot[aá]|Peru|Lima|Paraguay|Asunci[oó]n|Uruguay|Montevideo/i],
+  ['africa', /非洲|尼日利亚|肯尼亚|南非|埃及|乌干达|加纳|摩洛哥|突尼斯|坦桑尼亚|Africa|Nigeria|Lagos|Kenya|Nairobi|South Africa|Cape Town|Johannesburg|Egypt|Cairo|Uganda|Kampala|Ghana|Accra|Morocco|Tunisia|Tunis|Tanzania/i],
+  ['middle-east', /中东|中東|沙特|卡塔尔|以色列|约旦|黎巴嫩|\bIsrael\b|Tel Aviv|Jerusalem|Saudi|Riyadh|Qatar|Doha|Jordan|Amman|Lebanon|Beirut/i],
+  // 东南亚/南亚剩余国家
+  ['asia', /菲律宾|印度尼西亚|印尼|越南|泰国|马来西亚|斯里兰卡|尼泊尔|孟加拉|柬埔寨|缅甸|亚美尼亚|Philippines|Manila|Indonesia|Jakarta|Vietnam|Hanoi|Ho Chi Minh|Thailand|Bangkok|Malaysia|Kuala Lumpur|Sri Lanka|Colombo|Nepal|Kathmandu|Bangladesh|Dhaka|Cambodia|Myanmar|Armenia|Yerevan/i],
+];
+
 function eventRegion(e) {
   const loc = String(e.location || '');
+  // 线上优先：但是「线上 + 线下」混合场次（Luma 常见）按线下判，因为地点更有信息量
+  const onlineOnly = /^(线上|online|remote|virtual|anywhere)$/i.test(loc.trim());
+  if (onlineOnly) return 'online';
+
+  const hay = `${loc} ${e.org || ''} ${e.title || ''}`;
+  for (const [code, re] of EV_REGION_RULES) {
+    if (re.test(hay)) return code;
+  }
+  // 没有可识别地区，但源明确说是线上 → online；否则 other
   if (/线上|online|remote|virtual|anywhere/i.test(loc)) return 'online';
-  if (/中国|上海|北京|深圳|杭州|广州|成都|China|Shanghai|Beijing|Shenzhen|Hangzhou/i.test(loc)) return 'cn';
-  if (/日本|东京|Tokyo|Shibuya|Chiyoda|Osaka|Japan/i.test(loc)) return 'jp';
-  if (/美国|纽约|旧金山|西雅图|US\b|United States|New York|San Francisco|Seattle|Austin|Boston|California/i.test(loc)) return 'us';
-  if (/英国|伦敦|欧洲|Berlin|London|Paris|Amsterdam|Europe|Germany/i.test(loc)) return 'eu';
-  if (/新加坡|Singapore|印度|India|Bangalore|Dubai|UAE/i.test(loc)) return 'asia';
   return 'other';
+}
+
+/* 地区归并：值太碎就没法当筛选维度用。
+ * 实测问题（2026-10-24）：`ae`（阿联酋）只有 1 条、`kr`（韩国）2 条，
+ * 前端按实际数据生成筛选按钮时会列出一堆点开只有 1 条的空按钮。
+ * 原则：**国家**值条数 < EV_REGION_MIN 就并入所属大区，原始值留在 regionRaw 里备查。
+ * 大区值（asia / eu / latam / middle-east / africa / online / other）不参与归并。
+ * 阈值不写死在别处：条数变化时自动生效，不需要再改代码。 */
+const EV_REGION_MIN = 5;
+// 小国家值并到哪个大区（先查这张表，查不到就按 fallback 再查，最后落 other）
+const EV_REGION_FOLD = { ae: 'middle-east', kr: 'asia' };
+const EV_REGION_FOLD_FALLBACK = {
+  ae: 'middle-east', kr: 'asia', sg: 'asia', jp: 'asia', cn: 'asia', in: 'asia',
+  uk: 'eu', ca: 'latam', au: 'asia', africa: 'africa',
+};
+const EV_REGION_REGIONS = new Set(['online', 'other', 'asia', 'eu', 'latam', 'middle-east', 'africa']);
+
+function foldRegions(events) {
+  const count = events.reduce((a, e) => { a[e.region] = (a[e.region] || 0) + 1; return a; }, {});
+  const fold = { ...EV_REGION_FOLD };
+  for (const [code, n] of Object.entries(count)) {
+    if (EV_REGION_REGIONS.has(code)) continue;             // 大区本身不动
+    if (n >= EV_REGION_MIN) continue;                       // 够量就保留独立值
+    if (fold[code] == null) fold[code] = EV_REGION_FOLD_FALLBACK[code] || 'other';
+  }
+  const applied = Object.entries(fold).filter(([from]) => count[from] != null && count[from] < EV_REGION_MIN);
+  if (applied.length) {
+    console.log(`[collect] region 归并（<${EV_REGION_MIN} 条并入大区）：${applied.map(([k, v]) => `${k}(${count[k]})→${v}`).join(' · ')}`);
+  }
+  return events.map((e) => (fold[e.region] ? { ...e, region: fold[e.region], regionRaw: e.region } : e));
 }
 
 /* Aibijia 公开数据：第三方挂单（带真实商品链接）+ App Store 各国订阅价 */
@@ -1314,6 +1592,11 @@ async function fetchAios() {
         org: o.organizerName || '', prize: o.priceLabel || null, regs: 0,
         themes: o.topics || [], source: 'AIOS',
         worth: o.worthScore ?? null,
+        // AIOS 自带一句话摘要（其余两源都没有），直接用；detail 给前端做更长的说明
+        summary: (o.summary || o.recommendationReason || '').slice(0, 280) || null,
+        detail: (o.recommendationReason || '').slice(0, 280) || null,
+        // type 字段是 AIOS 自己的分类（event / program / …），交给 eventKind 参考
+        kindHint: o.type || null,
       };
       row.status = eventStatus(row);   // AIOS 是本地历史库，绝大多数会正确翻成 past
       return row;
@@ -1935,11 +2218,11 @@ async function main() {
   const vendors = [...new Set(models.map((m) => m.vendor))].sort();
 
   // 活动：状态统一由 eventStatus 按日期判定，三个来源一视同仁
-  const allEvents = [...devpost, ...luma, ...aios].map((e) => {
+  const allEvents = foldRegions([...devpost, ...luma, ...aios].map((e) => {
     const row = { ...e, kind: eventKind(e), region: eventRegion(e) };
     row.status = eventStatus(row);
     return row;
-  });
+  }));
   const eventsOpen = allEvents.filter((e) => e.status === 'open' || e.status === 'upcoming').length;
   const eventsPast = allEvents.filter((e) => e.status === 'past').length;
   const eventsUnknown = allEvents.filter((e) => e.status === 'unknown').length;

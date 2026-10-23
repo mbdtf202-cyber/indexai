@@ -227,7 +227,9 @@ button,input,select{font:inherit; color:inherit}
 .tllegend{display:flex; gap:18px; margin-top:8px; font-size:11.5px; color:var(--faint); font-family:var(--mono)}
 .tllegend span{display:flex; align-items:center; gap:6px}
 .tllegend i{width:10px; height:8px; border-radius:1px}
-.tl-more{padding:12px 0 0; border-top:1px solid var(--line); margin-top:12px}
+.tl-more{padding:12px 0 0; border-top:1px solid var(--line); margin-top:12px; display:flex; flex-wrap:wrap; gap:10px 18px}
+.tl-more .more{display:inline; padding:0; border:0; background:none; color:var(--dim); font-family:var(--mono); font-size:11.5px; cursor:pointer}
+.tl-more .more:hover{color:var(--accent); border:0}
 .tl-more button{appearance:none; border:0; background:none; padding:0; cursor:pointer;
   font-family:var(--mono); font-size:11.5px; color:var(--faint); letter-spacing:.02em}
 .tl-more button:hover{color:var(--accent); text-decoration:underline; text-underline-offset:3px}
@@ -494,6 +496,7 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .tag.free{border-color:var(--good); color:var(--good)}
 .tag.direct{border-color:var(--good); color:var(--good)}
 .tag.warn{border-color:var(--warn); color:var(--warn)}
+.tag.hot{border-color:#e11d48; color:#e11d48}
 .dim{color:var(--faint)}
 .best{color:var(--good); font-weight:600}
 .src a{display:inline-flex; align-items:center; gap:4px; color:var(--faint); font-family:var(--mono); font-size:11.5px}
@@ -762,55 +765,80 @@ footer.foot a:hover{color:var(--accent)}
 
 .newsfld{margin-bottom:8px}
 
-/* ── 超级大事件：时间轴上方的一层事件带 ──
-   它是行业级转折，和下面的日更密度共用一个横轴，但视觉上必须一眼分开：
-   上面是稀疏的锚点（可点的竖杆），下面是密集的流量。 */
-.ms{margin:6px 0 20px; border-top:1px solid var(--ink); padding-top:10px}
-.ms-head{display:flex; align-items:baseline; justify-content:space-between; gap:14px; flex-wrap:wrap}
-.ms-title{display:flex; align-items:baseline; gap:10px}
-.ms-title b{font-size:13px; font-weight:700; letter-spacing:.01em}
-.ms-title span{font-family:var(--mono); font-size:11px; color:var(--faint); letter-spacing:.04em}
-.ms-legend{display:flex; gap:6px; flex-wrap:wrap}
-.ms-epoch{appearance:none; border:1px solid var(--line); background:none; color:var(--dim);
-  font-size:11.5px; padding:3px 8px; border-radius:99px; cursor:pointer; transition:all .14s}
-.ms-epoch:hover{border-color:var(--line2); color:var(--ink)}
-.ms-epoch[aria-pressed="true"]{background:var(--ink); border-color:var(--ink); color:var(--panel)}
+/* ── 超级大事件 ──
+   这一层要回答两个问题：行业在哪拐弯、拐弯之间隔了多久。
+   所以用「时代色块」（宽度=真实时长）+「节点」（一杆一事）+「两栏详情」。 */
+.ms{margin:8px 0 22px}
+.ms-head{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:14px}
+.ms-head h2{margin:0; font-size:15px; font-weight:700; letter-spacing:-.01em}
+.ms-head p{margin:0; font-size:12px; color:var(--faint); line-height:1.6}
+.ms-head p b{color:var(--accent); font-family:var(--mono); font-weight:600}
 
-.ms-band{position:relative; height:calc(30px + var(--lanes,1) * 22px); margin:12px 0 2px}
-.ms-axis{position:absolute; left:0; right:0; bottom:22px; height:1px; background:var(--line2)}
-.ms-dot{position:absolute; left:var(--x); bottom:calc(22px + var(--l) * 22px);
-  transform:translateX(-50%); display:flex; flex-direction:column; align-items:center;
-  gap:0; background:none; border:0; padding:0; cursor:pointer}
-.ms-dot i{display:block; width:2px; height:12px; background:var(--dim); transition:all .14s}
-.ms-dot em{font-style:normal; font-family:var(--mono); font-size:9.5px; color:var(--faint);
-  letter-spacing:.02em; white-space:nowrap; margin-top:2px; opacity:0; transition:opacity .14s}
-.ms-dot.is-era i{width:3px; height:18px; background:var(--accent)}
-.ms-dot.is-era em{opacity:1; color:var(--accent)}
-.ms-dot:hover i{background:var(--ink); height:20px}
-.ms-dot:hover em{opacity:1; color:var(--ink)}
-.ms-dot.is-on i{background:var(--ink); width:3px; height:24px}
-.ms-dot.is-on em{opacity:1; color:var(--ink); font-weight:600}
-.ms-foot{display:flex; justify-content:space-between; gap:12px; font-family:var(--mono);
-  font-size:10.5px; color:var(--faint); letter-spacing:.04em; margin-bottom:10px}
+.ms-wrap{border-top:1px solid var(--ink)}
 
-.ms-card{display:grid; grid-template-columns:150px minmax(0,1fr); gap:18px;
-  padding:14px 0 16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
-.ms-when{display:flex; flex-direction:column; gap:5px; align-items:flex-start}
-.ms-when b{font-family:var(--mono); font-size:15px; font-weight:600; letter-spacing:-.01em}
-.ms-when span{font-size:11.5px; color:var(--faint); letter-spacing:.03em}
-.ms-tag{font-family:var(--mono); font-size:10px; padding:2px 6px; border:1px solid var(--line); border-radius:2px}
-.ms-tag.era{border-color:var(--accent); color:var(--accent)}
-.ms-body h3{margin:0 0 6px; font-size:17px; line-height:1.35; font-weight:600; letter-spacing:-.015em}
-.ms-body p{margin:0 0 8px; font-size:13px; line-height:1.75; color:var(--dim); max-width:76ch}
-.ms-links{display:flex; gap:14px; flex-wrap:wrap; align-items:baseline; font-size:12px}
-.ms-links a{color:var(--accent); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
-.ms-near{color:var(--faint); font-size:11.5px}
+/* 时代带：色块按真实时长铺开；相邻块之间用底色切分 */
+.ms-eras{position:relative; height:46px}
+.ms-era{appearance:none; border:0; padding:0 9px; cursor:pointer;
+  position:absolute; left:var(--l); width:var(--w); top:0; bottom:0;
+  display:flex; flex-direction:column; justify-content:center; gap:3px;
+  text-align:left; overflow:hidden; color:var(--dim);
+  border-left:1px solid var(--bg); background:var(--panel3); transition:background .16s, color .16s}
+.ms-era:first-child{border-left:0}
+.ms-era b{font-size:11.5px; font-weight:600; letter-spacing:.02em; white-space:nowrap}
+.ms-era i{font-style:normal; font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.03em; white-space:nowrap}
+.ms-era:hover{background:var(--panel2); color:var(--ink)}
+.ms-era.is-on{background:var(--ink); color:var(--bg)}
+.ms-era.is-on i{color:color-mix(in oklab, var(--bg) 62%, var(--ink))}
+
+/* 节点层：竖杆落在自己的槽位，标签竖排向上错开 */
+.ms-track{position:relative; height:calc(34px + var(--lanes,1) * 18px)}
+.ms-base{position:absolute; left:0; right:0; bottom:34px; height:1px; background:var(--line2)}
+.ms-node{position:absolute; left:var(--x); bottom:34px; transform:translateX(-50%);
+  background:none; border:0; padding:0; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; justify-content:flex-end; height:calc(12px + var(--l) * 18px); z-index:1}
+.ms-node .ms-pin{display:block; width:1px; height:12px; background:var(--line2); transition:background .14s, width .14s, height .14s}
+.ms-node em{position:absolute; bottom:100%; left:calc(50% + (var(--lx) - var(--x)) * 1% ); transform:translateX(-50%); margin-bottom:3px;
+  font-style:normal; font-family:var(--mono); font-size:9.5px; line-height:1; color:var(--faint);
+  letter-spacing:.01em; white-space:nowrap; opacity:.72; max-width:22ch; overflow:hidden; text-overflow:ellipsis}
+.ms-node.is-era .ms-pin{width:2px; height:16px; background:var(--accent)}
+.ms-node.is-era em{color:var(--accent); opacity:1; font-weight:500; font-family:var(--sans); font-size:10.5px}
+.ms-node:hover{z-index:3}
+.ms-node:hover .ms-pin{background:var(--ink); width:2px; height:20px}
+.ms-node.is-on{z-index:4}
+.ms-node.is-on .ms-pin{background:var(--ink); width:3px; height:24px}
+.ms-node.is-on em{opacity:1; color:var(--ink); font-weight:600; font-family:var(--sans); font-size:10.5px;
+  background:var(--bg); padding:0 3px; border-radius:1px}
+
+.ms-scale{display:flex; justify-content:space-between; align-items:baseline; gap:12px;
+  border-top:1px solid var(--line); padding:5px 0 0; font-family:var(--mono); font-size:10.5px; color:var(--faint)}
+.ms-k{opacity:.85}
+
+/* 详情卡：左窄右宽，左栏只放身份，右栏放判断 */
+.ms-card{display:grid; grid-template-columns:190px minmax(0,1fr); gap:26px;
+  padding:18px 0 4px; margin-top:12px; border-top:2px solid var(--ink)}
+.ms-when{display:flex; flex-direction:column; gap:7px; align-items:flex-start}
+.ms-when time{font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:-.02em; line-height:1}
+.ms-era-tag{font-size:12px; color:var(--dim)}
+.ms-tier,.ms-ver{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em;
+  padding:2px 6px; border:1px solid var(--line2); border-radius:2px; color:var(--faint)}
+.ms-tier.era{border-color:var(--accent); color:var(--accent)}
+.ms-ver.ok{border-color:var(--good); color:var(--good)}
+.ms-ver.part{border-color:var(--warn); color:var(--warn)}
+.ms-ver.no{border-style:dashed}
+.ms-body h3{margin:0 0 8px; font-size:21px; line-height:1.3; font-weight:600; letter-spacing:-.02em}
+.ms-body p{margin:0 0 10px; font-size:13.5px; line-height:1.8; color:var(--dim); max-width:74ch}
+.ms-meta{display:flex; flex-direction:column; gap:5px; font-size:12px}
+.ms-upd{color:var(--dim); font-family:var(--mono); font-size:11px}
+.ms-src{color:var(--accent); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2); width:max-content}
+.ms-near{color:var(--faint); font-size:11.5px; line-height:1.7}
 .ms-near a{color:var(--dim); text-decoration-color:var(--line)}
+.ms-near a:hover{color:var(--accent)}
 @media (max-width:760px){
-  .ms-card{grid-template-columns:1fr; gap:8px}
-  .ms-band{height:calc(28px + var(--lanes,1) * 20px)}
-  .ms-dot em{display:none}
-  .ms-dot.is-on em,.ms-dot.is-era em{display:block}
+  .ms-card{grid-template-columns:1fr; gap:10px}
+  .ms-track{height:calc(28px + var(--lanes,1) * 16px)}
+  .ms-node em{display:none}
+  .ms-node.is-era em,.ms-node.is-on em{display:block}
+  .ms-era i{display:none}
 }
 
 /* 情报密度带：一条 26px 高的横条装下整段跨度，颜色深浅=条数，小点=有重大 */
@@ -1146,8 +1174,12 @@ const MOTION = (() => {
   const SRC_LABEL = { x: "X", blog: "官方博客", newsroom: "新闻稿" };
   /* 活动层的两个字典只负责「把已知的值翻成中文」，值本身一律从 data.events 里取。
      新增来源/类型/地区会在筛选行里自己长出来，不用改这里；未收录的键原样显示。 */
-  const EV_KIND = { hackathon: "黑客松", conference: "会议 / 峰会", meetup: "Meetup", workshop: "工作坊", award: "评选 / 影展", other: "其他" };
-  const EV_REGION = { online: "线上", cn: "国内", jp: "日本", us: "美国", eu: "欧洲", asia: "亚洲", other: "其他" };
+  const EV_KIND = { hackathon: "黑客松", conference: "会议 / 峰会", meetup: "Meetup", workshop: "工作坊", demo: "Demo Day", award: "评选 / 影展", other: "其他" };
+  const EV_REGION = {
+    online: "线上", cn: "国内", jp: "日本", us: "美国", eu: "欧洲", asia: "亚洲", other: "其他",
+    uk: "英国", ca: "加拿大", au: "澳洲", sg: "新加坡",
+    latam: "拉美", in: "印度", "middle-east": "中东", africa: "非洲", kr: "韩国", ae: "阿联酋",
+  };
   const EV_SRC = { Devpost: "Devpost", Luma: "Luma", AIOS: "AIOS" };
   const EV_LABEL = (dict, k) => dict[k] || String(k || "");
   const catLabel = (c) => CAT_LABEL[c] || c;
@@ -1155,7 +1187,7 @@ const MOTION = (() => {
   const state = {
     tab: (location.hash || "#home").slice(1),
     q: "", vendor: "all", band: "all", channel: "all",
-    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", newsScale: "m", newsLimit: 12, benchView: "table", benchGroup: "all", benchPicks: null, benchLimit: 60, benchFull: null, benchLoading: null, benchError: null, newsFull: null, newsLoading: null, newsError: null, ms: null, msLoading: null, msErr: null, msSel: null, newsWin: "all", vendorSet: "", evLimit: 18, evPastLimit: 30, evTlLimit: 48, toolKind: "all",
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", newsScale: "m", newsLimit: 12, benchView: "table", benchGroup: "all", benchPicks: null, benchLimit: 60, benchFull: null, benchLoading: null, benchError: null, newsFull: null, newsLoading: null, newsError: null, ms: null, msLoading: null, msErr: null, msSel: null, newsWin: "all", vendorSet: "", evLimit: 18, evPastLimit: 30, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
     hit: 0.7, outShare: 0.2,
@@ -1305,9 +1337,7 @@ const MOTION = (() => {
   function renderKpis() {
     const d = state.data, c = d.meta.counts;
     const offers = d.offers || [];
-    const events = (d.events || []).filter(e => e.status !== "past");
-    const evKind = {};
-    for (const e of events) evKind[e.kind] = (evKind[e.kind] || 0) + 1;
+    const evKind = evBy("kind");
     const res = d.resources || [];
     const useCount = {};
     for (const r of res) useCount[r.use] = (useCount[r.use] || 0) + 1;
@@ -1360,11 +1390,14 @@ const MOTION = (() => {
         ["Sonnet 5.5 最低", cheapestSonnet ? "$" + (cheapestSonnet.low >= 100 ? cheapestSonnet.low.toFixed(0) : cheapestSonnet.low.toFixed(2)) : "—",
           cheapestSonnet ? `${cheapestSonnet.r.name}${cheapestSonnet.viaFloor ? " · " + (cheapestSonnet.grp || "特殊分组") : ""}` : ""],
       ],
+      // 类型分布跟着真实数据走：某一类归零就不占位，新增的类型自己出现
       events: [
         ["开放中", c.eventsOpen, `共收录 ${c.events} 条`],
-        ["黑客松", evKind.hackathon || 0, "有奖有截止日"],
-        ["Meetup", evKind.meetup || 0, "社区场次"],
-        ["会议 / 峰会", evKind.conference || 0, "行业大会"],
+        ...[...new Set([...Object.keys(EV_KIND), ...Object.keys(evKind)])]
+          .filter(k => evKind[k])
+          .sort((a, b) => (evKind[b] || 0) - (evKind[a] || 0) || String(a).localeCompare(String(b)))
+          .slice(0, 3)
+          .map(k => [EV_LABEL(EV_KIND, k), evKind[k], ""]),
       ],
       tools: [
         ["收录", c.resources || 0, "人工精选，非按星数"],
@@ -1397,7 +1430,7 @@ const MOTION = (() => {
     const cells = cellsByTab[state.tab] || cellsByTab.free;
     const el = $("#kpis");
     el.innerHTML = cells.map(([k, n, s]) => `
-      <div class="kpi"><div class="k">${esc(k)}</div><div class="n">${esc(n)}</div><div class="s" title="${esc(s)}">${esc(s)}</div></div>`).join("");
+      <div class="kpi"><div class="k">${esc(k)}</div><div class="n">${esc(n)}</div><div class="s"${s ? ` title="${esc(s)}"` : ""}>${esc(s || "")}</div></div>`).join("");
     el.style.display = cells.length ? "" : "none";
     // 情报页要的是「一条横条 + 一大段列表」，KPI 摊成两行会白吃掉半屏
     el.classList.toggle("is-tight", state.tab === "signals");
@@ -2101,38 +2134,90 @@ const MOTION = (() => {
 
 
   /* ── events ── */
+  const EV_D0 = 864e5;
+  const evDay = (s) => (s ? Date.parse(s + "T00:00:00Z") : NaN);
+  const evToday = () => Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
+  const evDays = (e) => { const d = (evDay(e.end) - evToday()) / EV_D0; return Number.isFinite(d) ? Math.ceil(d) : null; };
+  const evBy = (k) => {
+    const m = {};
+    for (const e of (state.data.events || [])) { const v = e[k] ?? ""; m[v] = (m[v] || 0) + 1; }
+    return m;
+  };
+  const evPips = (n, total) => `<i class="pips" aria-hidden="true">${[0, 1, 2, 3]
+    .map(k => `<b class="${k < Math.round(n / total * 4) ? "on" : ""}"></b>`).join("")}</i>`;
+
   function viewEvents() {
     const all = state.data.events || [];
-    const pass = (e) =>
-      (state.evKind === "all" || e.kind === state.evKind) &&
-      (state.evSrc === "all" || e.source === state.evSrc) &&
-      (state.evRegion === "all" || e.region === state.evRegion);
+    // 每个筛选维度先只应用另外两个维度：按钮上的数字始终等于点下去能看到的条数。
+    const pass = (e, skip) =>
+      (skip === "kind" || state.evKind === "all" || e.kind === state.evKind) &&
+      (skip === "src" || state.evSrc === "all" || e.source === state.evSrc) &&
+      (skip === "region" || state.evRegion === "all" || e.region === state.evRegion);
 
-    const pool = all.filter(pass);
-    const open = pool.filter(e => e.status === "open").sort((a, b) => String(a.end || a.start).localeCompare(String(b.end || b.start)));
-    const upcoming = pool.filter(e => e.status === "upcoming").sort((a, b) => String(a.start).localeCompare(String(b.start)));
-    const past = pool.filter(e => e.status === "past");
+    const pool = all.filter(e => pass(e, null));
+    const key = (e) => String(e.end || e.start || "");
+    const open = pool.filter(e => e.status === "open").sort((a, b) => key(a).localeCompare(key(b)));
+    const upcoming = pool.filter(e => e.status === "upcoming").sort((a, b) => key(a).localeCompare(key(b)));
+    // 归档按时间倒序，最近的在前
+    const past = pool.filter(e => e.status === "past").sort((a, b) => key(b).localeCompare(key(a)));
+    // 档期还没定的（status=unknown 或 start/end 缺失）单独一档，不并进上面任何一组，也不丢
+    const undated = pool.filter(e => !["open", "upcoming", "past"].includes(e.status));
+    const live = open.length + upcoming.length;
 
-    const kindCount = {};
-    for (const e of all.filter(e => e.status !== "past")) kindCount[e.kind] = (kindCount[e.kind] || 0) + 1;
+    const cards = (arr) => `<div class="grid">${arr.map(card).join("")}</div>`;
 
-    const card = (e) => `
+    const card = (e) => {
+      const d = e.status === "open" ? evDays(e) : null;
+      const urgent = d != null && d <= 3;
+      const stamp = e.status === "open" ? (d == null ? "报名中" : d < 0 ? "已过期" : d === 0 ? "今天截止" : `剩 ${d} 天`)
+        : e.status === "upcoming" ? "将开始" : e.status === "past" ? "已结束" : "档期待定";
+      const when = e.start
+        ? `${esc(e.start)}${e.end && e.end !== e.start ? " → " + esc(e.end) : ""}`
+        : esc(e.dates || "—");
+      const rows = [
+        ["时间", `<span class="mono" style="font-size:12px">${when}</span>`],
+        e.prize ? ["奖励", esc(e.prize) + (e.regs ? ` · ${e.regs.toLocaleString()} 人报名` : "")]
+          : e.regs ? ["报名", `${e.regs.toLocaleString()} 人`] : null,
+        e.worth != null ? ["推荐", `${e.worth}<span class="tag" style="margin-left:6px">${evPips(e.worth, 100)}</span>`] : null,
+      ].filter(Boolean);
+      const themes = (e.themes || []).slice(0, 4);
+      return `
       <article class="card">
         <div class="hd">
           <div style="flex:1;min-width:0">
             <h3>${esc(e.title)}</h3>
-            <div class="sub">${esc(e.source)}${e.org ? " · " + esc(e.org) : ""} · ${esc(e.location || "")}</div>
+            <div class="sub">${esc(EV_LABEL(EV_SRC, e.source))}${e.org ? " · " + esc(e.org) : ""}${e.location ? " · " + esc(e.location) : ""}</div>
           </div>
-          <span class="tag ${e.status === "open" ? "free" : ""}">${e.status === "open" ? "报名中" : e.status === "upcoming" ? "将开始" : "已结束"}</span>
+          ${stamp ? `<span class="tag ${e.status === "open" ? (urgent ? "hot" : "free") : ""}">${stamp}</span>` : ""}
         </div>
-        <dl>
-          <dt>时间</dt><dd class="mono" style="font-size:12px">${esc(e.start || "—")}${e.end && e.end !== e.start ? " → " + esc(e.end) : ""}</dd>
-          ${e.prize ? `<dt>奖励</dt><dd>${esc(e.prize)}${e.regs ? ` · ${e.regs.toLocaleString()} 人报名` : ""}</dd>` : (e.regs ? `<dt>报名</dt><dd>${e.regs.toLocaleString()} 人</dd>` : "")}
-          ${(e.themes || []).length ? `<dt>主题</dt><dd><div class="mchips">${e.themes.slice(0, 4).map(t => `<span class="mchip">${esc(t)}</span>`).join("")}</div></dd>` : ""}
+        ${e.summary ? `<p class="ev-sum">${esc(e.summary)}</p>` : ""}
+        <dl${rows.length ? "" : ' class="zero"'}>
+          ${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}
+          ${themes.length ? `<dt>主题</dt><dd><div class="mchips">${themes.map(t => `<span class="mchip">${esc(t)}</span>`).join("")}</div></dd>` : ""}
         </dl>
-        <div class="foot"><a href="${esc(e.url)}" target="_blank" rel="noopener">活动页 ↗</a>
-          <span class="tag">${esc(EV_KIND[e.kind] || "其他")}</span></div>
+        <div class="foot">
+          <a href="${esc(e.url)}" target="_blank" rel="noopener">活动页 ↗</a>
+          <span class="evline"><span>${esc(EV_LABEL(EV_KIND, e.kind))}</span><span class="tag">${esc(EV_LABEL(EV_REGION, e.region))}</span></span>
+        </div>
       </article>`;
+    };
+
+    const lane = (vals, dict, cur, attr, allLabel, cnt) => `
+      <div class="chips" role="group" aria-label="${allLabel}">
+        <button class="chip" data-${attr}="all" aria-pressed="${cur === "all"}">${allLabel} <b style="opacity:.55;font-weight:400">${cnt.all}</b></button>
+        ${vals.map(([k, n]) => `<button class="chip" data-${attr}="${esc(k)}" aria-pressed="${cur === k}">${esc(EV_LABEL(dict, k))} <b style="opacity:.55;font-weight:400">${n}</b></button>`).join("")}
+      </div>`;
+
+    // 来源按真实出现的值生成，AIOS / 以后新增的源都会自己出现
+    const srcCount = {}; for (const e of all.filter(e => pass(e, "src"))) srcCount[e.source || ""] = (srcCount[e.source || ""] || 0) + 1;
+    const kindCount = {}; for (const e of all.filter(e => pass(e, "kind") && e.status !== "past")) kindCount[e.kind || ""] = (kindCount[e.kind || ""] || 0) + 1;
+    const regionCount = {}; for (const e of all.filter(e => pass(e, "region"))) regionCount[e.region || ""] = (regionCount[e.region || ""] || 0) + 1;
+    const byN = (o) => Object.entries(o).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+    const allSrc = all.filter(e => e.status !== "past").length;
+    const allCnt = { all: all.filter(e => pass(e, "kind") && e.status !== "past").length };
+
+    // 时间轴每类只画前 EV_TL_CAP 条；真实的「画了多少 / 一共多少」由 renderTimeline 渲染后写进这一行
+    const tlNote = `<div class="tl-more"><span data-tlnote></span></div>`;
 
     return `
       <section class="tlsec">
@@ -2147,35 +2232,35 @@ const MOTION = (() => {
           <span><i style="background:#0f7b4f"></i>Meetup</span>
           <span><i style="background:#b9b9b9"></i>其他</span>
         </div>
+        <div id="tlNote">${tlNote}</div>
       </section>
 
       <div class="controls">
-        <div class="chips" role="group" aria-label="活动类型">
-          <button class="chip" data-evkind="all" aria-pressed="${state.evKind === "all"}">全部类型</button>
-          ${Object.entries(EV_KIND).map(([k, l]) =>
-            `<button class="chip" data-evkind="${k}" aria-pressed="${state.evKind === k}">${l}${kindCount[k] ? ` <b style="opacity:.55;font-weight:400">${kindCount[k]}</b>` : ""}</button>`).join("")}
-        </div>
-        <div class="chips" role="group" aria-label="来源">
-          <button class="chip" data-evsrc="all" aria-pressed="${state.evSrc === "all"}">全部来源</button>
-          ${["Devpost", "Luma"].map(k =>
-            `<button class="chip" data-evsrc="${k}" aria-pressed="${state.evSrc === k}">${esc(EV_SRC[k])}</button>`).join("")}
-        </div>
-        <div class="chips" role="group" aria-label="地区">
-          <button class="chip" data-evregion="all" aria-pressed="${state.evRegion === "all"}">全部地区</button>
-          ${Object.entries(EV_REGION).map(([k, l]) =>
-            `<button class="chip" data-evregion="${k}" aria-pressed="${state.evRegion === k}">${l}</button>`).join("")}
-        </div>
-        <span class="spacer"></span><span class="eyebrow">${open.length + upcoming.length} 个在场 · ${past.length} 条归档</span>
+        ${lane(byN(kindCount), EV_KIND, state.evKind, "evkind", "全部类型", allCnt)}
+        ${lane(byN(srcCount), EV_SRC, state.evSrc, "evsrc", "全部来源", { all: allSrc })}
+        ${lane(byN(regionCount), EV_REGION, state.evRegion, "evregion", "全部地区", { all: all.length })}
+        <span class="spacer"></span><span class="eyebrow">${live + undated.length} 个在场 · ${past.length} 条归档</span>
       </div>
 
       <div class="shead" style="padding-top:18px"><h2>开放中</h2><span class="right">${open.length} 个</span></div>
-      ${open.length ? `<div class="grid">${open.slice(0, state.evLimit).map(card).join("")}</div>` : `<div class="empty">这个筛选组合下没有开放中的活动。</div>`}
-      ${open.length > state.evLimit ? `<div style="padding:18px 0"><button class="more" data-evmore type="button">再加载 ${Math.min(18, open.length - state.evLimit)} 个活动</button></div>` : ""}
+      ${open.length ? cards(open.slice(0, state.evLimit)) : `<div class="empty">这个筛选组合下没有开放中的活动。</div>`}
+      ${open.length > state.evLimit
+        ? `<div class="tl-more"><button class="more" data-evmore="1" type="button">展开全部 ${open.length - state.evLimit} 个</button></div>` : ""}
 
-      ${upcoming.length ? `<div class="shead"><h2>即将开始</h2><span class="right">${upcoming.length} 个</span></div><div class="grid">${upcoming.map(card).join("")}</div>` : ""}
+      ${upcoming.length ? `<div class="shead"><h2>即将开始</h2><span class="right">${upcoming.length} 个</span></div>
+        ${cards(upcoming.slice(0, state.evLimit))}
+        ${upcoming.length > state.evLimit
+          ? `<div class="tl-more"><button class="more" data-evmore="1" type="button">展开全部 ${upcoming.length - state.evLimit} 个</button></div>` : ""}` : ""}
+
+      ${undated.length ? `<div class="shead"><h2>档期待定</h2><span class="desc">来源只给了日期串或还标着 unknown，照原样列，不做推断。</span><span class="right">${undated.length} 条</span></div>
+        ${cards(undated.slice(0, state.evPastLimit))}
+        ${undated.length > state.evPastLimit
+          ? `<div class="tl-more"><button class="more" data-evpastmore="1" type="button">展开全部 ${undated.length} 条</button></div>` : ""}` : ""}
 
       ${past.length ? `<div class="shead"><h2>历史归档</h2><span class="desc">已结束的场次，只作来源对照，不混进「开放中」。</span><span class="right">${past.length} 条</span></div>
-        <div class="cand">${past.slice(0, 30).map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.title)}">${esc(e.title)}</a>`).join("")}</div>` : ""}`;
+        <div class="cand">${cards(past.slice(0, state.evPastLimit))}</div>
+        ${past.length > state.evPastLimit
+          ? `<div class="tl-more"><button class="more" data-evpastmore="1" type="button">展开全部 ${past.length} 条</button></div>` : ""}` : ""}`;
   }
 
   /* ── tools ── */
@@ -2443,55 +2528,105 @@ const MOTION = (() => {
     }).join("");
   }
 
+
+
+
+  /* 时间轴：600+ 场活动不能硬塞进 260px 高的一张图里。
+     按 kind 分泳道，每泳道最多画 EV_TL_CAP 条（最先到期的先画）；
+     行数决定 viewBox 高度，其余明细交给下面的列表——超出的部分在图上明说，而不是压成糊。 */
+  const EV_TL_CAP = 26;
   function renderTimeline() {
     const svg = document.getElementById("eventTimeline");
+    const note = document.getElementById("tlNote");
     if (!svg) return;
-    const evs = (state.data.events || []).filter(e => e.status !== "past" && e.start && e.end);
-    if (!evs.length) { svg.parentElement.style.display = "none"; return; }
+    // 档期未定的没有区间可画，但也算进「未显示」里，靠下面的按钮明说去向
+    const upcomingAll = (state.data.events || []).filter(e => e.status !== "past");
+    const all = upcomingAll.filter(e => e.start && e.end);
+    if (!all.length) { svg.style.display = "none"; if (note) note.style.display = "none"; return; }
 
     const DAY = 864e5;
     const t = (s) => Date.parse(s + "T00:00:00Z");
     const now = Date.now();
-    const starts = evs.map(e => t(e.start) || now);
-    const ends = evs.map(e => t(e.end) || now);
+    const colors = { hackathon: "#0a0a0a", conference: "#e11d48", meetup: "#0f7b4f" };
+    const order = ["hackathon", "conference", "meetup"];
+
+    // 先按类型分泳道，未知类型排最后；每道内按结束日期升序（最紧的先画）
+    const groups = {};
+    for (const e of all) (groups[e.kind || "other"] ||= []).push(e);
+    const kinds = Object.keys(groups).sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || String(a).localeCompare(String(b));
+    });
+
+    let total = 0;
+    let drawn = 0;
+    const lanes = kinds.map(k => {
+      const list = [...groups[k]].sort((a, b) => (t(a.end) - t(b.end)) || (t(a.start) - t(b.start)));
+      const shown = list.slice(0, EV_TL_CAP);
+      drawn += shown.length;
+      total += list.length;
+      return { k, list, shown };
+    });
+
+    const W = 1200, padL = 64, padR = 4, top = 20, rowH = 12, laneGap = 18, axisH = 26;
+    const laneH = (n) => Math.max(18, n * rowH);
+    const H = top + lanes.reduce((s, l) => s + laneH(l.shown.length) + laneGap, 0) + axisH;
+    const bot = H - axisH;
+
+    const starts = all.map(e => t(e.start) || now);
+    const ends = all.map(e => t(e.end) || now);
     const minD = Math.min(now - 7 * DAY, ...starts);
     const maxD = Math.max(now + 21 * DAY, ...ends);
-    const W = 1200, H = 260, padL = 3, padR = 3, top = 22, bot = H - 26;
     const X = (d) => padL + (d - minD) / (maxD - minD) * (W - padL - padR);
 
-    const sorted = [...evs].sort((a, b) => (t(a.start) - t(b.start)) || (t(a.end) - t(b.end)));
-    const rowH = Math.min(3.4, (bot - top) / sorted.length);
-    const colors = { hackathon: "#0a0a0a", conference: "#e11d48", meetup: "#0f7b4f" };
-
-    let bars = "";
-    sorted.forEach((e, i) => {
-      const x1 = X(t(e.start)), x2 = Math.max(X(t(e.end)), x1 + 2);
-      const y = top + i * rowH;
-      const col = colors[e.kind] || "#b9b9b9";
-      bars += `<rect class="tl-bar" x="${x1.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(2, x2 - x1).toFixed(1)}"
-        height="${Math.max(1.8, rowH - 0.9).toFixed(1)}" fill="${col}" opacity=".72" rx="0.6"><title>${esc(e.title)} · ${esc(e.dates || "")}</title></rect>`;
-    });
+    let bars = "", y = top;
+    for (const l of lanes) {
+      const h = laneH(l.shown.length);
+      const col = colors[l.k] || "#b9b9b9";
+      l.shown.forEach((e, i) => {
+        const x1 = X(t(e.start)), x2 = Math.max(X(t(e.end)), x1 + 2);
+        const yy = y + i * rowH;
+        bars += `<rect class="tl-bar" x="${x1.toFixed(1)}" y="${yy.toFixed(1)}" width="${Math.max(2, x2 - x1).toFixed(1)}"
+          height="${(rowH - 3).toFixed(1)}" fill="${col}" opacity=".72" rx="1"><title>${esc(e.title)} · ${esc(e.dates || "")} · ${esc(EV_LABEL(EV_SRC, e.source))}</title></rect>`;
+      });
+      // 泳道标签：类型 + 该类型真实总数（图上画的可能只是前 26 个）
+      const rest = l.list.length > l.shown.length ? ` +${l.list.length - l.shown.length}` : "";
+      bars += `<text class="tl-lane" x="0" y="${(y + Math.min(h, rowH) / 2 + 3.5).toFixed(1)}">${esc(EV_LABEL(EV_KIND, l.k))} ` +
+        `<tspan style="opacity:.55">${l.list.length}${rest}</tspan></text>`;
+      y += h + laneGap;
+    }
 
     // 月份刻度
     let grid = "";
     const d0 = new Date(minD), d1 = new Date(maxD);
-    for (let y = d0.getUTCFullYear(), m = d0.getUTCMonth(); ;) {
-      const cur = Date.UTC(y, m, 1);
+    for (let yy0 = d0.getUTCFullYear(), m = d0.getUTCMonth(); ;) {
+      const cur = Date.UTC(yy0, m, 1);
       if (cur > maxD) break;
       if (cur >= minD) {
         const x = X(cur);
         grid += `<line class="tl-grid" x1="${x.toFixed(1)}" y1="${top - 6}" x2="${x.toFixed(1)}" y2="${bot}"/>`;
         grid += `<text class="tl-t" x="${(x + 4).toFixed(1)}" y="${H - 8}">${m + 1}月</text>`;
       }
-      m++; if (m > 11) { m = 0; y++; }
+      m++; if (m > 11) { m = 0; yy0++; }
     }
 
     const xn = X(now);
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.style.aspectRatio = `${W} / ${H}`;
     svg.innerHTML = `${grid}${bars}
       <line class="tl-now" x1="${xn.toFixed(1)}" y1="${top - 8}" x2="${xn.toFixed(1)}" y2="${bot}"/>
-      <text class="tl-nowt" x="${xn.toFixed(1)}" y="${top - 12}" text-anchor="middle">今天</text>`;
-  }
+      <text class="tl-nowt" x="${xn.toFixed(1)}" y="${top - 10}" text-anchor="middle">今天</text>`;
 
+    // 图上画不下的（每道只画前 EV_TL_CAP 条）在图下明说，并指向下方完整列表
+    if (note) {
+      const line = note.querySelector("[data-tlnote]");
+      const more = all.length - drawn;
+      if (line) line.textContent = more > 0
+        ? `时间轴显示最先到期的 ${drawn} 条，另有 ${more} 条在下方列表`
+        : `时间轴显示全部 ${drawn} 条`;
+      note.style.display = "";
+    }
+  }
 
 
   /* ── 工具箱：星数带（对数刻度） ── */
@@ -3098,74 +3233,132 @@ const MOTION = (() => {
 
     const dayOf = (n) => n.date.slice(5).replace("-", "/");
 
-    /* ── 超级大事件：横跨整个刻度的一条事件带，独立于下面的日更密度 ──
-       scaleX 用「当前显示窗口」的起止点，所以里程碑和密度带是同一根时间轴上的两层：
-       上层是行业级转折，下层是逐日流水。切换窗口时两者一起缩放。 */
+    /* ── 超级大事件：两根带子 + 一层节点 ──
+       1) 时代带：每个分期自成一个色块，宽度由该分期首末事件决定（不是均分）——
+          一眼能看出「对话时代只有 4 个月、智能体时代已经超过一年」。
+       2) 节点层：每条事件一根竖杆 + 短标签（转折点带完整标题，其余给编号），
+          密集处自动错轨；hover 出完整标题，点击锁定并展开下方详情。
+       3) 详情卡：左栏是身份与核验状态，右栏是它改变了什么 + 同期真实归档。
+       坐标全部基于「当前窗口」，和下面的密度带共用一根横轴。 */
     const winStartMs = Math.min(barStart, EPOCH0);
     const winEndMs = today;
-    const scaleX = (ts) => winEndMs > winStartMs ? ((ts - winStartMs) / (winEndMs - winStartMs)) * 100 : 100;
-    const msAll = Array.isArray(state.ms) ? state.ms.slice().sort((a, b) => a.d.localeCompare(b.d)) : [];
-    const msIn = msAll.filter(e => {
-      const t = Date.parse(e.d + "T00:00:00+08:00");
-      return Number.isFinite(t) && t >= winStartMs && t <= winEndMs + 864e5;
+    const spanMs = Math.max(1, winEndMs - winStartMs);
+    const scaleX = (ts) => Math.max(0, Math.min(100, ((ts - winStartMs) / spanMs) * 100));
+    const msAll = (Array.isArray(state.ms) ? state.ms : []).slice().sort((a, b) => a.d.localeCompare(b.d));
+    const tsOf = (d) => Date.parse(d + "T00:00:00+08:00");
+    const msIn = msAll.filter(e => { const t = tsOf(e.d); return Number.isFinite(t) && t >= winStartMs && t <= winEndMs + 864e5; });
+
+    /* 时代带：分期首末事件 → 色块区间；首末相接不留缝，但每段之间画 1px 分隔 */
+    const meta = state.msMeta || [];
+    const eras = meta.map((m, i) => {
+      const own = msIn.filter(e => e.e === m.id);
+      const first = own.length ? tsOf(own[0].d) : null;
+      const last = own.length ? tsOf(own[own.length - 1].d) : null;
+      const nextFirst = (() => {
+        for (let j = i + 1; j < meta.length; j += 1) {
+          const s = msIn.filter(e => e.e === meta[j].id);
+          if (s.length) return tsOf(s[0].d);
+        }
+        return winEndMs;
+      })();
+      return { ...m, n: own.length, x0: first == null ? 0 : scaleX(first), x1: last == null ? 0 : scaleX(nextFirst) };
     });
-    // 同一条竖线上挤了多个事件时错开高度，避免横线互相盖住
-    const lanes = [];
+    const liveEras = eras.filter(e => e.n > 0);
+
+    /* 节点层：按标签实际宽度错轨。
+       标签是横排文字，宽度≈字数×9.5px×0.55（中文按 1em 算），换成百分比后用
+       「上一条的右沿 < 本条的左沿」判断能否共用轨道——固定像素阈值会让长标题直接叠在一起。 */
+    // 轨道宽度取内容区实际宽度（不是 window.innerWidth，后者包含页面留白会低估百分比）
+    const trackEl = typeof document !== "undefined" ? document.querySelector(".wrap") : null;
+    const trackPx = (trackEl && trackEl.clientWidth) || (typeof window !== "undefined" ? window.innerWidth : 1280) || 1280;
+    // 实测：10.5px 中文 ≈ 11px/字，9.5px mono ≈ 6px/字；再多留 1.5 个字的呼吸位
+    const labelW = (e) => {
+      const txt = e.tier === "era" ? e.title : (eraOf0(e.e) || "—");
+      const px = [...txt].reduce((n, ch) => n + (ch.charCodeAt(0) > 255 ? 11.2 : 6.2), 0);
+      return ((px + 14) / trackPx) * 100;
+    };
+    function eraOf0(id) { return (state.msMeta || []).find(x => x.id === id)?.name; }
+    const lanes = [];   // 每轨记录「最后占用到的 x」
     const placed = msIn.map((e) => {
-      const t = Date.parse(e.d + "T00:00:00+08:00");
+      const t = tsOf(e.d);
       const x = scaleX(t);
-      let lane = lanes.findIndex((lastX) => x - lastX > 3.2);
-      if (lane < 0) { lane = lanes.length; lanes.push(x); } else { lanes[lane] = x; }
-      // 注意：e.t 是标题，别被时间戳覆盖——曾经这里写成 t: t，把标题渲染成了时间戳
-      return { ...e, x: Math.max(0.6, Math.min(99.4, x)), lane, ts: t };
+      const w = Math.min(labelW(e), 92);
+      // 标签默认以竖杆居中；贴近左右边缘时整体推入，避免被容器裁掉
+      const lx = Math.max(w / 2 + 0.4, Math.min(100 - w / 2 - 0.4, x));
+      const left = lx - w / 2, right = lx + w / 2;
+      let lane = lanes.findIndex((lastRight) => left > lastRight + 1.2);
+      if (lane < 0) { lane = lanes.length; lanes.push(right); } else { lanes[lane] = right; }
+      return { ...e, x, lx, lane, w, ts: t };
     });
     const laneCount = Math.max(1, lanes.length);
 
-    /* 选中态：默认取最近的一件 era 级事件，没有就取最近一件 */
-    const pick = state.msSel && msAll.find(m => m.d + m.title === state.msSel);
-    const selEvent = pick || placed.slice().reverse().find(e => e.tier === "era") || placed[placed.length - 1] || null;
-    const epochName = (id) => ((state.msMeta || []).find(x => String(x.id) === String(id)) || {}).name || "—";
-    // 同期真实归档：把「大事件」和你自己收到的新闻接上
-    const nearNews = selEvent ? newsItems()
-      .filter(n => {
-        const t = newsDay(n.date);
-        return Math.abs(t - selEvent.ts) <= 7 * 864e5;
-      })
-      .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 2) : [];
+    const keyOf = (e) => e.d + "|" + e.title;
+    const eraOf = (id) => meta.find(x => x.id === id) || { name: "—", full: "—" };
+    const pick = state.msSel && msAll.find(m => keyOf(m) === state.msSel);
+    const sel = pick || placed.find(e => e.tier === "era") || placed[0] || null;
+    const VERIFY = {
+      checked: { t: "已核实", cls: "ok" },
+      part: { t: "部分核实", cls: "part" },
+      unchecked: { t: "待核实", cls: "no" },
+    };
+    const nearNews = sel ? newsItems()
+      .filter(n => { const t = newsDay(n.date); return Math.abs(t - sel.ts) <= 10 * 864e5; })
+      .sort((a, b) => Math.abs(newsDay(a.date) - sel.ts) - Math.abs(newsDay(b.date) - sel.ts))
+      .slice(0, 3) : [];
 
     const strip = msAll.length ? `
-      <section class="ms" aria-label="超级大事件时间轴">
-        <div class="ms-head">
-          <div class="ms-title"><b>超级大事件</b><span>${msAll.length} 件 · 2022.11.30 至今 · ${laneCount} 轨</span></div>
-          <div class="ms-legend">${(state.msMeta || []).map(x =>
-            `<button class="ms-epoch" data-msepoch="${esc(x.id)}" aria-pressed="${selEvent && selEvent.e === x.id}">${esc(x.name)}</button>`).join("")}</div>
-        </div>
-        <div class="ms-band" style="--lanes:${laneCount}">
-          <div class="ms-axis"></div>
-          ${placed.map(e => `
-            <button class="ms-dot ${e.tier === "era" ? "is-era" : ""} ${selEvent && e.d === selEvent.d && e.title === selEvent.title ? "is-on" : ""}"
-              style="--x:${e.x}%; --l:${e.lane}"
-              data-ms="${esc(e.d + e.title)}"
-              title="${esc(e.d)} · ${esc(e.title || e.t)}${e.note ? " — " + esc(e.note) : ""}">
-              <i></i><em>${esc(e.d.slice(0, 7).replace("-", "."))}</em>
-            </button>`).join("")}
-        </div>
-        <div class="ms-foot"><span>${esc(newsFmt(winStartMs, "m"))}</span><span>点一下看这件大事改变了什么</span><span>${esc(newsFmt(winEndMs, "m"))}</span></div>
+      <section class="ms" aria-label="超级大事件">
+        <header class="ms-head">
+          <h2>超级大事件</h2>
+          <p>从 ChatGPT 上线起，行业只拐了 <b>${msAll.length}</b> 次弯。挑出这些节点，是为了让下面两千多条流水有个参照。</p>
+        </header>
 
-        ${selEvent ? `
+        <div class="ms-wrap">
+          <div class="ms-eras" role="list">
+            ${liveEras.map(m => `
+              <button class="ms-era ${sel && sel.e === m.id ? "is-on" : ""}" role="listitem"
+                style="--l:${m.x0}%; --w:${Math.max(m.x1 - m.x0, 4)}%"
+                data-msepoch="${esc(m.id)}"
+                title="${esc(m.full)} · ${esc(m.span)} · ${m.n} 件">
+                <b>${esc(m.name)}</b><i>${esc(m.span)}</i>
+              </button>`).join("")}
+          </div>
+
+          <div class="ms-track" style="--lanes:${laneCount}">
+            <div class="ms-base"></div>
+            ${placed.map((e, i) => `
+              <button class="ms-node ${e.tier === "era" ? "is-era" : ""} ${sel && keyOf(sel) === keyOf(e) ? "is-on" : ""}"
+                style="--x:${e.x}%; --lx:${e.lx}%; --l:${e.lane}; --i:${i}"
+                data-ms="${esc(keyOf(e))}"
+                title="${esc(e.d)} · ${esc(e.title)}${e.note ? " — " + esc(e.note) : ""}">
+                <em>${e.tier === "era" ? esc(e.title) : esc(eraOf(e.e).name)}</em>
+                <span class="ms-pin"></span>
+              </button>`).join("")}
+          </div>
+
+          <div class="ms-scale">
+            <span>${esc(newsFmt(winStartMs, "m"))}</span>
+            <span class="ms-k">竖杆 = 一件大事 · 红 = 改变路线的那一下 · 悬停看全文</span>
+            <span>${esc(newsFmt(winEndMs, "m"))}</span>
+          </div>
+        </div>
+
+        ${sel ? `
         <article class="ms-card">
           <div class="ms-when">
-            <b>${esc(selEvent.d)}</b>
-            <span>${esc(epochName(selEvent.e))}</span>
-            <span class="ms-tag ${selEvent.tier === "era" ? "era" : ""}">${selEvent.tier === "era" ? "转折点" : "关键节点"}</span>
+            <time>${esc(sel.d)}</time>
+            <span class="ms-era-tag">${esc(eraOf(sel.e).full)}</span>
+            <span class="ms-tier ${sel.tier === "era" ? "era" : ""}">${sel.tier === "era" ? "转折点" : "关键节点"}</span>
+            <span class="ms-ver ${(VERIFY[sel.v] || VERIFY.unchecked).cls}">${(VERIFY[sel.v] || VERIFY.unchecked).t}</span>
           </div>
           <div class="ms-body">
-            <h3>${esc(selEvent.title || selEvent.t)}</h3>
-            ${selEvent.note ? `<p>${esc(selEvent.note)}</p>` : ""}
-            <div class="ms-links">
-              <a href="${esc(selEvent.src)}" target="_blank" rel="noopener">原始出处 ↗</a>
-              ${nearNews.length ? `<span class="ms-near">同期归档：${nearNews.map(n =>
-                `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.summary || n.title)}">${esc(n.title.length > 26 ? n.title.slice(0, 25) + "…" : n.title)}</a>`).join(" · ")}</span>` : ""}
+            <h3>${esc(sel.title)}</h3>
+            ${sel.note ? `<p>${esc(sel.note)}</p>` : ""}
+            <div class="ms-meta">
+              ${sel.update ? `<span class="ms-upd">↳ ${esc(sel.update.d)}　${esc(sel.update.text)}</span>` : ""}
+              <a class="ms-src" href="${esc(sel.src)}" target="_blank" rel="noopener">出处：${esc(sel.srcNote || hostOf(sel.src))} ↗</a>
+              ${nearNews.length ? `<span class="ms-near">那几天我们收到的：${nearNews.map(n =>
+                `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.summary || n.title)}">${esc(n.title.length > 22 ? n.title.slice(0, 21) + "…" : n.title)}</a>`).join("")}</span>` : ""}
             </div>
           </div>
         </article>` : ""}
@@ -3432,7 +3625,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
   /* ── events ── */
   function bind() {
     document.addEventListener("click", (ev) => {
-      const t = ev.target.closest("[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-vendorset],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      const t = ev.target.closest("[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-vendorset],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn");
       if (!t) return;
       if (t.dataset.tab) {
         if (t.dataset.tab === state.tab) return;
@@ -3455,7 +3648,8 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
         render(); return;
       }
       if (t.dataset.cmpview) { state.cmpView = t.dataset.cmpview; render(); return; }
-      if (t.dataset.evmore) { state.evLimit += 18; render(); return; }
+      if (t.dataset.evmore) { state.evLimit = Math.max(state.evLimit * 40, state.evLimit + 600); render(); return; }
+      if (t.dataset.evpastmore) { state.evPastLimit = 100000; render(); return; }
       if (t.dataset.evkind) { state.evKind = t.dataset.evkind; state.evLimit = 18; render(); return; }
       if (t.dataset.evsrc) { state.evSrc = t.dataset.evsrc; state.evLimit = 18; render(); return; }
       if (t.dataset.evregion) { state.evRegion = t.dataset.evregion; state.evLimit = 18; render(); return; }
