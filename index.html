@@ -302,17 +302,7 @@ td .vend{color:var(--faint); font-size:11px; margin-left:8px}
 [data-theme="dark"] .story .dot.agg{fill:#7c7f72}
 @media (max-width:760px){.axhead{gap:10px}.axsub{font-size:12.5px}.axfoot span:last-child{display:none}}
 
-/* ── ticker (A) ── */
-.ticker{background:#0a0b0a;color:#e9e7df;overflow:hidden;border-bottom:1px solid #1c1e1a}
-.ticker-track{display:flex;width:max-content;animation:tickmove 54s linear infinite;will-change:transform}
-.ticker-track:hover{animation-play-state:paused}
-.ticker i{display:flex;align-items:center;gap:10px;padding:9px 18px;border-right:1px solid #22241f;
-  font:500 11.5px/1 var(--mono);font-style:normal;color:#9aa096;white-space:nowrap}
-.ticker i b{color:#e9e7df;font-weight:500}
-.ticker i s{color:#6ee7a8;text-decoration:none}
-.ticker i u{color:#fb5f7a;text-decoration:none}
-@keyframes tickmove{to{transform:translate3d(-50%,0,0)}}
-@media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+
 
 /* ── section header ── */
 .shead{display:flex; align-items:baseline; gap:14px; padding:26px 0 14px; border-bottom:var(--rule); flex-wrap:wrap}
@@ -493,6 +483,13 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 
 .empty{padding:64px 0; text-align:center; color:var(--faint); font-family:var(--mono); font-size:12px; line-height:2}
 .empty b{display:block; color:var(--dim); font-size:13px; margin-bottom:4px; font-weight:400}
+/* 数据健康横幅：只在数据陈旧或有层缺失时出现，平时完全不存在 */
+.healthbar{margin:14px 0 0; border:1px solid var(--line2); border-left:3px solid var(--accent); border-radius:3px; background:var(--panel); padding:10px 14px; font-family:var(--mono); font-size:11.5px; line-height:1.7; color:var(--dim)}
+.healthbar[data-level="bad"]{border-left-color:#c2410c}
+.healthbar[data-level="bad"] b{color:#c2410c}
+.healthbar b{color:var(--fg); font-weight:600}
+.healthbar ul{margin:4px 0 0; padding-left:18px}
+.healthbar li{color:var(--faint)}
 footer.foot{border-top:var(--rule); padding:20px 0 44px; color:var(--faint); font-family:var(--mono); font-size:11.5px; display:flex; gap:18px; flex-wrap:wrap; background:var(--bg)}
 footer.foot a{text-decoration:underline; text-underline-offset:3px}
 footer.foot a:hover{color:var(--accent)}
@@ -782,7 +779,6 @@ body.ready{opacity:1}
   </div>
 </header>
 
-<div class="ticker" aria-hidden="true"><div class="ticker-track" id="ticker"></div></div>
 
 <section class="hero" id="hero">
   <div class="wrap">
@@ -798,6 +794,8 @@ body.ready{opacity:1}
 <main class="wrap" id="view" role="tabpanel" tabindex="-1">
   <div class="bootmsg"><span class="spin"></span>正在读取 data.json…</div>
 </main>
+
+<div class="wrap"><div class="healthbar" id="healthbar" role="status" aria-live="polite" hidden></div></div>
 
 <div class="wrap"><footer class="foot">
   <span>数据每日采集 · <code>node collect.mjs</code></span>
@@ -1001,31 +999,6 @@ const MOTION = (() => {
     }
   }
 
-  function renderTicker() {
-    const d = state.data, c = d.meta.counts;
-    const live = (d.relays || []).filter(r => r.status === "ok");
-    const lowOf = (key) => {
-      const xs = live.map(r => r.prices?.[key]).filter(p => p && p.kind === "per_1m" && !p.anomaly);
-      return xs.length ? Math.min(...xs.map(p => p.input)) : null;
-    };
-    const rows = [
-      ["Sonnet 5.5", lowOf("sonnet55"), "中转最低"],
-      ["Opus 5.5", lowOf("opus55"), "中转最低"],
-      ["GPT-6.1 Sol", lowOf("gpt61sol"), "中转最低"],
-      ["Gemini 4 Argon", lowOf("gemini4argon"), "中转最低"],
-    ].filter(r => r[1] != null).map(([n, v, t]) =>
-      `<i>${n} <b>$${money(v)}</b> <s>${t}</s></i>`);
-
-    rows.push(
-      `<i>免费额度 <b>${c.offers}</b> <s>个渠道</s></i>`,
-      `<i>开放活动 <b>${c.eventsOpen}</b> <s>场</s></i>`,
-      `<i>精选工具 <b>${c.resources || 0}</b> <s>个</s></i>`,
-      `<i>登记来源 <b>${c.sources}</b> <s>条</s></i>`,
-    );
-    const one = rows.join("");
-    const el = $("#ticker");
-    if (el) el.innerHTML = one + one;
-  }
 
   function renderKpis() {
     const d = state.data, c = d.meta.counts;
@@ -2806,7 +2779,6 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     }
     const base = state.data.meta.fx || { USDCNY: 7.1, as_of: "", fetched_at: "" };
     state.fx = { rate: base.USDCNY, ts: Date.parse(base.fetched_at) || Date.now(), asof: base.as_of };
-    renderTicker();
     renderKpis(); bind(); render(); renderFxStamp();
     MOTION.progress();
     requestAnimationFrame(() => { document.body.classList.add("ready"); MOTION.arm(); });

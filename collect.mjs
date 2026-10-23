@@ -13,6 +13,8 @@
  */
 
 import { writeFile, readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { assertLayers } from './health.mjs';
 
 const OPENROUTER = 'https://openrouter.ai/api/v1/models';
 const FX_CNY = 7.1; // 2026-10-23 记账汇率，仅用于把人民币价折算成 USD 对比
@@ -171,20 +173,14 @@ const SIGNALS = [
 ];
 
 
-/* ────────────────────────── 4. 订阅（官方价，人工核实） ────────────────────────── */
-// 订阅档位不再手写：产品与官方标价全部来自 aibijia 的 apple_subscriptions.json（美国区价格）
-const SUBSCRIPTIONS = [];
-
-
-/* 第三方挂单价样本：公开挂单页快照，仅作行情参考，不构成购买建议 */
-const SUBS_THIRD = [
-  { product: 'ChatGPT Go', route: '官方直充月卡', price_cny: 48, platform: 'Tokyo', note: '页面称真实付费开通；官方 $8≈¥56.8' },
-  { product: 'ChatGPT Plus', route: '成品号（首登质保）', price_cny: 25.52, platform: 'LDXP', note: '账号+密码，质保首登；稳定性自负' },
-  { product: 'ChatGPT Plus', route: '成品号 + 反代', price_cny: 28.18, platform: 'LDXP', note: '网页与反代双用，标称老号耐活' },
-  { product: 'ChatGPT Plus', route: '月卡成品号', price_cny: 40, platform: 'LDXP', note: '整月可用，首登质保' },
-  { product: 'ChatGPT Plus', route: '镜像站 周卡', price_cny: 24, platform: 'LDXP', note: '共享镜像站，非官方账号' },
-  { product: 'ChatGPT Plus', route: '镜像站 天卡', price_cny: 4.5, platform: 'LDXP', note: '按天试用，稳定性未知' },
-];
+/* ────────────────────────── 4. 订阅（官方价） ──────────────────────────
+ * 订阅档位一律从 aibijia 的 apple_subscriptions.json 派生（美国区 App Store 明码），
+ * 不再手写常量、也不再留硬编码兜底。
+ *
+ * 历史教训：这里曾经是 `const SUBSCRIPTIONS = []`，而前端照常渲染「官方档位 0」，
+ * README 还写着「订阅 10 档」。死数据 + 看不出来的空，比少一层更糟。
+ * 现在：派生不出来 → health 直接红线 → 拒绝发布。
+ */
 
 /* ────────────────────────── 5. 中转站（自动探测 /api/pricing） ────────────────────────── */
 // auto: 该站公开 OneAPI/NewAPI 价目接口，脚本每天自动采；false 的只登记、等人工核价
@@ -477,7 +473,29 @@ async function fetchFx(prev) {
 }
 
 /* ────────────────────────── 7. AI 活动 ────────────────────────── */
-const AIOS_FILE = process.env.AIOS_OPPORTUNITIES || '/Users/raki/Desktop/AIOS/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json';
+/* AIOS 活动库：可选层，本地有就用、没有就跳过。
+ * 以前是一个写死的绝对路径（还重复了一段 Desktop/AIOS），换机器或上 CI 必然读不到，
+ * 而且读不到时没有任何提示。现在按候选顺序探测，都不在就明确说一句「跳过」。 */
+const AIOS_CANDIDATES = [
+  process.env.AIOS_OPPORTUNITIES,
+  `${process.env.HOME || ''}/Desktop/AIOS/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
+  `${process.env.HOME || ''}/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
+].filter(Boolean);
+
+function resolveAiosFile() {
+  for (const p of AIOS_CANDIDATES) {
+    try {
+      if (existsSync(p)) return p;
+    } catch { /* 下一个 */ }
+  }
+  return null;
+}
+const AIOS_FILE = resolveAiosFile();
+if (!AIOS_FILE) {
+  console.warn('[collect] 没找到 AIOS 活动库（可选层），本次活动只收 Devpost + Luma');
+} else {
+  console.log(`[collect] AIOS 活动库：${AIOS_FILE}`);
+}
 
 function parseDevpostDates(s) {
   const m = String(s || '').match(/^([A-Z][a-z]{2}) (\d{1,2}) - ([A-Z][a-z]{2}) (\d{1,2}), (\d{4})$/);
@@ -509,14 +527,16 @@ async function fetchDevpost() {
     .filter((h) => { if (seen.has(h.id)) return false; seen.add(h.id); return true; })
     .map((h) => {
       const d = parseDevpostDates(h.submission_period_dates);
-      return {
+      const row = {
         id: `devpost-${h.id}`, title: h.title, url: h.url, dates: h.submission_period_dates,
         start: d.start, end: d.end, location: h.displayed_location?.location || '线上',
         org: h.organization_name || '',
         prize: h.prize_amount ? String(h.prize_amount).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() : null,
         regs: h.registrations_count || 0,
-        themes: (h.themes || []).map((t) => t.name), source: 'Devpost', status: 'open',
+        themes: (h.themes || []).map((t) => t.name), source: 'Devpost',
       };
+      row.status = eventStatus(row);   // 按日期判，不再一律 open
+      return row;
     });
 }
 
@@ -528,7 +548,6 @@ async function fetchLuma() {
     });
     if (!res.ok) return [];
     const j = await res.json();
-    const today = new Date().toISOString().slice(0, 10);
     const re = /(\bAI\b|LLM|GPT|Claude|Gemini|agent|模型|人工智能|machine learning|大模型|智能体)/i;
     const out = [];
     const seen = new Set();
@@ -540,20 +559,43 @@ async function fetchLuma() {
       if (!ev.url || seen.has(ev.api_id)) continue;
       seen.add(ev.api_id);
       const start = String(ev.start_at || '').slice(0, 10);
-      out.push({
+      const row = {
         id: `luma-${ev.api_id}`, title: name, url: `https://lu.ma/${ev.url}`,
         dates: start, start, end: String(ev.end_at || '').slice(0, 10),
         location: ev.location_type === 'online' ? '线上' : (ev.geo_address_info?.city || '线下'),
         org: ev.calendar?.name || 'Luma', prize: null, regs: ev.guest_count || 0,
-        themes: [], source: 'Luma', status: start >= today ? 'upcoming' : 'open',
-      });
+        themes: [], source: 'Luma',
+      };
+      row.status = eventStatus(row);   // 按日期判
+      out.push(row);
     }
     return out;
-  } catch { return []; }
+  } catch (e) {
+    console.error(`[collect] luma 失败：${e.message}`);
+    return [];
+  }
 }
 
 
 /* 活动类型与地区：从标题 / 主题 / 场地推断，前端用来做细分筛选 */
+/* 活动状态：只由日期决定，不由数据源决定。
+ * 以前 Devpost 一律硬编码 status:'open'，导致 25 个已经过了截止日的活动还挂在「开放中」，
+ * 用户点进去发现早结束了——数字看着对、语义是错的，最伤信任。
+ * 规则（按优先级）：
+ *   past     —— end 已过（没有 end 就用 start）
+ *   upcoming —— start 在未来
+ *   open     —— 正在进行中
+ *   unknown  —— 两个日期都没有，无法判断，宁可标未知也不假装开放 */
+function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
+  const start = e.start || '';
+  const end = e.end || '';
+  const last = end || start;
+  if (last && last < today) return 'past';
+  if (!start && !end) return 'unknown';
+  if (start && start > today) return 'upcoming';
+  return 'open';
+}
+
 function eventKind(e) {
   const b = `${e.title || ''} ${(e.themes || []).join(' ')} ${e.dates || ''}`;
   if (/hackathon|hack\b|黑客松|challenge|jam|competition|竞赛|大赛|hack ?day/i.test(b)) return 'hackathon';
@@ -585,11 +627,19 @@ async function fetchAibijia() {
   const get = async (u) => {
     try {
       const r = await fetch(u, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-      return r.ok ? await r.json() : null;
-    } catch { return null; }
+      if (!r.ok) {
+        console.error(`[collect] aibijia ${u} → HTTP ${r.status}`);
+        return null;
+      }
+      return await r.json();
+    } catch (e) {
+      console.error(`[collect] aibijia ${u} 失败：${e.message}`);
+      return null;
+    }
   };
   const [prod, apple] = await Promise.all([get(AIBIJIA_PRODUCTS), get(AIBIJIA_APPLE)]);
-  return { prod, apple };
+  // 两个源都挂 = 这一层真的没了；只挂一个仍然算有值（订阅和挂单可以分别降级）
+  return { prod, apple, valid: !!(prod || apple) };
 }
 
 function buildSubsThird(prod) {
@@ -609,6 +659,48 @@ function buildSubsThird(prod) {
   return rows.sort(
     (a, b) => (a.status === 'in_stock' ? 0 : 1) - (b.status === 'in_stock' ? 0 : 1) || a.price - b.price,
   );
+}
+
+/* 官方订阅档位：从苹果区价里取美国区价格，一档一行。
+ * 这是「官网写多少就是多少」里唯一能自动化且可复核的口径——App Store 商品页是公开明码。
+ * 拿不到美国区价格的档位直接跳过，不猜价、不用历史值填。 */
+const SUB_VENDOR = { chatgpt: 'OpenAI', claude: 'Anthropic', gemini: 'Google', grok: 'xAI' };
+const SUB_NOTE = {
+  chatgpt: 'App Store 美国区内购价；网页版可能另有年付折扣',
+  claude: 'App Store 美国区内购价；官网另有年付 17% 折扣',
+  gemini: 'Google One AI 套餐，经 App Store 美国区购买',
+  grok: 'X Premium+ 内的 Grok 档位，美国区定价',
+};
+
+function buildSubs(apple) {
+  if (!apple) return [];
+  const out = [];
+  for (const app of apple.apps || []) {
+    const vendor = SUB_VENDOR[app.slug] || '';
+    for (const plan of app.plans || []) {
+      const us = (plan.regions || []).find((r) => r.country_code === 'US');
+      if (!us || !(Number(us.price_value) > 0)) continue;   // 没有美国区明码就不进这一层
+      const tier = String(plan.label || plan.slug || '')
+        .replace(new RegExp(`^${app.display_name}\\s*`, 'i'), '')
+        .trim() || plan.label;
+      out.push({
+        id: `${app.slug}-${plan.slug}`,
+        product: app.display_name,
+        productSlug: app.slug,
+        vendor,
+        tier,
+        price: Number(us.price_value),
+        currency: us.currency_code || 'USD',
+        period: plan.duration_label || '1月',
+        buy: us.app_store_url || '',
+        quota: '',
+        note: SUB_NOTE[app.slug] || '',
+        source: 'apple',
+        checked: (us.fetched_at || '').slice(0, 10) || null,
+      });
+    }
+  }
+  return out.sort((a, b) => a.product.localeCompare(b.product) || a.price - b.price);
 }
 
 /* AI 圈新闻：公开新闻流，按主题分类 + 打分精选 */
@@ -691,7 +783,9 @@ async function fetchNews() {
         };
       });
     }
-  } catch { /* 源挂了就用历史 */ }
+  } catch (e) {
+    console.error(`[collect] news 源失败，只用手头历史：${e.message}`);
+  }
 
   // 读历史，合并去重，让时间跨度逐日长起来
   let hist = [];
@@ -751,18 +845,27 @@ function buildSubsRegions(apple) {
 }
 
 async function fetchAios() {
+  if (!AIOS_FILE) return [];   // 可选层，没有就是没有，交给上面的 warn 说明
   try {
     const raw = JSON.parse(await readFile(AIOS_FILE, 'utf8'));
     const rows = Array.isArray(raw) ? raw : raw.data || [];
-    const today = new Date().toISOString().slice(0, 10);
-    return rows.map((o) => ({
-      id: o.id, title: o.title, url: o.canonicalUrl || o.sourceUrl, dates: (o.startsAt || '').slice(0, 10),
-      start: (o.startsAt || '').slice(0, 10), location: o.mode === 'online' ? '线上' : (o.city || '线下'),
-      org: o.organizerName || '', prize: o.priceLabel || null, regs: 0,
-      themes: o.topics || [], source: 'AIOS', status: (o.startsAt || '').slice(0, 10) >= today ? 'upcoming' : 'past',
-      worth: o.worthScore ?? null,
-    })).sort((a, b) => String(a.start).localeCompare(String(b.start)));
-  } catch { return []; }
+    return rows.map((o) => {
+      const row = {
+        id: o.id, title: o.title, url: o.canonicalUrl || o.sourceUrl, dates: (o.startsAt || '').slice(0, 10),
+        start: (o.startsAt || '').slice(0, 10), end: (o.endsAt || '').slice(0, 10),
+        location: o.mode === 'online' ? '线上' : (o.city || '线下'),
+        org: o.organizerName || '', prize: o.priceLabel || null, regs: 0,
+        themes: o.topics || [], source: 'AIOS',
+        worth: o.worthScore ?? null,
+      };
+      row.status = eventStatus(row);   // AIOS 是本地历史库，绝大多数会正确翻成 past
+      return row;
+    }).sort((a, b) => String(a.start).localeCompare(String(b.start)));
+  } catch (e) {
+    // AIOS 是本地文件，CI 里读不到是正常的（没配 AIOS_OPPORTUNITIES），这里只提示不报错
+    console.warn(`[collect] AIOS 活动库不可用，跳过这一源：${e.message}`);
+    return [];
+  }
 }
 
 /* ────────────────────────── 8. 智力评测（Vals Index） ────────────────────────── */
@@ -784,14 +887,19 @@ async function fetchBench(prev) {
       seen.add(name);
       rows.push({ rank: Number(m[1]), model: name, score: Number(m[3]) });
     }
-    const old = new Map((prev?.bench || []).map((b) => [b.model, b.score]));
+    // 注意：prev.bench 是 { as_of, source, rows, fetched_at } 对象，不是数组。
+    // 这里以前写成 (prev?.bench || []).map(...)，每次抛 TypeError 被 catch 吞掉，
+    // 导致 bench 永久 stale、delta 永远为 null——「分数下跌标黄」从来没生效过。
+    const prevRows = Array.isArray(prev?.rows) ? prev.rows : [];
+    const old = new Map(prevRows.map((b) => [b.model, b.score]));
     for (const r of rows) {
       const o = old.get(r.model);
       r.delta = o == null ? null : Number((r.score - o).toFixed(2));
     }
     return { as_of: asOf, source: url, rows, fetched_at: new Date().toISOString() };
-  } catch {
-    return prev ? { ...prev, stale: true } : { as_of: null, source: url, rows: [], fetched_at: null };
+  } catch (e) {
+    console.error(`[collect] bench 抓取失败：${e.message}`);
+    return prev ? { ...prev, stale: true } : { as_of: null, source: url, rows: [], fetched_at: null, stale: true };
   }
 }
 
@@ -949,11 +1057,22 @@ function parseOpenRouter(html) {
 async function fetchOpenRouter() {
   try {
     const res = await fetch(OPENROUTER_RANKINGS, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    if (!res.ok) return { apps: [], models: [] };
+    if (!res.ok) {
+      console.error(`[collect] openrouter rankings HTTP ${res.status}`);
+      return { apps: [], models: [] };
+    }
     const html = await res.text();
-    if (html.length < 10000) return { apps: [], models: [] };
-    return parseOpenRouter(html);
-  } catch {
+    if (html.length < 10000) {
+      console.error(`[collect] openrouter rankings 页面过短（${html.length}），可能被拦`);
+      return { apps: [], models: [] };
+    }
+    const parsed = parseOpenRouter(html);
+    if (!parsed.apps.length && !parsed.models.length) {
+      console.error('[collect] openrouter rankings 解析出 0 条——页面结构可能变了');
+    }
+    return parsed;
+  } catch (e) {
+    console.error(`[collect] openrouter rankings 失败：${e.message}`);
     return { apps: [], models: [] };
   }
 }
@@ -997,11 +1116,20 @@ function parseAA(html) {
 async function fetchAA() {
   try {
     const res = await fetch(AA_URL, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.error(`[collect] artificialanalysis HTTP ${res.status}`);
+      return [];
+    }
     const html = await res.text();
-    if (html.length < 50000) return [];
-    return parseAA(html);
-  } catch {
+    if (html.length < 50000) {
+      console.error(`[collect] artificialanalysis 页面过短（${html.length}），可能被拦`);
+      return [];
+    }
+    const parsed = parseAA(html);
+    if (!parsed.length) console.error('[collect] AA 解析出 0 条——initialModels 结构可能变了');
+    return parsed;
+  } catch (e) {
+    console.error(`[collect] artificialanalysis 失败：${e.message}`);
     return [];
   }
 }
@@ -1040,18 +1168,95 @@ async function fetchHNSignal(names) {
   return out.sort((a, b) => b.heat - a.heat);
 }
 
+/* ────────────────────────── 分层采集：状态可追溯 ──────────────────────────
+ * 每个数据层都经过这里。约定：
+ *   fresh  —— 本次拿到了非空结果
+ *   stale  —— 本次为空/异常，沿用上一版（prev 里有值）
+ *   failed —— 本次为空且上一版也没有，这一层真的没了（health 会判红线）
+ * 采集结果写进 meta.collect[]，前端和 health.mjs 都能读到，不再靠数数去猜。 */
+function makeTracker() {
+  const log = [];
+  return {
+    log,
+    /** @param {string} layer 层名
+     *  @param {Function} run 返回 Promise<{value:any, valid?:boolean}>
+     *  valid 显式覆盖「非空」判定（值本身是对象、空对象也算空时用） */
+    async run(layer, run, prevValue) {
+      const started = Date.now();
+      let value = null;
+      let error = null;
+      let valid = null;
+      try {
+        const out = await run();
+        value = out?.value ?? null;
+        valid = out?.valid ?? null;
+      } catch (e) {
+        error = e.message;
+      }
+      const size = (v) => {
+        if (v == null) return 0;
+        if (Array.isArray(v)) return v.length;
+        if (typeof v === 'object') {
+          // {prod, apple} 这种聚合对象：任一子字段有内容就算有值
+          const sub = Object.values(v).filter((x) => x != null);
+          if (sub.length) return sub.reduce((n, x) => n + (Array.isArray(x) ? x.length : typeof x === 'object' ? Object.keys(x).length : 1), 0);
+          return Object.keys(v).length;
+        }
+        return 1;
+      };
+      const n = valid === false ? 0 : size(value);
+      const prevN = size(prevValue);
+
+      if (n > 0) {
+        log.push({ layer, status: 'fresh', n, ms: Date.now() - started });
+        return value;
+      }
+      if (prevN > 0) {
+        log.push({ layer, status: 'stale', n: 0, prev: prevN, ms: Date.now() - started, error });
+        console.warn(`[collect] ${layer} 本次为空${error ? `（${error}）` : ''}，沿用上一版 ${prevN} 条`);
+        return prevValue;
+      }
+      log.push({ layer, status: 'failed', n: 0, ms: Date.now() - started, error });
+      console.error(`[collect] ${layer} 本次为空且无上一版${error ? `（${error}）` : ''}`);
+      return value;
+    },
+  };
+}
+
 /* ────────────────────────── 主流程 ────────────────────────── */
 async function main() {
   let prev = null;
   try { prev = JSON.parse(await readFile(OUT, 'utf8')); } catch { /* 首次运行 */ }
 
   const fx = await fetchFx(prev?.meta?.fx);
-  const [devpost, aios, luma, aibijia, news, resources, openrouter, aaModels] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources(), fetchOpenRouter(), fetchAA()]);
+  const T = makeTracker();
 
-// 民间讨论：拿使用量前 18 的工具名去 HN 查公开帖
-const hnTargets = openrouter.apps.slice(0, 18).map((a) => a.title).filter(Boolean);
-const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
-  const bench = await fetchBench(prev?.bench);
+  // 并行拉取，每层独立记账；失败不互相拖累
+  const [devpost, aios, luma, aibijia, resources, openrouter, aaModels] = await Promise.all([
+    T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
+    T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
+    T.run('luma', async () => ({ value: await fetchLuma() }), prev?.events?.filter((e) => e.source === 'Luma')),
+    T.run('aibijia', async () => {
+      const v = await fetchAibijia();
+      return { value: v, valid: v.valid };
+    }, null),
+    T.run('resources', async () => ({ value: await fetchResources() }), prev?.resources),
+    T.run('openrouter', async () => ({ value: await fetchOpenRouter() }), prev ? { apps: prev.orApps, models: prev.orModels } : null),
+    T.run('aa', async () => ({ value: await fetchAA() }), prev?.aaModels),
+  ]);
+
+  const news = await T.run('news', async () => ({ value: await fetchNews() }), prev?.news);
+
+  // 民间讨论：拿使用量前 18 的工具名去 HN 查公开帖
+  const hnTargets = (openrouter?.apps || []).slice(0, 18).map((a) => a.title).filter(Boolean);
+  const hnSignals = hnTargets.length
+    ? await T.run('hn', async () => ({ value: await fetchHNSignal(hnTargets) }), prev?.hnSignals)
+    : (prev?.hnSignals || []);
+
+  const bench = await T.run('bench', async () => {
+    const b = await fetchBench(prev?.bench);
+    return { value: b.rows?.length ? b : { ...b, rows: prev?.bench?.rows || [] } };
+  }, prev?.bench);
 
   const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
@@ -1115,12 +1320,28 @@ const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
     return { ...r, stale: true, prices: old?.prices || {}, models: old?.models || 0, checked_at: old?.checked_at || null };
   }).sort((a, b) => (b.models || 0) - (a.models || 0));
 
-  const subs = SUBSCRIPTIONS.map((x) => ({ ...x, cny: Number((x.price * fx.USDCNY).toFixed(1)) }));
-  const aibijiaThird = buildSubsThird(aibijia.prod);
-  const subsThird = aibijiaThird.length
-    ? aibijiaThird
-    : SUBS_THIRD.map((x) => ({ ...x, usd: Number((x.price_cny / fx.USDCNY).toFixed(2)), url: 'https://aibijia.org/', status: 'unknown' }));
-  const subsRegions = buildSubsRegions(aibijia.apple);
+  // 订阅层：官方月费从苹果区价派生；第三方挂单只认 aibijia 的实时挂单，没有就是没有。
+  // aibijia 整体挂掉时沿用上一版的派生结果（而不是让订阅页空掉）。
+  const prevSubs = Array.isArray(prev?.subs) ? prev.subs : [];
+  const prevSubsThird = Array.isArray(prev?.subsThird) ? prev.subsThird : [];
+  const prevSubsRegions = Array.isArray(prev?.subsRegions) ? prev.subsRegions : [];
+
+  let subs = buildSubs(aibijia.apple).map((x) => ({ ...x, cny: Number((x.price * fx.USDCNY).toFixed(1)) }));
+  let subsThird = buildSubsThird(aibijia.prod);
+  let subsRegions = buildSubsRegions(aibijia.apple);
+
+  if (!subs.length && prevSubs.length) {
+    subs = prevSubs; T.log.push({ layer: 'subs', status: 'stale', n: 0, prev: prevSubs.length, ms: 0, error: 'apple 源为空' });
+    console.warn(`[collect] subs 派生为空，沿用上一版 ${prevSubs.length} 档`);
+  }
+  if (!subsThird.length && prevSubsThird.length) {
+    subsThird = prevSubsThird; T.log.push({ layer: 'subsThird', status: 'stale', n: 0, prev: prevSubsThird.length, ms: 0, error: 'products 源为空' });
+    console.warn(`[collect] subsThird 为空，沿用上一版 ${prevSubsThird.length} 条`);
+  }
+  if (!subsRegions.length && prevSubsRegions.length) {
+    subsRegions = prevSubsRegions; T.log.push({ layer: 'subsRegions', status: 'stale', n: 0, prev: prevSubsRegions.length, ms: 0, error: 'apple 源为空' });
+    console.warn(`[collect] subsRegions 为空，沿用上一版 ${prevSubsRegions.length} 组`);
+  }
 
   // 来源登记表：所有 URL 去重，标注类型与命中次数
   const srcMap = new Map();
@@ -1157,12 +1378,23 @@ const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
 
   const vendors = [...new Set(models.map((m) => m.vendor))].sort();
 
+  // 活动：状态统一由 eventStatus 按日期判定，三个来源一视同仁
+  const allEvents = [...devpost, ...luma, ...aios].map((e) => {
+    const row = { ...e, kind: eventKind(e), region: eventRegion(e) };
+    row.status = eventStatus(row);
+    return row;
+  });
+  const eventsOpen = allEvents.filter((e) => e.status === 'open' || e.status === 'upcoming').length;
+  const eventsPast = allEvents.filter((e) => e.status === 'past').length;
+  const eventsUnknown = allEvents.filter((e) => e.status === 'unknown').length;
+
   const data = {
     meta: {
       generated_at: new Date().toISOString(),
       date: new Date().toISOString().slice(0, 10),
       brand: 'IndexAI',
       fx,
+      collect: T.log,
       counts: {
         models: models.length,
         aggregator: models.filter((m) => m.channelKind === 'aggregator').length,
@@ -1186,8 +1418,10 @@ const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
         relaySamples: relays.reduce((n, r) => n + (r.samples || []).length, 0),
-        events: devpost.length + luma.length + aios.length,
-        eventsOpen: devpost.length + luma.filter((e) => e.status !== 'past').length,
+        events: allEvents.length,
+        eventsOpen,
+        eventsPast,
+        eventsUnknown,
         bench: bench.rows.length,
         sources: srcMap.size,
       },
@@ -1207,14 +1441,30 @@ const hnSignals = hnTargets.length ? await fetchHNSignal(hnTargets) : [];
     aaModels,
     hnSignals,
     relays,
-    events: [...devpost, ...luma, ...aios].map((e) => ({ ...e, kind: eventKind(e), region: eventRegion(e) })),
+    events: allEvents,
     bench,
     signals,
     sources: [...srcMap.values()].sort((a, b) => b.refs - a.refs),
   };
 
+  // 健康门禁：不达标就抛，绝不写出残缺的 data.json 再发布出去
+  const prevCounts = prev?.meta?.counts || null;
+  const prevOf = (k) => {
+    if (!prev) return null;
+    if (k === 'subsThird') return (prev.subsThird || []).length;
+    if (k === 'relaysLive') return (prev.relays || []).filter((r) => r.status === 'ok').length;
+    if (k === 'subsRegions') return (prev.subsRegions || []).length;
+    return prevCounts?.[k] ?? (Array.isArray(prev[k]) ? prev[k].length : null);
+  };
+  const health = assertLayers(data, prevOf, { allowDegraded: process.env.ALLOW_DEGRADED === '1' });
+  data.meta.health = {
+    ok: health.ok,
+    red: health.red.map((i) => `${i.key}: ${i.msg}`),
+    warn: health.warn.map((i) => `${i.key}: ${i.msg}`),
+  };
+
   await writeFile(OUT, JSON.stringify(data));
-  console.log(JSON.stringify(data.meta, null, 2));
+  console.log(JSON.stringify({ ...data.meta, counts: data.meta.counts }, null, 2));
 }
 
 main().catch((e) => { console.error('[collect] failed:', e.message); process.exit(1); });
