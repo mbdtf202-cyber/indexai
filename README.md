@@ -97,41 +97,31 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 
 纯静态（HTML + JSON），没有后端、没有数据库。
 
-### 两种运行模式
-
-**A. 云端（推荐，不依赖本机）** — `.github/workflows/daily-collect.yml`
+### 运行模式：云端
 
 ```
-GitHub Actions  每天 09:00
-      ├─ node collect.mjs
-      ├─ 组装 dist/
-      └─ wrangler pages deploy → Cloudflare Pages
+GitHub Actions  .github/workflows/daily-collect.yml   每天 09:00（UTC 01:00）
+      ├─ node collect.mjs                       重采全部数据
+      ├─ 组装 dist/                              index.html + data.json + _headers
+      └─ wrangler pages deploy                   → Cloudflare Pages
 ```
 
-启用只需要仓库里有一个 secret：
+不依赖任何一台机器开机。手动触发：
 
 ```bash
-# 1. 建 token（30 秒）：Cloudflare Dash → My Profile → API Tokens → Create Token
-#    https://dash.cloudflare.com/profile/api-tokens
-#    模板选 "Edit Cloudflare Workers"，或自定义权限：
-#    Account → Cloudflare Pages → Edit
-# 2. 写进仓库（会提示粘贴，不回显）
-gh secret set CLOUDFLARE_API_TOKEN -R mbdtf202-cyber/indexai
-# 3. 手动触发一次验证
 gh workflow run daily-collect -R mbdtf202-cyber/indexai
+gh run list -R mbdtf202-cyber/indexai --limit 3
 ```
 
-**B. 本地（当前在跑）** — `com.raki.indexai.collect`
+需要的仓库 Secret（已配置）：
 
-```
-launchd 每天 09:00 → node deploy.mjs → wrangler pages deploy
-```
+| Secret | 说明 |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token，权限需含 **Account → Cloudflare Pages → Edit** |
 
-云端跑通后可以关掉本机定时，避免两边重复部署：
+> 踩过的坑：如果用 R2 模板创建 token，`/tokens/verify` 会返回 `active`，但调 Pages API 会报 `Authentication error [code: 10000]`。要选 **Edit Cloudflare Workers** 模板或手动加 Pages 权限。
 
-```bash
-launchctl bootout gui/$(id -u)/com.raki.indexai.collect
-```
+**本地备用**：`node deploy.mjs` 仍可一键采集 + 发布（走本机 wrangler 登录态）。原来的 launchd 定时已停用，避免和云端重复部署。
 
 ### 为什么本地用 Node 驱动
 
