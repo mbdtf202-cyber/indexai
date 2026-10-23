@@ -68,15 +68,16 @@ button,input,select{font:inherit; color:inherit}
 .brand:hover .glyph{fill:var(--accent)}
 .brand b{font-size:15px; font-weight:700; letter-spacing:-.01em}
 .brand span{font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; color:var(--faint)}
-.topnav{overflow-x:auto; scrollbar-width:none; display:flex; gap:2px; margin-left:6px; overflow:auto; scrollbar-width:none}
+.topnav{overflow-x:auto; scrollbar-width:none; display:flex; align-items:center; gap:2px; margin-left:8px; overflow:auto; scrollbar-width:none}
 .topnav::-webkit-scrollbar-x{display:none}
-.nav{appearance:none; border:0; background:none; padding:9px 6px; cursor:pointer; white-space:nowrap;
-  font-size:13px; color:var(--dim); border-radius:3px; position:relative}
+.nav{appearance:none; border:0; background:none; padding:5px 8px; cursor:pointer; white-space:nowrap;
+  font-size:13px; color:var(--dim); border-radius:3px; position:relative;
+  display:inline-flex; align-items:baseline; gap:3px; line-height:1.5}
 .nav:hover{color:var(--ink); background:var(--panel2)}
 .nav[aria-selected="true"]{color:var(--ink); font-weight:600}
-.nav[aria-selected="true"]::after{content:""; position:absolute; left:11px; right:11px; bottom:2px; height:2px; background:var(--accent)}
-.nav sup{font-family:var(--mono); font-size:11.5px; color:var(--faint); margin-left:3px}
-.top .right{margin-left:auto; display:flex; align-items:center; gap:10px}
+.nav[aria-selected="true"]::after{content:""; position:absolute; left:8px; right:8px; bottom:-1px; height:2px; background:var(--accent)}
+.nav sup{font-family:var(--mono); font-size:11px; color:var(--faint); line-height:1; vertical-align:baseline; letter-spacing:0}
+.top .right{margin-left:auto; display:flex; align-items:center; gap:10px; align-self:center}
 .stamp{font-family:var(--mono); font-size:11.5px; color:var(--faint); white-space:nowrap}
 .iconbtn{height:28px; padding:0 9px; border:1px solid var(--line); background:transparent; color:var(--dim);
   font-family:var(--mono); font-size:11.5px; letter-spacing:.08em; cursor:pointer; border-radius:3px}
@@ -793,6 +794,16 @@ footer.foot a:hover{color:var(--accent)}
 .rt-stem.on{stroke:var(--ink); stroke-width:1.6}
 /* 选中事件：把这一根针画成 accent 并稍粗，用户一眼定位；不再另画通长竖线 */
 .rt-dot{fill:var(--panel); stroke:var(--dim); stroke-width:1.2; vector-effect:non-scaling-stroke; transition:all .16s}
+/* 四类事件四种形状：填充色也分开，扫一眼就能看出「这一段在发生什么」 */
+.rt-dot.k-price,.rt-dot[class*="k-price"]{fill:var(--warn); stroke:var(--warn); fill-opacity:.85}
+.rt-key{font-weight:400; font-style:normal; font-family:var(--mono); font-size:11px; margin-right:2px}
+.k-price{color:var(--warn)} .k-use{color:var(--good)} .k-turn{color:var(--accent)} .k-cap{color:var(--dim)}
+.rt-kind{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; padding:2px 6px; border-radius:2px;
+  border:1px solid currentColor; white-space:nowrap}
+.rt-kind.k-price{color:var(--warn)} .rt-kind.k-use{color:var(--good)}
+.rt-kind.k-turn{color:var(--accent)} .rt-kind.k-cap{color:var(--faint)}
+.rt-tally{font-style:normal; font-family:var(--mono); font-size:9px; margin-left:5px; letter-spacing:0}
+.rt-tally u{text-decoration:none; margin-right:4px}
 .rt-dot.era{fill:var(--accent); stroke:var(--accent)}
 .rt-dot.on{fill:var(--ink); stroke:var(--bg); stroke-width:2; r:5}
 .rt-node.on .rt-mo{opacity:1; color:var(--ink); font-weight:600}
@@ -809,7 +820,9 @@ footer.foot a:hover{color:var(--accent)}
 .rt-mo{position:absolute; bottom:-2px; left:50%; transform:translate(-50%, 100%); font-family:var(--mono);
   font-size:9.5px; letter-spacing:.01em; color:var(--faint); white-space:nowrap; opacity:0;
   background:var(--bg); padding:0 4px; transition:opacity .15s, color .15s}
-.rt-node.era .rt-mo{opacity:.85; color:var(--accent)}
+/* 只有转折点常显月份；普通节点 hover / 选中才出——否则 38 个标签会挤成一片 */
+.rt-node.era .rt-mo{opacity:.8; color:var(--accent)}
+.rt-node:not(.era) .rt-mo{opacity:0}
 .rt-node:hover .rt-mo,.rt-node.on .rt-mo{opacity:1; color:var(--ink); font-weight:600}
 .rt-node:hover .rt-mo{opacity:1; color:var(--ink)}
 
@@ -1354,10 +1367,14 @@ const MOTION = (() => {
       <button class="nav" role="tab" data-tab="${t.id}" aria-selected="${state.tab === t.id}" title="${esc(t.hint)}">
         ${esc(t.label)}${counts[t.id] != null ? `<sup>${esc(counts[t.id])}</sup>` : ""}
       </button>`).join("");
-    // 窄屏时把当前 tab 滚到中间，别让用户猜右边还有什么
+    // 只有当前 tab 真的超出可视区才滚，避免把左边项顶出去
     const on = el.querySelector('[aria-selected="true"]');
     if (on && el.scrollWidth > el.clientWidth) {
-      el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+      const l = on.offsetLeft, r = l + on.offsetWidth;
+      const viewL = el.scrollLeft, viewR = viewL + el.clientWidth;
+      if (l < viewL || r > viewR) {
+        el.scrollLeft = l - (el.clientWidth - on.offsetWidth) / 2;
+      }
     }
   }
 
@@ -3319,7 +3336,19 @@ const MOTION = (() => {
       const recency = (ts - winStartMs) / spanMs;            // 0→1
       const h = (e.tier === "era" ? 2.4 : 1) + recency * 0.5;
       return { ...e, ts, x, h, i };
-    });
+    }).sort((a, b) => a.x - b.x);
+
+    /* 月份标签只给「转折点」且互不压字：按 x 扫一遍，够远才显形。
+       38 个节点全带标签会挤成一排乱码，等于没标。 */
+    (() => {
+      let cursor = -Infinity;
+      pts.forEach(p => {
+        p.showMo = false;
+        if (p.tier !== "era") return;
+        const labelPct = 3.4;              // 5 个字符的月份标签约占 3.4% 宽
+        if (p.x - cursor >= labelPct) { p.showMo = true; cursor = p.x; }
+      });
+    })();
 
     /* 脊线：每个事件是一个「峰」，峰的两侧用高斯衰减落到低谷（不是零基线）。
        低谷 = 安静的时期，峰 = 事件发生；这样曲线形状才和数据一一对应。
@@ -3391,9 +3420,9 @@ const MOTION = (() => {
     const strip = msAll.length ? `
       <section class="rt" aria-label="超级大事件">
         <header class="rt-head">
-          <p class="rt-eyebrow">TIMELINE · ${msAll.length} 个改变路线的日子</p>
+          <p class="rt-eyebrow">TIMELINE · ${msAll.length} 个节点</p>
           <h2>从 ChatGPT 上线到今天<br><em>${meta.length} 个时代</em>　<em>${msAll.filter(e => e.tier === "era").length} 次改道</em></h2>
-          <p class="rt-sub">${longest ? `最长的静默是 ${longest.days} 天——${esc(longest.from.title)} 到 ${esc(longest.to.title)}。` : ""}下面这条脊线按真实时间比例画，节点高度是它的分量。</p>
+          <p class="rt-sub">${longest ? `最长的静默是 ${longest.days} 天——${esc(longest.from.title)} 到 ${esc(longest.to.title)}。` : ""}脊线按真实时间比例画，高度是分量；形状区分类别——<b class="rt-key k-price">■ 价格</b> <b class="rt-key k-use">▲ 用法</b> <b class="rt-key k-turn">◆ 转向</b> <span class="rt-key k-cap">● 能力</span>。</p>
         </header>
 
         <figure class="rt-fig">
@@ -3411,22 +3440,37 @@ const MOTION = (() => {
             ${pts.map(p => `
               <line class="rt-stem ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
                 x1="${sx(p.x).toFixed(1)}" y1="${sy(curveY(p.x)).toFixed(1)}" x2="${sx(p.x).toFixed(1)}" y2="${BASE}"></line>
-              <circle class="rt-dot ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
-                cx="${sx(p.x).toFixed(1)}" cy="${sy(curveY(p.x)).toFixed(1)}" r="${p.tier === "era" ? 4.2 : 2.4}"></circle>`).join("")}
+              ${(() => {
+                const cx = sx(p.x).toFixed(1), cy = sy(curveY(p.x)).toFixed(1);
+                const on = sel && keyOf(sel) === keyOf(p) ? " on" : "";
+                const era = p.tier === "era" ? " era" : "";
+                const r = p.tier === "era" ? 4.6 : 2.9;
+                // 形状即语义：不同类的事不该长成同一个点
+                if (p.kind === "price") return `<rect class="rt-dot${era}${on}" x="${(+cx - r).toFixed(1)}" y="${(+cy - r).toFixed(1)}" width="${r * 2}" height="${r * 2}"></rect>`;
+                if (p.kind === "use") return `<polygon class="rt-dot${era}${on}" points="${cx},${(+cy - r - 1).toFixed(1)} ${(+cx + r + 1).toFixed(1)},${(+cy + r).toFixed(1)} ${(+cx - r - 1).toFixed(1)},${(+cy + r).toFixed(1)}"></polygon>`;
+                if (p.kind === "turn") return `<polygon class="rt-dot${era}${on}" points="${cx},${(+cy - r - 1).toFixed(1)} ${(+cx + r + 1).toFixed(1)},${cy} ${cx},${(+cy + r + 1).toFixed(1)} ${(+cx - r - 1).toFixed(1)},${cy}"></polygon>`;
+                return `<circle class="rt-dot${era}${on}" cx="${cx}" cy="${cy}" r="${r}"></circle>`;
+              })()}`).join("")}
             ${pts.map(p => `<rect class="rt-grab" x="${(sx(p.x) - 7).toFixed(1)}" y="0" width="14" height="${BASE}"
                 data-ms="${esc(keyOf(p))}"></rect>`).join("")}
           </svg>
           <div class="rt-origin"><span>起点</span></div>
           <div class="rt-hit">
             ${pts.map(p => `
-              <button class="rt-node ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
+              <button class="rt-node ${p.showMo ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
                 style="--x:${p.x}%" data-ms="${esc(keyOf(p))}" aria-label="${esc(p.d + " " + p.title)}">
                 <span class="rt-mo">${esc(p.d.slice(2, 7).replace("-", "."))}</span>
               </button>`).join("")}
           </div>
           <div class="rt-eraLegend">
-            ${eras.map(m => `<button class="rt-chip ${sel && sel.e === m.id ? "on" : ""}" data-msepoch="${esc(m.id)}" title="${esc(m.desc || "")}">
-              <b>${esc(m.name)}</b><i>${esc(m.span || "")}</i></button>`).join("")}
+            ${eras.map(m => {
+              const own = pts.filter(p => p.e === m.id);
+              const c = ks => own.filter(p => p.kind === ks).length;
+              const tally = [["price", "■"], ["use", "▲"], ["turn", "◆"]].filter(([k]) => c(k))
+                .map(([k, g]) => `<u class="k-${k}">${g}${c(k)}</u>`).join("");
+              return `<button class="rt-chip ${sel && sel.e === m.id ? "on" : ""}" data-msepoch="${esc(m.id)}" title="${esc(m.desc || "")}">
+                <b>${esc(m.name)}<em class="rt-tally">${tally}</em></b><i>${esc(m.span || "")}　${own.length} 件</i></button>`;
+            }).join("")}
           </div>
           <figcaption>左 ${esc(newsFmt(winStartMs, "m"))}　·　按日等宽　·　右 ${esc(newsFmt(winEndMs, "m"))}</figcaption>
         </figure>
@@ -3437,6 +3481,7 @@ const MOTION = (() => {
             <time>${esc(sel.d)}</time>
             <p class="rt-era">${esc(eraOf(sel.e).full)}</p>
             <div class="rt-flags">
+              <span class="rt-kind k-${sel.kind}">${{cap:"能力",price:"价格",use:"用法",turn:"转向"}[sel.kind] || "能力"}</span>
               <span class="rt-tier ${sel.tier === "era" ? "era" : ""}">${sel.tier === "era" ? "改道" : "铺垫"}</span>
               <span class="rt-ver ${ver.cls}">${ver.t}</span>
             </div>
