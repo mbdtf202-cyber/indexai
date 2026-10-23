@@ -144,6 +144,23 @@ button,input,select{font:inherit; color:inherit}
 .sb-x{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--accent); white-space:nowrap}
 @media (max-width:760px){.sb{grid-template-columns:110px 1fr 56px}.sb-v{display:none}}
 
+
+/* ── 活动时间轴 ── */
+.tlsec{margin-bottom:var(--sect); padding-top:18px; border-top:1px solid var(--line)}
+.tlhead{display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; margin-bottom:6px}
+.tlhead h3{margin:0; font-size:clamp(16px,1.5vw,19px); font-weight:600; letter-spacing:-.02em}
+.tlhead p{margin:0; font-size:12.5px; color:var(--faint)}
+#eventTimeline{display:block; width:100%; height:clamp(200px,22vw,260px); overflow:visible}
+.tlsec .tl-bar{transition:opacity .18s}
+.tlsec .tl-bar:hover{opacity:1!important}
+.tlsec .tl-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
+.tlsec .tl-grid{stroke:var(--line); stroke-width:1}
+.tlsec .tl-now{stroke:var(--accent); stroke-width:1.5; stroke-dasharray:3 3}
+.tlsec .tl-nowt{fill:var(--accent); font-family:var(--mono); font-size:11px}
+.tllegend{display:flex; gap:18px; margin-top:8px; font-size:11.5px; color:var(--faint); font-family:var(--mono)}
+.tllegend span{display:flex; align-items:center; gap:6px}
+.tllegend i{width:10px; height:8px; border-radius:1px}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -1088,6 +1105,7 @@ const MOTION = (() => {
     if (state.cmpView === "vendors") return cmpSwitch() + viewVendors();
     const { tbody, tfoot } = modelRows();
     return cmpSwitch() + `
+
       <div class="controls">
         <label class="search"><span class="eyebrow">FIND</span>
           <input id="q" type="search" placeholder="模型 / 厂商 / id，例如 claude、deepseek、free" value="${esc(state.q)}" autocomplete="off">
@@ -1458,6 +1476,20 @@ const MOTION = (() => {
       </article>`;
 
     return `
+      <section class="tlsec">
+        <div class="tlhead">
+          <h3>什么时候有活动</h3>
+          <p>每条是一个活动的起止区间，按开始时间排。</p>
+        </div>
+        <svg id="eventTimeline" viewBox="0 0 1200 260" preserveAspectRatio="none" role="img" aria-label="活动时间轴"></svg>
+        <div class="tllegend">
+          <span><i style="background:#0a0a0a"></i>黑客松</span>
+          <span><i style="background:#e11d48"></i>会议</span>
+          <span><i style="background:#0f7b4f"></i>Meetup</span>
+          <span><i style="background:#b9b9b9"></i>其他</span>
+        </div>
+      </section>
+
       <div class="controls">
         <div class="chips" role="group" aria-label="活动类型">
           <button class="chip" data-evkind="all" aria-pressed="${state.evKind === "all"}">全部类型</button>
@@ -1729,6 +1761,57 @@ const MOTION = (() => {
         <span class="sb-x">${ratio.toFixed(1).replace(/\.0$/, "")}×</span>
       </a>`;
     }).join("");
+  }
+
+
+  /* ── 活动时间轴（甘特） ── */
+  function renderTimeline() {
+    const svg = document.getElementById("eventTimeline");
+    if (!svg) return;
+    const evs = (state.data.events || []).filter(e => e.status !== "past" && e.start && e.end);
+    if (!evs.length) { svg.parentElement.style.display = "none"; return; }
+
+    const DAY = 864e5;
+    const t = (s) => Date.parse(s + "T00:00:00Z");
+    const now = Date.now();
+    const starts = evs.map(e => t(e.start) || now);
+    const ends = evs.map(e => t(e.end) || now);
+    const minD = Math.min(now - 7 * DAY, ...starts);
+    const maxD = Math.max(now + 21 * DAY, ...ends);
+    const W = 1200, H = 260, padL = 3, padR = 3, top = 22, bot = H - 26;
+    const X = (d) => padL + (d - minD) / (maxD - minD) * (W - padL - padR);
+
+    const sorted = [...evs].sort((a, b) => (t(a.start) - t(b.start)) || (t(a.end) - t(b.end)));
+    const rowH = Math.min(3.4, (bot - top) / sorted.length);
+    const colors = { hackathon: "#0a0a0a", conference: "#e11d48", meetup: "#0f7b4f" };
+
+    let bars = "";
+    sorted.forEach((e, i) => {
+      const x1 = X(t(e.start)), x2 = Math.max(X(t(e.end)), x1 + 2);
+      const y = top + i * rowH;
+      const col = colors[e.kind] || "#b9b9b9";
+      bars += `<rect class="tl-bar" x="${x1.toFixed(1)}" y="${y.toFixed(1)}" width="${Math.max(2, x2 - x1).toFixed(1)}"
+        height="${Math.max(1.8, rowH - 0.9).toFixed(1)}" fill="${col}" opacity=".72" rx="0.6"><title>${esc(e.title)} · ${esc(e.dates || "")}</title></rect>`;
+    });
+
+    // 月份刻度
+    let grid = "";
+    const d0 = new Date(minD), d1 = new Date(maxD);
+    for (let y = d0.getUTCFullYear(), m = d0.getUTCMonth(); ;) {
+      const cur = Date.UTC(y, m, 1);
+      if (cur > maxD) break;
+      if (cur >= minD) {
+        const x = X(cur);
+        grid += `<line class="tl-grid" x1="${x.toFixed(1)}" y1="${top - 6}" x2="${x.toFixed(1)}" y2="${bot}"/>`;
+        grid += `<text class="tl-t" x="${(x + 4).toFixed(1)}" y="${H - 8}">${m + 1}月</text>`;
+      }
+      m++; if (m > 11) { m = 0; y++; }
+    }
+
+    const xn = X(now);
+    svg.innerHTML = `${grid}${bars}
+      <line class="tl-now" x1="${xn.toFixed(1)}" y1="${top - 8}" x2="${xn.toFixed(1)}" y2="${bot}"/>
+      <text class="tl-nowt" x="${xn.toFixed(1)}" y="${top - 12}" text-anchor="middle">今天</text>`;
   }
 
   /* ── bench ── */
@@ -2030,7 +2113,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     else if (state.tab === "signals") v.innerHTML = viewSignals();
     else v.innerHTML = viewMethod();
     history.replaceState(null, "", "#" + state.tab);
-    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'relays') renderRelayAxis(); if (state.tab === 'subs') renderSubBars(); });
+    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'relays') renderRelayAxis(); if (state.tab === 'subs') renderSubBars(); if (state.tab === 'events') renderTimeline(); });
   }
 
   /* ── events ── */
