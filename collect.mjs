@@ -905,13 +905,76 @@ async function fetchResources() {
   return out;
 }
 
+
+/* ────────────────────────── OpenRouter 真实使用量（民间口碑 + 工具采纳） ────────────────────────── */
+const OPENROUTER_RANKINGS = 'https://openrouter.ai/rankings';
+
+function parseOpenRouter(html) {
+  const h = html.replace(/\\+"/g, '"').replace(/\\n/g, ' ');
+
+  // 应用（谁在用哪个工具）——只取 day 窗口，跨窗口的 token 不可比
+  const dayAt = h.indexOf('"day":[');
+  const scope = dayAt >= 0 ? h.slice(dayAt, dayAt + 30000) : h;
+  const apps = [];
+  for (const p of scope.split('"app_id":').slice(1)) {
+    const id = p.match(/^(\d+)/);
+    const tok = p.match(/"total_tokens":"?(\d+)"?/);
+    const rk = p.match(/"rank":(\d+)/);
+    const ttl = p.match(/"title":"((?:[^"\\]|\\.)*)"/);
+    const slug = p.match(/"slug":"((?:[^"\\]|\\.)*)"/);
+    const cats = p.match(/"categories":\[([^\]]*)\]/);
+    const desc = p.match(/"description":"((?:[^"\\]|\\.)*)"/);
+    if (!id || !ttl || !rk) continue;
+    apps.push({
+      id: +id[1],
+      title: ttl[1],
+      slug: slug ? slug[1] : '',
+      rank: +rk[1],
+      tokens: tok ? +tok[1] : 0,
+      categories: cats ? cats[1].replace(/"/g, '').split(',').filter(Boolean) : [],
+      desc: desc ? desc[1].slice(0, 240) : '',
+    });
+  }
+  const appMap = new Map();
+  for (const a of apps) {
+    if (!appMap.has(a.title)) appMap.set(a.title, a);
+  }
+
+  // 模型调用量（真实选择）
+  const models = [];
+  const reM = /\{"date":"([^"]+)","model_permaslug":"([^"]+)","variant":"([^"]*)","total_completion_tokens":(\d+),"total_prompt_tokens":(\d+)/g;
+  let m;
+  while ((m = reM.exec(h))) models.push({ slug: m[2], tokens: +m[4] + +m[5] });
+  const modelMap = new Map();
+  for (const r of models) modelMap.set(r.slug, (modelMap.get(r.slug) || 0) + r.tokens);
+
+  return {
+    apps: [...appMap.values()].sort((a, b) => b.tokens - a.tokens).map((a, i) => ({ ...a, rank: i + 1 })),
+    models: [...modelMap.entries()]
+      .map(([slug, tokens]) => ({ slug, tokens }))
+      .sort((a, b) => b.tokens - a.tokens),
+  };
+}
+
+async function fetchOpenRouter() {
+  try {
+    const res = await fetch(OPENROUTER_RANKINGS, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+    if (!res.ok) return { apps: [], models: [] };
+    const html = await res.text();
+    if (html.length < 10000) return { apps: [], models: [] };
+    return parseOpenRouter(html);
+  } catch {
+    return { apps: [], models: [] };
+  }
+}
+
 /* ────────────────────────── 主流程 ────────────────────────── */
 async function main() {
   let prev = null;
   try { prev = JSON.parse(await readFile(OUT, 'utf8')); } catch { /* 首次运行 */ }
 
   const fx = await fetchFx(prev?.meta?.fx);
-  const [devpost, aios, luma, aibijia, news, resources] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources()]);
+  const [devpost, aios, luma, aibijia, news, resources, openrouter] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources(), fetchOpenRouter()]);
   const bench = await fetchBench(prev?.bench);
 
   const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
@@ -1004,6 +1067,7 @@ async function main() {
   if (luma.length) addSrc('https://api.lu.ma/discover/get-paginated-events', 'events', 'Luma');
   if (news.length) addSrc('https://data.aibijia.org/news-frontline.yaml', 'news', 'AI 要闻');
   if (resources.length) addSrc('https://api.github.com/repos', 'toolkit', 'GitHub 精选');
+  if (openrouter.apps.length) addSrc('https://openrouter.ai/rankings', 'adoption', 'OpenRouter 实际调用量');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
   addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
@@ -1036,6 +1100,8 @@ async function main() {
         subsRegionsRaw: subsRegions.reduce((n, r) => n + r.total, 0),
         news: news.length,
         resources: resources.filter((r) => r.status === 'ok').length,
+        orApps: openrouter.apps.length,
+        orModels: openrouter.models.length,
         relays: relays.length,
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
@@ -1056,6 +1122,8 @@ async function main() {
     subsRegions,
     news,
     resources,
+    orApps: openrouter.apps,
+    orModels: openrouter.models,
     relays,
     events: [...devpost, ...luma, ...aios].map((e) => ({ ...e, kind: eventKind(e), region: eventRegion(e) })),
     bench,

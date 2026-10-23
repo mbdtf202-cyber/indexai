@@ -221,6 +221,21 @@ td .val{color:#0f7b4f; font-weight:500}
 .bslegend i.dot.val{background:#0f7b4f}
 .bslegend i.line{width:16px; height:1px; background:var(--line2)}
 
+/* ── 团队在用（应用榜） ── */
+.applist{display:flex; flex-direction:column; gap:1px; margin-bottom:var(--sect)}
+.approw{display:grid; grid-template-columns:clamp(140px,18vw,240px) 150px 1fr 58px;
+  align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line);
+  text-decoration:none; color:inherit}
+.approw:hover{background:var(--panel2)}
+.ar-n{font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ar-c{display:flex; gap:4px; flex-wrap:wrap}
+.ar-c i{font-style:normal; font-family:var(--mono); font-size:10.5px; color:var(--faint);
+  border:1px solid var(--line); padding:1px 5px; border-radius:2px}
+.ar-t{height:5px; background:var(--panel3); position:relative}
+.ar-t i{display:block; height:100%; background:var(--ink); opacity:.7}
+.ar-v{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--faint); font-variant-numeric:tabular-nums}
+@media (max-width:760px){.approw{grid-template-columns:1fr 62px}.ar-c,.ar-t{display:none}}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -912,7 +927,7 @@ const MOTION = (() => {
   const state = {
     tab: (location.hash || "#home").slice(1),
     q: "", vendor: "all", band: "all", channel: "all",
-    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", evLimit: 18, toolKind: "all",
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", benchTab: "official", evLimit: 18, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
     hit: 0.7, outShare: 0.2,
@@ -2012,7 +2027,9 @@ const MOTION = (() => {
   function renderBenchScatter() {
     const svg = document.getElementById("benchScatter");
     if (!svg) return;
-    const pts = benchPoints();
+    const mode = state.benchTab || "official";
+    const src = mode === "community" ? benchCommunity() : benchOfficial().map(r => ({ ...r, value: r.price ? r.score / r.price : 0 }));
+    const pts = src.filter(p => p.price != null && p.price > 0);
     if (pts.length < 3) { svg.parentElement.style.display = "none"; return; }
 
     const W = 1200, H = 340, padL = 54, padR = 150, padT = 26, padB = 48;
@@ -2038,14 +2055,14 @@ const MOTION = (() => {
     }
 
     const best = pts.reduce((a, b) => (a.score >= b.score ? a : b));
-    const value = pts.reduce((a, b) => (a.value >= b.value ? a : b));
-    const priciest = pts.reduce((a, b) => (a.price >= b.price ? a : b));
+    const value = pts.reduce((a, b) => ((a.value || 0) >= (b.value || 0) ? a : b));
+    const useValue = mode !== "community";
 
     // 标签避让：右侧放得下就右置，否则左置；同名竖直错开
     const placed = [];
     const dots = pts.map((p) => {
       const x = X(p.price), y = Y(p.score);
-      const isBest = p === best, isValue = p === value;
+      const isBest = p === best, isValue = useValue && p === value;
       const right = x < W - padR - 8;
       let ly = y + 4;
       for (const q of placed) {
@@ -2067,46 +2084,139 @@ const MOTION = (() => {
       <line class="bs-ax" x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}"/>
       <line class="bs-ax" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}"/>
       <text class="bs-axt" x="${(padL + (W - padL - padR) / 2).toFixed(0)}" y="${H - 6}" text-anchor="middle">每 1M 输入 token 价格（对数）</text>
-      <text class="bs-axt" transform="translate(14,${(padT + (H - padT - padB) / 2).toFixed(0)}) rotate(-90)" text-anchor="middle">Vals Index 分数</text>
+      <text class="bs-axt" transform="translate(14,${(padT + (H - padT - padB) / 2).toFixed(0)}) rotate(-90)" text-anchor="middle">${mode === "community" ? "口碑分（按调用量归一化）" : "Vals Index 分数"}</text>
       ${dots}`;
   }
 
   /* ── bench ── */
+  /* 官方基准（Vals）与民间选择（OpenRouter 实际调用量）分开成两张榜 */
+  function benchOfficial() {
+    const rows = state.data.bench?.rows || [];
+    const models = state.data.models || [];
+    const price = (name) => {
+      const exact = models.find(m => m.name === name && m.input > 0);
+      if (exact) return exact.input;
+      const key = name.toLowerCase();
+      const near = models.find(m => m.input > 0 && (m.name.toLowerCase().includes(key) || key.includes(m.name.toLowerCase())));
+      return near ? near.input : null;
+    };
+    return rows.map(r => ({ name: r.model, score: r.score, delta: r.delta, price: price(r.model) }));
+  }
+
+  function benchCommunity() {
+    const src = state.data.orModels || [];
+    const models = state.data.models || [];
+    if (!src.length) return [];
+
+    // 同一模型的多个快照合并成一条
+    const merged = new Map();
+    for (const x of src) {
+      const parts = x.slug.split("/");
+      const bare = (parts[1] || parts[0]).replace(/-\d{8}$/, "");
+      merged.set(bare, (merged.get(bare) || 0) + x.tokens);
+    }
+    const rows = [...merged.entries()].map(([bare, tokens]) => {
+      // 优先用价格表里的正式写法，找不到就把 slug 还原成人话
+      const norm = (t) => t.toLowerCase()
+        .replace(/^[a-z0-9.\-]+\s*:\s*/, "")   // 去掉 "Z.ai: " 这类厂商前缀
+        .replace(/[\s.\-_()（）]+/g, "");
+      const key = norm(bare);
+      const m = models.find(y => y.input > 0 && norm(y.name) === key)
+        || models.find(y => y.input > 0 && norm(y.name).startsWith(key))
+        || models.find(y => y.input > 0 && key.startsWith(norm(y.name)));
+      const name = m ? m.name : bare.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      return { name, tokens, price: m ? m.input : null };
+    }).sort((a, b) => b.tokens - a.tokens);
+
+    const toks = rows.map(r => r.tokens);
+    const lo = Math.log10(Math.min(...toks)), hi = Math.log10(Math.max(...toks));
+    const span = hi - lo || 1;
+    return rows.map((r, i) => ({
+      ...r,
+      rank: i + 1,
+      score: 40 + 60 * ((Math.log10(r.tokens) - lo) / span),
+    }));
+  }
+
   function viewBench() {
     const b = state.data.bench;
-    const rows = (b?.rows || []);
-    if (!rows.length) return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code> 抓取 Vals Index。</div>`;
-    const max = Math.max(...rows.map(r => r.score));
+    const official = benchOfficial();
+    const community = benchCommunity();
+    const apps = state.data.orApps || [];
+    if (!official.length && !community.length) {
+      return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code>。</div>`;
+    }
+    const tab = state.benchTab || "official";
+    const maxO = Math.max(...official.map(r => r.score), 1);
+
     return `
+      <div class="controls">
+        <div class="chips" role="group" aria-label="榜单">
+          <button class="chip" data-benchtab="official" aria-pressed="${tab === "official"}">官方基准 ${official.length}</button>
+          <button class="chip" data-benchtab="community" aria-pressed="${tab === "community"}">民间选择 ${community.length}</button>
+          <button class="chip" data-benchtab="apps" aria-pressed="${tab === "apps"}">团队在用 ${apps.length}</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="eyebrow">${tab === "official" ? "Vals Index · 同一套题" : tab === "community" ? "OpenRouter 实际调用量" : "按 token 消耗排"}</span>
+      </div>
+
+      ${tab === "official" ? `
       <section class="bsc">
         <div class="bschead">
           <h3>贵的不一定强</h3>
-          <p>横轴是每百万输入 token 的价格（对数），纵轴是公开评测分。红点是分数最高的，绿点是每美元买到最多分数的。</p>
+          <p>横轴是每百万输入 token 的价格（对数），纵轴是官方基准分。红点分数最高，绿点每美元买到最多分数。</p>
         </div>
-        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="none" role="img" aria-label="评测分与价格的关系"></svg>
+        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="none" role="img" aria-label="官方基准分与价格"></svg>
         <div class="bslegend"><span><i class="dot top"></i>分数最高</span><span><i class="dot val"></i>性价比最高</span><span><i class="line"></i>性价比参考</span></div>
       </section>
-      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="官方基准榜">
         <table><caption class="sr">Vals Index 公开分数</caption>
-          <thead><tr><th style="cursor:default">#</th><th style="cursor:default">模型</th><th style="cursor:default">分数</th>
-            <th class="num hidesm" style="cursor:default">每美元分数</th>
-            <th class="num" style="cursor:default">较上次</th><th class="num hidesm" style="cursor:default">来源</th></tr></thead>
+          <thead><tr><th>#</th><th>模型</th><th>分数</th><th class="num hidesm">每美元分数</th><th class="num">较上次</th><th class="num hidesm">来源</th></tr></thead>
           <tbody>
-          ${rows.map(r => `<tr>
-            <td class="num" style="width:34px">${r.rank}</td>
-            <td><b>${esc(r.model)}</b></td>
-            <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:120px"><i style="width:${Math.max(4, (r.score / max) * 100).toFixed(1)}%"></i></span><span class="num">${r.score.toFixed(2)}</span></span></td>
-            <td class="num hidesm">${(() => {
-              const p = benchPoints().find(x => x.name === r.model);
-              return p ? `<span class="val">${p.value.toFixed(0)}</span>` : '<span class="dim">—</span>';
-            })()}</td>
-            <td class="num">${r.delta == null ? '<span class="dim">—</span>' : `<span class="${r.delta < 0 ? "best" : ""}" style="color:${r.delta < 0 ? "var(--warn)" : "var(--dim)"}">${r.delta > 0 ? "+" : ""}${r.delta.toFixed(2)}</span>`}</td>
-            <td class="num hidesm"><a href="${esc(b.source)}" target="_blank" rel="noopener" style="color:var(--faint);font-size:11.5px">Vals ↗</a></td>
+          ${official.map((r, i) => `<tr>
+            <td class="num" style="width:34px">${i + 1}</td>
+            <td><b>${esc(r.name)}</b></td>
+            <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:120px"><i style="width:${Math.max(4, (r.score / maxO) * 100).toFixed(1)}%"></i></span><span class="num">${r.score.toFixed(2)}</span></span></td>
+            <td class="num hidesm">${r.price ? `<span class="val">${(r.score / r.price).toFixed(0)}</span>` : '<span class="dim">—</span>'}</td>
+            <td class="num">${r.delta == null ? '<span class="dim">—</span>' : `${r.delta > 0 ? "+" : ""}${r.delta.toFixed(2)}`}</td>
+            <td class="num hidesm"><a href="${esc(b?.source || "https://vals.ai")}" target="_blank" rel="noopener" style="color:var(--faint);font-size:11.5px">Vals ↗</a></td>
           </tr>`).join("")}
           </tbody>
         </table>
-      </div>
-      <div class="tfoot"><span>口径：同一套题目的公开总分，跨厂商可比；分数下降标黄，可能是版本回退或渠道掺水，需人工复核。</span></div>`;
+      </div>` : tab === "community" ? `
+      <section class="bsc">
+        <div class="bschead">
+          <h3>开发者的钱投给了谁</h3>
+          <p>纵轴是根据 OpenRouter 实际处理 token 量归一化的口碑分（对数刻度，不是投票）。横轴仍是每百万输入 token 的价格。</p>
+        </div>
+        <svg id="benchScatter" viewBox="0 0 1200 340" preserveAspectRatio="none" role="img" aria-label="口碑分与价格"></svg>
+        <div class="bslegend"><span><i class="dot top"></i>用得最多</span><span><i class="line"></i>口碑参考</span></div>
+      </section>
+      <div class="tablewrap" tabindex="0" role="region" aria-label="民间选择榜">
+        <table><caption class="sr">OpenRouter 实际调用量</caption>
+          <thead><tr><th>#</th><th>模型</th><th>口碑分</th><th class="num">调用量</th><th class="num hidesm">价格 /1M</th></tr></thead>
+          <tbody>
+          ${community.map((r, i) => `<tr>
+            <td class="num" style="width:34px">${i + 1}</td>
+            <td><b>${esc(r.name)}</b></td>
+            <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:120px"><i style="width:${Math.max(4, ((r.score - 40) / 60) * 100).toFixed(1)}%"></i></span><span class="num">${r.score.toFixed(1)}</span></span></td>
+            <td class="num">${(r.tokens / 1e12).toFixed(1)}T</td>
+            <td class="num hidesm">${r.price != null ? "$" + money(r.price) : '<span class="dim">—</span>'}</td>
+          </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>` : `
+      <p class="tnote">按 OpenRouter 实际处理的 token 量排，反映开发者真正把哪些工具接进了工作流。</p>
+      <div class="applist">
+        ${apps.map(a => `<a class="approw" href="https://openrouter.ai/apps/${esc(a.slug || "")}" target="_blank" rel="noopener">
+          <span class="ar-n">${esc(a.title)}</span>
+          <span class="ar-c">${(a.categories || []).slice(0, 2).map(c => `<i>${esc(c)}</i>`).join("")}</span>
+          <span class="ar-t"><i style="width:${Math.max(3, Math.min(100, (Math.log10(Math.max(a.tokens, 1)) / Math.log10(6e13)) * 100)).toFixed(1)}%"></i></span>
+          <span class="ar-v">${(a.tokens / 1e12).toFixed(1)}T</span>
+        </a>`).join("")}
+      </div>`}
+
+      <div class="tfoot"><span>${tab === "official" ? "官方基准取自 Vals Index 的公开总分；价格下降标黄，可能是版本回退或渠道掺水。" : tab === "community" ? "口碑分是按实际调用量归一化的相对值，不等于质量评价，只说明有人在用。" : "分类与描述来自 OpenRouter 的公开应用目录。"}</span></div>`;
   }
 
   /* ── vendors ── */
@@ -2429,7 +2539,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
   /* ── events ── */
   function bind() {
     document.addEventListener("click", (ev) => {
-      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-benchtab],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
       if (!t) return;
       if (t.dataset.tab) {
         if (t.dataset.tab === state.tab) return;
@@ -2458,6 +2568,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
       if (t.dataset.newstopic) { state.newsTopic = t.dataset.newstopic; render(); return; }
       if (t.dataset.newsrange) { state.newsRange = t.dataset.newsrange; render(); return; }
       if (t.dataset.newsimp) { state.newsImp = t.dataset.newsimp; render(); return; }
+      if (t.dataset.benchtab) { state.benchTab = t.dataset.benchtab; render(); return; }
       if (t.dataset.toolkind) { state.toolKind = t.dataset.toolkind; render(); return; }
       if (t.dataset.relay) { if (ev.target.closest("a")) return; openRelay(t.dataset.relay); return; }
       if (t.dataset.sortkey) { state.sortKey = t.dataset.sortkey; state.sortDir = 1; render(); return; }
