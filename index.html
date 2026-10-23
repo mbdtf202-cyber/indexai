@@ -193,6 +193,21 @@ a:focus-visible,button:focus-visible{outline-offset:3px; border-radius:2px}
 #view.swapping{opacity:0; transform:translate3d(0,10px,0)}
 @media (prefers-reduced-motion:reduce){#view{transition:none}}
 
+
+/* ── 评测散点 ── */
+.bsc{margin:0 0 var(--sect); padding-top:20px; border-top:1px solid var(--line)}
+.bschead{display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; margin-bottom:8px}
+.bschead h3{margin:0; font-size:clamp(16px,1.5vw,19px); font-weight:600; letter-spacing:-.02em}
+.bschead p{margin:0; font-size:12.5px; color:var(--faint); max-width:54ch; line-height:1.6}
+#benchScatter{display:block; width:100%; height:clamp(240px,26vw,320px); overflow:visible}
+.bsc .bs-grid{stroke:var(--line); stroke-width:1; stroke-dasharray:1 4}
+.bsc .bs-ax{stroke:var(--ink); stroke-width:1}
+.bsc .bs-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
+.bsc .bs-pt{fill:var(--ink); opacity:.8}
+.bsc .bs-pt.top{fill:var(--accent); opacity:1}
+.bsc .bs-lb{fill:var(--dim); font-size:11.5px}
+.bsc .bs-lb.top{fill:var(--accent); font-weight:600}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -249,6 +264,7 @@ a:focus-visible,button:focus-visible{outline-offset:3px; border-radius:2px}
 .story .axline{stroke:var(--ink); stroke-width:1}
 .story .den{fill:var(--accent); fill-opacity:.06; stroke:var(--accent); stroke-width:1; stroke-opacity:.32; stroke-linejoin:round}
 [data-theme="dark"] .story .dot{fill:#e9e7df}
+[data-theme="dark"] .story .den{fill-opacity:.16; stroke-opacity:.55}
 [data-theme="dark"] .story .dot.agg{fill:#7c7f72}
 @media (max-width:760px){.axhead{gap:10px}.axsub{font-size:12.5px}.axfoot span:last-child{display:none}}
 
@@ -1946,6 +1962,65 @@ const MOTION = (() => {
     }).join("");
   }
 
+
+  /* ── 评测：分数 × 价格散点 ── */
+  function renderBenchScatter() {
+    const svg = document.getElementById("benchScatter");
+    if (!svg) return;
+    const rows = state.data.bench?.rows || [];
+    const models = state.data.models || [];
+    const findPrice = (name) => {
+      const exact = models.find(m => m.name === name && m.input > 0);
+      if (exact) return exact.input;
+      const key = name.toLowerCase().replace(/\s+/g, " ");
+      const near = models.find(m => m.input > 0 && (m.name.toLowerCase().includes(key) || key.includes(m.name.toLowerCase())));
+      return near ? near.input : null;
+    };
+    const pts = rows.map(r => ({ name: r.model, score: r.score, price: findPrice(r.model) }))
+      .filter(p => p.price != null && p.price > 0);
+    if (pts.length < 3) { svg.parentElement.style.display = "none"; return; }
+
+    const W = 1200, H = 320, padL = 46, padR = 120, padT = 18, padB = 40;
+    const ps = pts.map(p => p.price), sc = pts.map(p => p.score);
+    const lo = Math.min(...ps), hi = Math.max(...ps);
+    const sLo = Math.min(...sc) - 2, sHi = Math.max(...sc) + 2;
+    const X = (v) => padL + (Math.log10(v) - Math.log10(lo)) / ((Math.log10(hi) - Math.log10(lo)) || 1) * (W - padL - padR);
+    const Y = (v) => padT + (1 - (v - sLo) / (sHi - sLo)) * (H - padT - padB);
+
+    // 价格网格
+    let grid = "";
+    for (let p = Math.floor(Math.log10(lo)); p <= Math.ceil(Math.log10(hi)); p++) {
+      const v = Math.pow(10, p);
+      if (v < lo * 0.9 || v > hi * 1.1) continue;
+      const x = X(v);
+      grid += `<line class="bs-grid" x1="${x.toFixed(1)}" y1="${padT}" x2="${x.toFixed(1)}" y2="${H - padB}"/>`;
+      grid += `<text class="bs-t" x="${x.toFixed(1)}" y="${H - padB + 18}" text-anchor="middle">$${v >= 1 ? v : v.toFixed(2)}</text>`;
+    }
+    // 分数网格
+    for (let v = Math.ceil(sLo / 10) * 10; v <= sHi; v += 10) {
+      const y = Y(v);
+      grid += `<line class="bs-grid" x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}"/>`;
+      grid += `<text class="bs-t" x="${padL - 8}" y="${(y + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+    }
+
+    const best = pts.reduce((a, b) => (a.score >= b.score ? a : b));
+    const cheapest = pts.reduce((a, b) => (a.price <= b.price ? a : b));
+    const priciest = pts.reduce((a, b) => (a.price >= b.price ? a : b));
+
+    const dots = pts.map((p) => {
+      const isTop = p === best;
+      const x = X(p.price), y = Y(p.score);
+      const label = isTop ? p.name : (p === cheapest ? p.name : (p === priciest ? p.name : ""));
+      return `<circle class="bs-pt${isTop ? " top" : ""}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${isTop ? 5.5 : 3.8}"><title>${esc(p.name)} · $${money(p.price)} · ${p.score.toFixed(2)} 分</title></circle>` +
+        (label ? `<text class="bs-lb${isTop ? " top" : ""}" x="${(x + 9).toFixed(1)}" y="${(y + 4).toFixed(1)}">${esc(label)}</text>` : "");
+    }).join("");
+
+    svg.innerHTML = `${grid}
+      <line class="bs-ax" x1="${padL}" y1="${H - padB}" x2="${W - padR}" y2="${H - padB}"/>
+      <line class="bs-ax" x1="${padL}" y1="${padT}" x2="${padL}" y2="${H - padB}"/>
+      ${dots}`;
+  }
+
   /* ── bench ── */
   function viewBench() {
     const b = state.data.bench;
@@ -1953,11 +2028,13 @@ const MOTION = (() => {
     if (!rows.length) return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code> 抓取 Vals Index。</div>`;
     const max = Math.max(...rows.map(r => r.score));
     return `
-      <div class="relaybar" style="grid-template-columns:repeat(3,minmax(0,1fr))">
-        <div class="cell"><div class="k">数据日期</div><div class="v" style="font-size:16px">${esc(b.as_of || "—")}</div></div>
-        <div class="cell"><div class="k">收录模型</div><div class="v">${rows.length}</div></div>
-        <div class="cell"><div class="k">最高分</div><div class="v">${rows[0].score.toFixed(2)}<small style="font-size:11.5px;color:var(--faint)"> ${esc(rows[0].model)}</small></div></div>
-      </div>
+      <section class="bsc">
+        <div class="bschead">
+          <h3>贵的不一定强</h3>
+          <p>横轴是每百万输入 token 的价格（对数），纵轴是公开评测分。标出来的是最高分、最便宜和最贵。</p>
+        </div>
+        <svg id="benchScatter" viewBox="0 0 1200 320" preserveAspectRatio="none" role="img" aria-label="评测分与价格的关系"></svg>
+      </section>
       <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none">
         <table><caption class="sr">Vals Index 公开分数</caption>
           <thead><tr><th style="cursor:default">#</th><th style="cursor:default">模型</th><th style="cursor:default">分数</th>
@@ -2245,7 +2322,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     else if (state.tab === "signals") v.innerHTML = viewSignals();
     else v.innerHTML = viewMethod();
     history.replaceState(null, "", "#" + state.tab);
-    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'relays') renderRelayAxis(); if (state.tab === 'subs') renderSubBars(); if (state.tab === 'events') renderTimeline(); });
+    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'relays') renderRelayAxis(); if (state.tab === 'subs') renderSubBars(); if (state.tab === 'events') renderTimeline(); if (state.tab === 'bench') renderBenchScatter(); });
   }
 
   /* ── events ── */
