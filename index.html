@@ -222,6 +222,7 @@ td .val{color:#0f7b4f; font-weight:500}
 .bslegend i.line{width:16px; height:1px; background:var(--line2)}
 
 /* ── 团队在用（应用榜） ── */
+td .vend{color:var(--faint); font-size:11px; margin-left:8px}
 .applist{display:flex; flex-direction:column; gap:1px; margin-bottom:var(--sect)}
 .approw{display:grid; grid-template-columns:clamp(140px,18vw,240px) 150px 1fr 58px;
   align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--line);
@@ -245,7 +246,7 @@ td .val{color:#0f7b4f; font-weight:500}
 
 /* ── 滚动叙事 ── */
 .story{position:relative; margin:0 0 var(--sect)}
-.story-track{height:190vh; position:relative}
+.story-track{height:150vh; position:relative}
 .story-pin{position:sticky; top:56px; padding-top:26px; border-top:1px solid var(--line);
   background:var(--bg); z-index:2}
 .story-cap{position:relative; min-height:78px}
@@ -260,12 +261,10 @@ td .val{color:#0f7b4f; font-weight:500}
 .story-rail{height:2px; background:var(--line); margin-top:8px; overflow:hidden}
 .story-rail i{display:block; height:100%; width:0; background:var(--accent); transition:width .12s linear}
 .story .axfoot{margin-top:8px}
-#priceAxis .dot{transition:opacity .5s ease, fill .4s ease, r .3s ease}
-#priceAxis .dot.dim{opacity:.1}
-#priceAxis .dot.lit{opacity:1}
+#priceAxis .dot{transition:opacity .28s ease}
 #priceAxis .dot.mark{r:5.5}
 @media (max-width:760px){
-  .story-track{height:150vh}
+  .story-track{height:105vh}
   .story-pin{top:44px; padding-top:18px}
   .story-cap{min-height:96px}
   .story-line{font-size:13px}
@@ -298,7 +297,7 @@ td .val{color:#0f7b4f; font-weight:500}
 
 /* ── ticker (A) ── */
 .ticker{background:#0a0b0a;color:#e9e7df;overflow:hidden;border-bottom:1px solid #1c1e1a}
-.ticker-track{display:flex;width:max-content;animation:tickmove 54s linear infinite}
+.ticker-track{display:flex;width:max-content;animation:tickmove 54s linear infinite;will-change:transform}
 .ticker-track:hover{animation-play-state:paused}
 .ticker i{display:flex;align-items:center;gap:10px;padding:9px 18px;border-right:1px solid #22241f;
   font:500 11.5px/1 var(--mono);font-style:normal;color:#9aa096;white-space:nowrap}
@@ -578,15 +577,17 @@ footer.foot a:hover{color:var(--accent)}
 
 .entries{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
   border-top:1px solid var(--ink); margin-bottom:var(--sect)}
-.entries .ecard{border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:16px 18px 20px 0}
+.entries .ecard{border-bottom:1px solid var(--line); border-right:1px solid var(--line);
+  padding:20px 16px 24px; text-align:center}
+.entries .ecard:hover{background:var(--panel2)}
 .entries .ecard:nth-child(4n){border-right:0; padding-right:0}
 .ecard{position:relative; background:transparent; text-decoration:none; color:inherit; transition:background .22s}
 .ecard:hover{background:var(--panel2)}
-.ecard-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px}
+.ecard-top{display:flex; flex-direction:column; align-items:center; gap:6px; margin-bottom:10px}
 .ecard-top .et{font-size:13px; font-weight:600; letter-spacing:.01em}
 .ecard-top .eu{font-family:var(--mono); font-size:12px; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap}
 .ecard-top .eu em{font-style:normal; color:var(--faint); font-size:11.5px; margin-left:3px; letter-spacing:.02em}
-.ecard p{margin:0; font-size:11.5px; line-height:1.6; color:var(--dim); max-width:32ch}
+.ecard p{margin:0; font-size:11.5px; line-height:1.6; color:var(--dim); max-width:26ch; margin-inline:auto}
 .earrow{position:absolute; right:16px; bottom:14px; font-size:13px; color:var(--faint); opacity:0; transition:opacity .16s, transform .16s}
 .ecard:hover .earrow{opacity:1; transform:translate(2px,-2px); color:var(--accent)}
 
@@ -873,12 +874,15 @@ const MOTION = (() => {
     const bar = document.createElement("div");
     bar.className = "progress";
     document.body.appendChild(bar);
-    const on = () => {
+    let tick = false;
+    const paint = () => {
+      tick = false;
       const h = document.documentElement.scrollHeight - innerHeight;
       bar.style.width = (h > 0 ? (scrollY / h) * 100 : 0) + "%";
     };
+    const on = () => { if (!tick) { tick = true; requestAnimationFrame(paint); } };
     addEventListener("scroll", on, { passive: true });
-    on();
+    paint();
   }
 
   return { arm, progress, reduced };
@@ -1839,6 +1843,7 @@ const MOTION = (() => {
       dotsG.querySelectorAll(".dot.hot").forEach(el => el.classList.remove("hot"));
     });
 
+    storyDots = svg.querySelectorAll(".dot");
     bindStory();
   }
 
@@ -1847,13 +1852,15 @@ const MOTION = (() => {
      滚动回调就在操作幽灵元素。每次回调都重新查询。 */
   let storyWired = false;
   let storyStage = -1;
+  let storyDots = null;   // renderAxis 时刷新，滚动回调不重复查询
   const STORY_CUTS = [100, 25, 50, 90];
 
   function updateStory() {
     const track = document.querySelector(".story-track");
     if (!track) return;
     const rail = document.getElementById("storyRail");
-    const dots = document.querySelectorAll("#priceAxis .dot");
+    if (!storyDots || !storyDots.length) storyDots = document.querySelectorAll("#priceAxis .dot");
+    const dots = storyDots;
     const lines = document.querySelectorAll(".story-line");
     if (!dots.length) return;
 
@@ -1868,16 +1875,22 @@ const MOTION = (() => {
     const cut = STORY_CUTS[idx];
     dots.forEach((d) => {
       const lit = Number(d.dataset.q) <= cut;
-      d.classList.toggle("lit", lit);
-      d.classList.toggle("dim", !lit);
+      d.style.opacity = lit ? "" : "0.08";
     });
     lines.forEach((l, i) => l.classList.toggle("on", i === idx));
   }
 
+  let storyTick = false;
+  function onStoryScroll() {
+    if (storyTick) return;
+    storyTick = true;
+    requestAnimationFrame(() => { storyTick = false; updateStory(); });
+  }
+
   function bindStory() {
     if (!storyWired) {
-      addEventListener("scroll", updateStory, { passive: true });
-      addEventListener("resize", updateStory);
+      addEventListener("scroll", onStoryScroll, { passive: true });
+      addEventListener("resize", onStoryScroll);
       storyWired = true;
     }
     storyStage = -1;
@@ -2143,7 +2156,8 @@ const MOTION = (() => {
     const official = benchOfficial();
     const community = benchCommunity();
     const apps = state.data.orApps || [];
-    if (!official.length && !community.length) {
+    const aa = (state.data.aaModels || []).filter(m => m.idx > 0 && !m.estimated);
+    if (!official.length && !community.length && !aa.length) {
       return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code>。</div>`;
     }
     const tab = state.benchTab || "official";
@@ -2154,13 +2168,36 @@ const MOTION = (() => {
         <div class="chips" role="group" aria-label="榜单">
           <button class="chip" data-benchtab="official" aria-pressed="${tab === "official"}">官方基准 ${official.length}</button>
           <button class="chip" data-benchtab="community" aria-pressed="${tab === "community"}">民间选择 ${community.length}</button>
+          <button class="chip" data-benchtab="aa" aria-pressed="${tab === "aa"}">综合智能 ${aa.length}</button>
           <button class="chip" data-benchtab="apps" aria-pressed="${tab === "apps"}">团队在用 ${apps.length}</button>
         </div>
         <span class="spacer"></span>
-        <span class="eyebrow">${tab === "official" ? "Vals Index · 同一套题" : tab === "community" ? "OpenRouter 实际调用量" : "按 token 消耗排"}</span>
+        <span class="eyebrow">${tab === "official" ? "Vals Index · 同一套题" : tab === "community" ? "OpenRouter 实际调用量" : tab === "aa" ? "Artificial Analysis 智能指数" : "按 token 消耗排"}</span>
       </div>
 
-      ${tab === "official" ? `
+      ${tab === "aa" ? `
+      <section class="bsc">
+        <div class="bschead">
+          <h3>${aa.length} 个模型的综合智能分</h3>
+          <p>Artificial Analysis 把十来项公开评测合成一个指数。这里按分数排，只保留有实测值的（估算值不算）。</p>
+        </div>
+        <div class="tablewrap" tabindex="0" role="region" aria-label="综合智能榜" style="max-height:620px">
+          <table><caption class="sr">Artificial Analysis Intelligence Index</caption>
+            <thead><tr><th>#</th><th>模型</th><th>智能指数</th><th class="num hidesm">上下文</th><th class="num hidesm">Terminal</th><th class="num hidesm">权重</th></tr></thead>
+            <tbody>
+            ${aa.slice(0, 120).map((m, i) => `<tr>
+              <td class="num" style="width:40px">${i + 1}</td>
+              <td><b>${esc(m.name)}</b><span class="vend">${esc(m.vendor || "")}</span></td>
+              <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:130px"><i style="width:${Math.max(4, (m.idx / aa[0].idx) * 100).toFixed(1)}%"></i></span><span class="num">${m.idx.toFixed(1)}</span></span></td>
+              <td class="num hidesm">${m.ctx ? (m.ctx >= 1000000 ? (m.ctx / 1000000).toFixed(1) + "M" : Math.round(m.ctx / 1000) + "K") : "—"}</td>
+              <td class="num hidesm">${m.terminal != null ? m.terminal.toFixed(0) + "%" : "—"}</td>
+              <td class="num hidesm">${m.openWeights ? '<span class="tag free">开源</span>' : '<span class="dim">闭源</span>'}</td>
+            </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+        ${aa.length > 120 ? `<p class="tnote">显示前 120 个，共 ${aa.length} 个有实测值。</p>` : ""}
+      </section>` : tab === "official" ? `
       <section class="bsc">
         <div class="bschead">
           <h3>贵的不一定强</h3>

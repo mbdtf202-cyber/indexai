@@ -968,13 +968,61 @@ async function fetchOpenRouter() {
   }
 }
 
+
+/* ────────────────────────── Artificial Analysis 综合智能指数 ────────────────────────── */
+const AA_URL = 'https://artificialanalysis.ai/leaderboards/models';
+
+function parseAA(html) {
+  let h = html.replace(/\\+"/g, '"').replace(/\\n/g, ' ');
+  const at = h.indexOf('"initialModels":[');
+  if (at < 0) return [];
+  let i = h.indexOf('[', at), depth = 0, end = i;
+  for (; end < h.length; end++) {
+    if (h[end] === '[') depth++;
+    else if (h[end] === ']') { depth--; if (depth === 0) { end++; break; } }
+  }
+  let arr;
+  try { arr = JSON.parse(h.slice(i, end)); } catch { return []; }
+  return arr
+    .filter((m) => m && typeof m.intelligenceIndex === 'number' && !m.deprecated)
+    .map((m) => ({
+      slug: m.slug,
+      name: String(m.name || m.shortName || '')
+        .replace(/\s*,?\s*Default Fallback\s*/gi, '')
+        .replace(/\s*\(\s*\)/, '')
+        .trim(),
+      fullName: m.name,
+      vendor: m.modelCreatorName || '',
+      idx: Number(m.intelligenceIndex.toFixed(2)),
+      ctx: m.contextWindowTokens || null,
+      openWeights: !!m.isOpenWeights,
+      estimated: !!m.intelligenceIndexIsEstimated,
+      // 细分项，有就带上
+      terminal: typeof m.terminalbenchHard === 'number' ? Number((m.terminalbenchHard * 100).toFixed(1)) : null,
+      tau2: typeof m.tau2 === 'number' ? Number((m.tau2 * 100).toFixed(1)) : null,
+    }))
+    .sort((a, b) => b.idx - a.idx);
+}
+
+async function fetchAA() {
+  try {
+    const res = await fetch(AA_URL, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+    if (!res.ok) return [];
+    const html = await res.text();
+    if (html.length < 50000) return [];
+    return parseAA(html);
+  } catch {
+    return [];
+  }
+}
+
 /* ────────────────────────── 主流程 ────────────────────────── */
 async function main() {
   let prev = null;
   try { prev = JSON.parse(await readFile(OUT, 'utf8')); } catch { /* 首次运行 */ }
 
   const fx = await fetchFx(prev?.meta?.fx);
-  const [devpost, aios, luma, aibijia, news, resources, openrouter] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources(), fetchOpenRouter()]);
+  const [devpost, aios, luma, aibijia, news, resources, openrouter, aaModels] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources(), fetchOpenRouter(), fetchAA()]);
   const bench = await fetchBench(prev?.bench);
 
   const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
@@ -1068,6 +1116,7 @@ async function main() {
   if (news.length) addSrc('https://data.aibijia.org/news-frontline.yaml', 'news', 'AI 要闻');
   if (resources.length) addSrc('https://api.github.com/repos', 'toolkit', 'GitHub 精选');
   if (openrouter.apps.length) addSrc('https://openrouter.ai/rankings', 'adoption', 'OpenRouter 实际调用量');
+  if (aaModels.length) addSrc(AA_URL, 'bench', 'Artificial Analysis 智能指数');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
   addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
@@ -1102,6 +1151,7 @@ async function main() {
         resources: resources.filter((r) => r.status === 'ok').length,
         orApps: openrouter.apps.length,
         orModels: openrouter.models.length,
+        aaModels: aaModels.length,
         relays: relays.length,
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
@@ -1124,6 +1174,7 @@ async function main() {
     resources,
     orApps: openrouter.apps,
     orModels: openrouter.models,
+    aaModels,
     relays,
     events: [...devpost, ...luma, ...aios].map((e) => ({ ...e, kind: eventKind(e), region: eventRegion(e) })),
     bench,
