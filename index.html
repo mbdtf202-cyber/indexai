@@ -1,0 +1,1556 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light" data-density="cozy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IndexAI · 免费额度、模型价格、中转站与评测索引</title>
+<meta name="description" content="每天跟踪：能免费用的 AI 额度、各家 token 挂牌价（含缓存命中）、官方订阅价与第三方中转站报价。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23F7F5EF'/%3E%3Crect x='7' y='7' width='18' height='18' fill='%23C2410C'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f5ef; --panel:#fffefb; --panel2:#f1eee4; --panel3:#e9e4d7;
+  --ink:#16170f; --dim:#575a4e; --faint:#8a8d7f;
+  --line:rgba(22,23,15,.12); --line2:rgba(22,23,15,.26);
+  --accent:#16a34a; --accent-soft:#e9f8ee; --accent-ink:#ffffff;
+  --good:#16a34a; --good-soft:#e9f8ee; --warn:#8a5b00; --bad:#a4261d;
+  --sans:"Archivo","PingFang SC","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --pad:clamp(16px,3vw,40px);
+  --rule:1px solid var(--line);
+}
+[data-theme="dark"]{
+  --bg:#0d0e0c; --panel:#141512; --panel2:#1a1c17; --panel3:#22241d;
+  --ink:#eceade; --dim:#a6a99b; --faint:#7c7f72;
+  --line:rgba(236,234,222,.13); --line2:rgba(236,234,222,.28);
+  --accent:#4ade80; --accent-soft:#10241a; --accent-ink:#0b120d;
+  --good:#4ade80; --good-soft:#10241a; --warn:#e0b34d; --bad:#ff7a6b;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; text-wrap:pretty}
+a{color:inherit; text-decoration:none}
+button,input,select{font:inherit; color:inherit}
+::selection{background:var(--accent); color:#fff}
+.mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.wrap{max-width:1440px; margin:0 auto; padding:0 var(--pad)}
+.eyebrow{font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint)}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* ── topbar ── */
+.top{position:sticky; top:0; z-index:50; background:color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter:blur(8px); border-bottom:var(--rule)}
+.top .wrap{display:flex; align-items:center; gap:22px; height:60px}
+.brand{display:flex; align-items:center; gap:10px; white-space:nowrap}
+.glyph{width:11px; height:11px; background:var(--accent); flex:0 0 auto}
+.brand b{font-size:15px; font-weight:700; letter-spacing:-.01em}
+.brand span{font-family:var(--mono); font-size:9px; letter-spacing:.18em; color:var(--faint)}
+.topnav{display:flex; gap:2px; margin-left:6px; overflow:auto; scrollbar-width:none}
+.topnav::-webkit-scrollbar{display:none}
+.nav{appearance:none; border:0; background:none; padding:9px 11px; cursor:pointer; white-space:nowrap;
+  font-size:13px; color:var(--dim); border-radius:3px; position:relative}
+.nav:hover{color:var(--ink); background:var(--panel2)}
+.nav[aria-selected="true"]{color:var(--ink); font-weight:600}
+.nav[aria-selected="true"]::after{content:""; position:absolute; left:11px; right:11px; bottom:2px; height:2px; background:var(--accent)}
+.nav sup{font-family:var(--mono); font-size:9px; color:var(--faint); margin-left:3px}
+.top .right{margin-left:auto; display:flex; align-items:center; gap:10px}
+.stamp{font-family:var(--mono); font-size:10px; color:var(--faint); white-space:nowrap}
+.iconbtn{height:28px; padding:0 9px; border:1px solid var(--line); background:transparent; color:var(--dim);
+  font-family:var(--mono); font-size:10px; letter-spacing:.08em; cursor:pointer; border-radius:3px}
+.iconbtn:hover{color:var(--ink); border-color:var(--line2)}
+.iconbtn:focus-visible,.nav:focus-visible,.chip:focus-visible,th:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* ── hero ── */
+.hero{border-bottom:var(--rule); background:linear-gradient(180deg, var(--panel2), var(--bg) 78%)}
+.hero.compact .wrap{padding-top:22px; padding-bottom:18px; align-items:center}
+.hero.compact h1{font-size:clamp(22px,2.5vw,32px); margin:6px 0 8px}
+.hero.compact p{font-size:13.5px; max-width:64ch}
+.hero.compact .jump{margin-top:12px}
+.hero .wrap{padding-top:38px; padding-bottom:30px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:44px; align-items:end}
+.hero h1{margin:10px 0 12px; font-size:clamp(27px,3.5vw,46px); line-height:1.04; letter-spacing:-.035em; font-weight:700}
+.hero h1 em{font-style:normal; color:var(--accent); letter-spacing:0}
+.hero p{margin:0; color:var(--dim); font-size:15px; max-width:52ch; line-height:1.7}
+.hero .kpis{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; background:var(--line); border:var(--rule)}
+.kpi{background:var(--panel); padding:14px 16px}
+.kpi .n{font-family:var(--mono); font-size:26px; font-weight:500; letter-spacing:-.03em; line-height:1.15}
+.kpi .n small{font-size:11px; color:var(--faint); margin-left:4px; letter-spacing:0}
+.kpi .k{font-family:var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
+.kpi .s{font-size:11px; color:var(--dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.hero .jump{display:flex; gap:8px; margin-top:18px; flex-wrap:wrap}
+.jump a{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line2); padding:7px 12px; font-size:12px;
+  background:var(--panel); border-radius:3px}
+.jump a:hover{border-color:var(--accent); color:var(--accent)}
+.jump a b{font-family:var(--mono); font-weight:500}
+
+/* ── section header ── */
+.shead{display:flex; align-items:baseline; gap:14px; padding:26px 0 14px; border-bottom:var(--rule); flex-wrap:wrap}
+.shead h2{margin:0; font-size:19px; letter-spacing:-.02em; font-weight:600}
+.shead .desc{font-size:12.5px; color:var(--dim); max-width:70ch}
+.shead .right{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--faint)}
+
+/* ── controls ── */
+.controls{display:flex; flex-wrap:wrap; align-items:center; gap:9px; padding:14px 0}
+.search{flex:1 1 280px; min-width:200px; display:flex; align-items:center; gap:8px; border:1px solid var(--line);
+  background:var(--panel); padding:0 10px; height:36px; border-radius:3px}
+.search input{flex:1; min-width:0; border:0; background:none; outline:none; font-size:12.5px}
+.search input::placeholder{color:var(--faint)}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none}
+.search kbd{font-family:var(--mono); font-size:10px; color:var(--faint); border:1px solid var(--line); padding:0 5px; border-radius:2px}
+.sel{height:36px; border:1px solid var(--line); background:var(--panel); padding:0 30px 0 10px; font-size:12px; appearance:none; cursor:pointer; border-radius:3px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--faint) 50%),linear-gradient(135deg,var(--faint) 50%,transparent 50%);
+  background-position:calc(100% - 14px) 16px,calc(100% - 10px) 16px; background-size:4px 4px,4px 4px; background-repeat:no-repeat}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chip{height:28px; padding:0 11px; border:1px solid var(--line); background:var(--panel); color:var(--dim);
+  font-size:11.5px; cursor:pointer; border-radius:3px; white-space:nowrap}
+.chip:hover{color:var(--ink); border-color:var(--line2)}
+.chip[aria-pressed="true"]{background:var(--accent); border-color:var(--accent); color:var(--accent-ink)}
+.spacer{flex:1}
+
+/* sliders */
+.sliders{display:flex; flex-wrap:wrap; gap:26px; align-items:flex-end; padding:0 0 16px}
+.slider{flex:1 1 260px; min-width:210px}
+.slider .row{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px}
+.slider output{font-family:var(--mono); font-size:16px; color:var(--accent); font-weight:600}
+input[type=range]{appearance:none; width:100%; height:14px; background:none; cursor:pointer; display:block}
+input[type=range]::-webkit-slider-runnable-track{height:2px; background:var(--line2)}
+input[type=range]::-webkit-slider-thumb{appearance:none; width:12px; height:16px; margin-top:-7px; background:var(--accent); border:0; border-radius:2px}
+input[type=range]::-moz-range-track{height:2px; background:var(--line2)}
+input[type=range]::-moz-range-thumb{width:12px; height:16px; background:var(--accent); border:0; border-radius:2px}
+.formula{font-family:var(--mono); font-size:11px; color:var(--faint); padding-bottom:17px}
+.formula b{color:var(--dim); font-weight:400}
+
+/* ── table ── */
+.tablewrap{overflow:auto; max-height:calc(100vh - 250px); border-bottom:var(--rule)}
+table{width:100%; min-width:1180px; border-collapse:collapse; font-size:13px}
+thead th{position:sticky; top:0; z-index:5; background:var(--bg); text-align:left; font-weight:400;
+  border-bottom:1px solid var(--line2); padding:10px; white-space:nowrap; cursor:pointer;
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+thead th.num{text-align:right}
+thead th:hover{color:var(--ink)}
+thead th i{font-style:normal; color:var(--accent); margin-left:4px}
+thead th[aria-sort="ascending"],thead th[aria-sort="descending"]{color:var(--ink)}
+tbody tr{border-bottom:var(--rule); cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+td{padding:9px 10px; vertical-align:middle}
+td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums; white-space:nowrap}
+.mname{display:flex; align-items:center; gap:7px; min-width:0}
+.mname .txt{font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mname .id{font-family:var(--mono); font-size:10px; color:var(--faint)}
+.vend{font-size:12px; color:var(--dim); white-space:nowrap}
+.tag{display:inline-block; font-family:var(--mono); font-size:9px; letter-spacing:.06em; border:1px solid var(--line2);
+  padding:0 4px; color:var(--dim); white-space:nowrap; border-radius:2px; vertical-align:1px}
+.tag.new{border-color:var(--accent); color:var(--accent)}
+.tag.free{border-color:var(--good); color:var(--good)}
+.tag.direct{border-color:var(--good); color:var(--good)}
+.tag.warn{border-color:var(--warn); color:var(--warn)}
+.dim{color:var(--faint)}
+.best{color:var(--good); font-weight:600}
+.src a{display:inline-flex; align-items:center; gap:4px; color:var(--faint); font-family:var(--mono); font-size:10.5px}
+.src a:hover{color:var(--accent)}
+.conf{width:5px; height:5px; border-radius:50%; display:inline-block; background:var(--good)}
+.conf.med{background:var(--warn)} .conf.low{background:var(--bad)}
+[data-density="compact"] td{padding:5px 10px}
+[data-density="compact"] tbody{font-size:12.5px}
+.tfoot{display:flex; align-items:center; gap:14px; padding:10px 0; font-family:var(--mono); font-size:10.5px; color:var(--faint); flex-wrap:wrap}
+.tfoot .more{border:1px solid var(--line); background:var(--panel); color:var(--dim); padding:5px 10px; cursor:pointer; font-size:10.5px; border-radius:3px}
+.tfoot .more:hover{color:var(--accent); border-color:var(--accent)}
+
+/* ── cards ── */
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; padding:18px 0 28px}
+.card{background:var(--panel); border:var(--rule); border-radius:4px; padding:16px 17px 14px; display:flex; flex-direction:column; gap:10px}
+.card:hover{border-color:var(--line2)}
+.card .hd{display:flex; align-items:flex-start; gap:10px}
+.card h3{margin:0; font-size:15.5px; font-weight:600; letter-spacing:-.01em}
+.card .sub{font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.05em; text-transform:uppercase; margin-top:1px}
+.card p{margin:0; font-size:13px; color:var(--dim); line-height:1.62}
+.card dl{display:grid; grid-template-columns:auto 1fr; gap:5px 12px; margin:0; font-size:12px}
+.card dt{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); padding-top:3px}
+.card dd{margin:0}
+.card .foot{margin-top:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap; padding-top:6px; border-top:var(--rule); margin-left:-17px; margin-right:-17px; padding-left:17px; padding-right:17px}
+.card .foot a{font-family:var(--mono); font-size:10.5px; color:var(--dim); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
+.card .foot a:hover{color:var(--accent)}
+.mchips{display:flex; flex-wrap:wrap; gap:4px}
+.mchip{font-family:var(--mono); font-size:9.5px; border:1px solid var(--line); padding:0 5px; color:var(--dim); border-radius:2px}
+
+/* ── subscription cards ── */
+.shop{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; padding:18px 0 8px; align-items:start}
+.plan{background:var(--panel); border:var(--rule); border-radius:4px; overflow:hidden}
+.plan .ph{display:flex; align-items:baseline; justify-content:space-between; padding:14px 16px 10px; border-bottom:var(--rule)}
+.plan .ph h3{margin:0; font-size:16px; font-weight:600}
+.plan .ph span{font-family:var(--mono); font-size:10px; color:var(--faint)}
+.plan .rows{padding:4px 16px 12px}
+.prow{display:flex; align-items:baseline; gap:10px; padding:8px 0; border-bottom:1px dashed var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .tier{font-weight:500; min-width:64px}
+.prow .note{font-size:11px; color:var(--faint); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.prow .p{font-family:var(--mono); font-size:15px; font-weight:500}
+.prow .p small{font-size:10px; color:var(--faint); font-weight:400}
+.prow .cny{font-family:var(--mono); font-size:10.5px; color:var(--faint); min-width:56px; text-align:right}
+
+/* ── relay ── */
+.relaybar{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); border:var(--rule); margin:18px 0 6px}
+.relaybar .cell{background:var(--panel); padding:12px 14px}
+.relaybar .cell .k{font-family:var(--mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.relaybar .cell .v{font-family:var(--mono); font-size:21px; letter-spacing:-.02em; margin-top:2px}
+.idx{display:inline-flex; align-items:center; gap:6px; justify-content:flex-end}
+.idx .bar{width:54px; height:4px; background:var(--panel3); position:relative; overflow:hidden; border-radius:1px}
+.idx .bar i{position:absolute; left:0; top:0; bottom:0; background:var(--good)}
+.idx .bar i.over{background:var(--bad)}
+.idx .num{font-family:var(--mono); font-size:11px}
+.status{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em; border:1px solid var(--line2); padding:0 5px; border-radius:2px; color:var(--dim)}
+.status.ok{border-color:var(--good); color:var(--good)}
+.status.stale{border-color:var(--warn); color:var(--warn)}
+.status.off{border-color:var(--line); color:var(--faint)}
+.cand{display:flex; flex-wrap:wrap; gap:6px; padding:12px 0 28px}
+.cand a{font-family:var(--mono); font-size:11px; border:1px solid var(--line); padding:4px 8px; border-radius:3px; color:var(--dim); background:var(--panel)}
+.cand a:hover{border-color:var(--accent); color:var(--accent)}
+
+/* ── signals ── */
+.timeline{border-bottom:var(--rule)}
+.sig{display:grid; grid-template-columns:112px 1fr; gap:20px; padding:18px 0; border-top:var(--rule)}
+.sig:first-child{border-top:0}
+.sig .when{font-family:var(--mono); font-size:10.5px; color:var(--faint); padding-top:2px}
+.sig .when b{display:block; color:var(--dim); font-weight:400; font-size:12px; margin-bottom:2px}
+.sig h4{margin:0 0 6px; font-size:14px; font-weight:600; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.sig blockquote{margin:0; padding-left:12px; border-left:2px solid var(--line2); color:var(--dim); font-size:13px; line-height:1.66}
+.sig .links{display:flex; gap:12px; margin-top:8px; flex-wrap:wrap; align-items:center}
+.sig .links a{font-family:var(--mono); font-size:10.5px; color:var(--faint); text-decoration:underline; text-underline-offset:3px}
+.sig .links a:hover{color:var(--accent)}
+
+/* ── method ── */
+.doc{max-width:840px; margin:0 auto; padding:22px 0 60px}
+.doc h2{font-size:11px; font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+  font-weight:400; margin:32px 0 12px; padding-bottom:8px; border-bottom:var(--rule)}
+.doc h2:first-child{margin-top:0}
+.doc p{margin:0 0 12px; color:var(--dim); line-height:1.75}
+.doc strong{color:var(--ink); font-weight:600}
+.doc ol,.doc ul{margin:0 0 14px; padding-left:20px; color:var(--dim); line-height:1.85}
+.doc code{font-family:var(--mono); font-size:12px; background:var(--panel2); padding:1px 5px; border-radius:2px; color:var(--ink)}
+.code{display:block; padding:13px 15px; border:var(--rule); background:var(--panel); line-height:1.7; overflow-x:auto; white-space:pre;
+  font-family:var(--mono); font-size:12px; color:var(--dim); border-radius:3px}
+.srcs{width:100%; min-width:0; table-layout:fixed; font-size:12px}
+.srcs td{padding:7px 8px; border-bottom:var(--rule); word-break:break-all}
+.srcs td.u{font-family:var(--mono); font-size:10.5px; color:var(--dim)}
+
+/* ── drawer ── */
+.overlay{position:fixed; inset:0; background:rgba(10,10,8,.42); opacity:0; pointer-events:none; transition:opacity .2s; z-index:60}
+.overlay[data-open="1"]{opacity:1; pointer-events:auto}
+.drawer{position:fixed; top:0; right:0; bottom:0; width:min(480px,94vw); background:var(--panel); border-left:1px solid var(--line2);
+  transform:translateX(101%); transition:transform .25s cubic-bezier(.2,.8,.2,1); z-index:61; overflow-y:auto; padding:22px 24px 40px}
+.drawer[data-open="1"]{transform:none}
+.drawer .close{float:right; border:1px solid var(--line); background:none; color:var(--dim); width:26px; height:26px; cursor:pointer; border-radius:3px}
+.drawer .close:hover{color:var(--ink); border-color:var(--line2)}
+.drawer h2{margin:6px 0 3px; font-size:21px; letter-spacing:-.02em}
+.drawer .sub{font-family:var(--mono); font-size:11px; color:var(--faint); word-break:break-all}
+.pricegrid{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border:var(--rule); margin:18px 0 14px; border-radius:3px; overflow:hidden}
+.pcell{background:var(--panel); padding:11px 13px}
+.pcell .k{font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+.pcell .v{font-family:var(--mono); font-size:17px; font-weight:500; margin-top:2px}
+.drawer dl{display:grid; grid-template-columns:78px 1fr; gap:8px 12px; margin:14px 0; font-size:13px}
+.drawer dt{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); padding-top:3px}
+.drawer dd{margin:0; line-height:1.6; word-break:break-word}
+.drawer .note{color:var(--dim); font-size:12.5px; border-top:var(--rule); padding-top:12px; margin-top:14px; line-height:1.7}
+
+.empty{padding:64px 0; text-align:center; color:var(--faint); font-family:var(--mono); font-size:12px; line-height:2}
+.empty b{display:block; color:var(--dim); font-size:13px; margin-bottom:4px; font-weight:400}
+footer.foot{border-top:var(--rule); padding:20px 0 44px; color:var(--faint); font-family:var(--mono); font-size:10.5px; display:flex; gap:18px; flex-wrap:wrap; background:var(--bg)}
+footer.foot a{text-decoration:underline; text-underline-offset:3px}
+footer.foot a:hover{color:var(--accent)}
+.routes{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; padding:16px 0 8px}
+.route{background:var(--panel); border:var(--rule); border-radius:4px; padding:14px 15px}
+.route h4{margin:0 0 6px; font-size:13.5px}
+.route p{margin:0; font-size:12px; color:var(--dim); line-height:1.6}
+.route .risk{font-family:var(--mono); font-size:9.5px; color:var(--warn); margin-top:8px; letter-spacing:.04em}
+@media (max-width:1080px){
+  .hero .wrap{grid-template-columns:1fr; gap:26px}
+  .relaybar{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .top .wrap{height:auto; padding-top:10px; padding-bottom:10px; flex-wrap:wrap; gap:8px 14px}
+  .topnav{order:3; width:100%; margin-left:0; border-top:var(--rule); padding-top:6px;
+    -webkit-mask-image:linear-gradient(to right, #000 90%, transparent); mask-image:linear-gradient(to right, #000 90%, transparent)}
+  .hero .wrap{padding-top:26px; padding-bottom:22px}
+  .hero h1{font-size:30px}
+  .hero .kpis{grid-template-columns:1fr 1fr}
+  .tablewrap{max-height:none}
+  table{min-width:0; table-layout:fixed}
+  td.hidesm,th.hidesm{display:none}
+  td,th{padding-left:6px; padding-right:6px}
+  td:nth-child(1),th:nth-child(1){width:42%}
+  td:nth-child(4),th:nth-child(4),
+  td:nth-child(7),th:nth-child(7),
+  td:nth-child(9),th:nth-child(9){width:19%}
+  .mname .txt{white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical}
+  .mname .id{display:none}
+  .rtable td:nth-child(1),.rtable th:nth-child(1){width:36%}
+  .rtable td:nth-child(2),.rtable th:nth-child(2){width:15%}
+  .rtable td:nth-child(3),.rtable th:nth-child(3){width:33%}
+  .rtable td:nth-child(4),.rtable th:nth-child(4){width:16%}
+  .rtable .status{font-size:8px; padding:0 3px}
+  .rtable td.num{font-size:12px; white-space:normal}
+  .rtable td .tag.warn{display:block; margin-top:2px; width:max-content}
+  .nav{font-size:12px; padding:9px 8px}
+  .sig{grid-template-columns:1fr; gap:8px}
+  .doc{padding:10px 0 40px}
+}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important; transition:none!important}}
+
+.regions{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:28px}
+.rcard{background:var(--panel); padding:14px 16px 12px}
+.rcard .rh{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px}
+.rcard .rh h3{margin:0; font-size:13px; font-weight:600; letter-spacing:.01em}
+.rcard .rh h3 em{font-style:normal; color:var(--dim); font-weight:400}
+.rcard .rh span{font-family:var(--mono); font-size:10px; color:var(--faint); white-space:nowrap}
+.rrow{display:grid; grid-template-columns:18px 1fr auto auto; gap:8px; align-items:center; padding:4px 2px; border-top:1px solid var(--line); font-size:12px; color:var(--dim); text-decoration:none}
+.rrow:hover{background:var(--panel2); color:var(--ink)}
+.rrow .idx{font-family:var(--mono); font-size:9.5px; color:var(--faint)}
+.rrow .cty{color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rrow .raw{font-family:var(--mono); font-size:10.5px; color:var(--faint)}
+.rrow .cny{font-family:var(--mono); font-size:11.5px; font-variant-numeric:tabular-nums}
+.rrow.low .cny{color:var(--accent); font-weight:600}
+.rfoot{margin-top:8px; padding-top:7px; border-top:1px solid var(--line); font-size:10.5px; color:var(--faint); font-family:var(--mono)}
+.rfoot b{color:var(--accent); font-weight:600}
+
+/* ── home ── */
+.home-top{display:grid; grid-template-columns:minmax(0,1.55fr) minmax(248px,.45fr); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:34px}
+.home-lead{background:var(--panel); padding:30px clamp(16px,2.4vw,34px) 26px}
+.kicker{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:14px}
+.home-h{margin:0 0 10px; font-size:clamp(30px,4.1vw,50px); line-height:1.06; letter-spacing:-.025em; font-weight:600}
+.home-h b{color:var(--accent); font-weight:600; font-variant-numeric:tabular-nums}
+.home-h .unit{font-size:.34em; color:var(--dim); font-weight:400; letter-spacing:0; margin-left:.35em; vertical-align:.9em}
+.home-sub{margin:0; font-size:13.5px; line-height:1.65; color:var(--dim); max-width:52ch}
+.home-sub strong{color:var(--ink); font-weight:600}
+.home-facts{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); margin-top:24px; border-top:var(--rule)}
+.home-facts>div{background:var(--panel); padding:12px 12px 10px; display:flex; flex-direction:column; gap:3px; min-width:0}
+.home-facts .fk{font-size:10px; letter-spacing:.06em; color:var(--faint); text-transform:uppercase; font-family:var(--mono)}
+.home-facts .fv{font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.home-facts .fd{font-size:10.5px; color:var(--faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+
+.home-side{background:var(--panel2); padding:20px 16px 16px; display:flex; flex-direction:column}
+.hs-head{font-family:var(--mono); font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:10px}
+.hs-row{display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:7px 0; border-top:1px solid var(--line); color:var(--dim); text-decoration:none; font-size:12.5px}
+.hs-row:first-of-type{border-top:0}
+.hs-row:hover{color:var(--ink)}
+.hs-row b{font-family:var(--mono); font-size:14px; color:var(--ink); font-variant-numeric:tabular-nums}
+.hs-row:hover b{color:var(--accent)}
+
+.newsrow{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:34px}
+.ncard{background:var(--panel); padding:16px 18px 18px; display:flex; flex-direction:column; gap:8px; transition:background .16s}
+.ncard:hover{background:var(--panel2)}
+.nmeta{display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.ntopic{color:var(--accent); border:1px solid color-mix(in srgb, var(--accent) 35%, transparent); padding:1px 5px; border-radius:2px}
+.ncard h3{margin:0; font-size:14px; line-height:1.4; font-weight:600; letter-spacing:-.005em}
+.ncard h3 a{color:inherit; text-decoration:none}
+.ncard h3 a:hover{text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
+.ncard p{margin:0; font-size:12px; line-height:1.6; color:var(--dim)}
+.ncard p.nclamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+
+.entries{display:grid; grid-template-columns:repeat(auto-fit,minmax(178px,1fr)); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:30px}
+.ecard{position:relative; background:var(--panel); padding:16px 18px 20px; text-decoration:none; color:inherit; transition:background .16s}
+.ecard:hover{background:var(--panel2)}
+.ecard-top{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px}
+.ecard-top .et{font-size:13px; font-weight:600; letter-spacing:.01em}
+.ecard-top .eu{font-family:var(--mono); font-size:11px; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap}
+.ecard-top .eu em{font-style:normal; color:var(--faint); font-size:9.5px; margin-left:3px; letter-spacing:.02em}
+.ecard p{margin:0; font-size:11.5px; line-height:1.6; color:var(--dim); max-width:32ch}
+.earrow{position:absolute; right:16px; bottom:14px; font-size:13px; color:var(--faint); opacity:0; transition:opacity .16s, transform .16s}
+.ecard:hover .earrow{opacity:1; transform:translate(2px,-2px); color:var(--accent)}
+
+.home-foot{display:flex; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:14px 0 4px; border-top:var(--rule); font-family:var(--mono); font-size:10.5px; color:var(--faint)}
+
+@media (max-width:1080px){
+  .home-top{grid-template-columns:1fr}
+  .home-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  .home-facts{grid-template-columns:1fr 1fr}
+  .home-lead{padding:22px 16px}
+}
+#hero.is-hidden{display:none}
+.home-top{margin-top:0}
+
+.threeways{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:34px}
+.tway{position:relative; background:var(--panel); padding:18px 20px 20px; text-decoration:none; color:inherit; display:block; transition:background .16s}
+.tway:hover{background:var(--panel2)}
+.tway .tn{font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:.1em}
+.tway h4{margin:6px 0 8px; font-size:14.5px; font-weight:600; letter-spacing:-.005em}
+.tway p{margin:0 0 14px; font-size:12px; line-height:1.65; color:var(--dim)}
+.tway .tl{font-family:var(--mono); font-size:10.5px; color:var(--dim); letter-spacing:.02em}
+.tway:hover .tl{color:var(--accent)}
+.news .sig h4 a{color:inherit;text-decoration:none}
+.news .sig h4 a:hover{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)}
+.news .nsum{margin:6px 0 0;font-size:13px;line-height:1.7;color:var(--dim);max-width:78ch}
+
+.newsfld{margin-bottom:8px}
+.nday{margin-bottom:26px}
+.nday-h{display:flex; align-items:baseline; gap:10px; padding:0 0 7px; border-bottom:1px solid var(--line2)}
+.nday-h b{font-size:12.5px; font-weight:600; letter-spacing:.01em}
+.nday-h span{font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.05em; text-transform:uppercase}
+.nlist{border-bottom:1px solid var(--line)}
+.nitem{display:grid; grid-template-columns:82px minmax(0,1fr) 40px; gap:18px; align-items:baseline;
+  padding:9px 6px 9px 0; border-bottom:1px solid var(--line); text-decoration:none; color:inherit; transition:background .14s}
+.nlist .nitem:last-child{border-bottom:0}
+.nitem:hover{background:var(--panel2)}
+.nkind{font-family:var(--mono); font-size:10px; color:var(--accent); letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.nmain{min-width:0}
+.nmain h4{margin:0; font-size:13.5px; font-weight:600; line-height:1.45; letter-spacing:-.005em;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.nmain p{margin:3px 0 0; font-size:11.5px; line-height:1.55; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.ntime{font-family:var(--mono); font-size:10px; color:var(--faint); text-align:right; white-space:nowrap}
+@media (max-width:760px){
+  .nitem{grid-template-columns:66px minmax(0,1fr); gap:12px}
+  .ntime{display:none}
+  .nmain p{white-space:normal; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical}
+}
+
+/* ── 移动端专项 ── */
+@media (max-width:760px){
+  .top .wrap{height:auto; padding-top:8px; padding-bottom:6px; gap:4px 10px; flex-wrap:wrap}
+  .top .wrap .brand{order:1; margin-right:auto}
+  .top .right{order:2; margin-left:auto; gap:6px}
+  .topnav{order:3; flex-basis:100%; margin-left:0; border-top:0; padding-top:0}
+  #fxStamp{display:none}
+  .stamp{font-size:8.5px; letter-spacing:.04em}
+  .iconbtn{font-size:8.5px; padding:3px 6px}
+  .brand b{font-size:14px}
+  .brand span{display:none}
+  .top .meta{font-size:9px; gap:6px}
+  .iconbtn{font-size:9px; padding:4px 6px}
+
+  .hero .wrap{padding-top:16px; padding-bottom:14px; grid-template-columns:1fr; gap:14px}
+  .hero h1{font-size:clamp(24px,7.4vw,30px); line-height:1.08; margin:8px 0 8px}
+  .hero p{font-size:12.5px; line-height:1.6}
+  .hero .jump{display:none}
+  .hero .kpis{grid-template-columns:1fr 1fr; gap:1px}
+  .kpi{padding:8px 10px 7px}
+  .kpi .k{font-size:8.5px; letter-spacing:.08em}
+  .kpi .n{font-size:18px}
+  .kpi .s{font-size:9.5px}
+
+  .shead{padding:18px 0 10px; gap:8px}
+  .shead h2{font-size:16px}
+  .shead .desc{font-size:11px; max-width:100%; flex-basis:100%}
+  .shead .right{font-size:10px}
+
+  .controls{gap:6px; padding:10px 0}
+  .chip{font-size:11px; padding:4px 8px}
+  .grid{grid-template-columns:1fr}
+  .card{padding:13px 14px}
+  .card h3{font-size:13.5px}
+  .cand a{font-size:10.5px}
+
+  .home-top{grid-template-columns:1fr}
+  .home-lead{padding:20px 14px}
+  .home-h{font-size:clamp(26px,7.6vw,32px)}
+  .home-facts{grid-template-columns:1fr 1fr; margin-top:18px}
+  .home-facts>div{padding:9px 10px 8px}
+  .home-facts .fv{font-size:17px}
+  .home-side{display:none}
+  .newsrow{grid-template-columns:1fr}
+  .threeways{grid-template-columns:1fr}
+  .entries{grid-template-columns:1fr 1fr}
+  .ecard{padding:12px 13px 15px}
+  .ecard p{font-size:10.5px}
+  .home-foot{font-size:9.5px; gap:6px}
+
+  .topnav{scroll-snap-type:x proximity}
+  .nav{scroll-snap-align:center; font-size:11px; padding:8px 5.5px; letter-spacing:-.01em}
+  .nav sup{display:none}
+  .nav[aria-selected="true"]::after{left:6px; right:6px; bottom:1px}
+
+  .doc h2{font-size:15px}
+  .doc p, .doc li{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#free" aria-label="IndexAI">
+      <i class="glyph" aria-hidden="true"></i>
+      <b>IndexAI</b><span>PRICE&nbsp;·&nbsp;FREE&nbsp;·&nbsp;BENCH</span>
+    </a>
+    <nav class="topnav" id="nav" role="tablist" aria-label="视图"></nav>
+    <div class="right">
+      <span class="stamp" id="stamp">—</span><span class="stamp" id="fxStamp" title="每 8 小时刷新">—</span>
+      <button class="iconbtn" id="themeBtn" type="button" aria-pressed="false" title="切换深色">DARK</button>
+      <button class="iconbtn" id="densBtn" type="button" aria-pressed="false" title="紧凑模式">DENSE</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow" id="heroKicker">FREE FIRST · THEN PRICE</div>
+      <h1 id="heroTitle">先找能<em>免费用</em>的，再挑最便宜的。</h1>
+      <p id="heroSub">每天盯三件事：哪些通道还在送额度、同样 token 谁家挂牌更便宜、缓存命中之后真实成本是多少。价格全部来自官方定价页或站点公开价目接口，带来源与核实日期。</p>
+      <div class="jump">
+        <a href="#compare">直接比价 <b>↗</b></a>
+        <a href="#relays">中转站行情 <b>↗</b></a>
+        <a href="#subs">订阅怎么买 <b>↗</b></a>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </div>
+</section>
+
+<main class="wrap" id="view" role="tabpanel" tabindex="-1"></main>
+
+<div class="wrap"><footer class="foot">
+  <span>数据每日采集 · <code>node collect.mjs</code></span>
+  <span id="footSrc">—</span>
+  <span>挂牌价不含税、企业折扣与区域加价</span>
+</footer></div>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="模型详情"></aside>
+<noscript><div class="wrap empty">这个页面需要 JavaScript 渲染数据。</div></noscript>
+
+<script>
+(() => {
+  "use strict";
+
+  const TABS = [
+    { id: "home", label: "总览", hint: "一站看全" },
+    { id: "free", label: "免费额度", hint: "还能免费用什么" },
+    { id: "compare", label: "比价", hint: "token 挂牌价与缓存成本" },
+    { id: "subs", label: "订阅", hint: "旗舰订阅官方价与路子" },
+    { id: "relays", label: "中转站", hint: "第三方 API 报价与状态" },
+    { id: "events", label: "AI活动", hint: "黑客松、会议、meetup，按类型细分" },
+    { id: "bench", label: "评测", hint: "同一批题目的公开分数" },
+    { id: "signals", label: "情报", hint: "AI 圈要闻与 X 一手信号" },
+    { id: "method", label: "方法", hint: "口径、去重与来源" }
+  ];
+  const HERO = {
+    home: { k: "INDEX AI", t: "AI 的价、量、场，<br>一个入口看完。", s: "免费额度、token 单价、订阅区价、中转站报价、活动、评测与要闻——同一套口径，每天自动采集。" },
+    free: { k: "FREE TIERS", t: "免费的先用完，<br>再谈花钱。", s: "还在送额度的产品与服务：额度多少、能用哪些模型、门槛是什么、什么时候结束。每条都附官方页面，能自己点开核。" },
+    compare: { k: "PRICES", t: "同一个模型，<br>不同渠道不同价。", s: "官方直连、聚合平台、中转站分开列；缓存命中、缓存写入、分时价都摊在表里，不合并成一个「最低价」。" },
+    subs: { k: "SUBSCRIPTIONS", t: "订阅价，官网上写多少<br>就是多少。", s: "ChatGPT、Claude、Copilot 各档月费，按当日汇率折人民币；第三方挂单只当行情看，不推荐。" },
+    relays: { k: "RELAYS", t: "中转站的公开价目，<br>每天探一遍。", s: "读 OneAPI / NewAPI 的价目接口，按倍率换算成每百万 token。需要登录才能看的价格不采，也不替它猜。" },
+    events: { k: "AI EVENTS", t: "能报名、有奖、<br>给额度的 AI 活动。", s: "Devpost 开放中的黑客松 + Luma 的 AI 场次，加上本地 AIOS 收录的活动，按截止日期排；过期的单独归档。" },
+    bench: { k: "BENCHMARKS", t: "同一批题目，<br>谁在退步。", s: "Vals Index 的公开分数，每次采集存一份；分数掉了就标出来，不解释成「版本优化」。" },
+    signals: { k: "INTELLIGENCE", t: "AI 圈在发生什么，<br>挑过再给你。", s: "每日要闻按价格、模型、融资、政策、安全分类打分精选；下面是 X 与官方的价格一手信号，只收抓到正文的。" },
+    method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "五层数据、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
+  };
+  const VENDOR_RANK = ["OpenAI","Anthropic","Google","DeepSeek","Alibaba Qwen","Moonshot","Zhipu","MiniMax","xAI","Meta","Mistral","ByteDance","Tencent"];
+  const RANK = new Map(VENDOR_RANK.map((v, i) => [v, i]));
+  const rankOf = (v) => (RANK.has(v) ? RANK.get(v) : 99);
+  const FOCUS = new Set(VENDOR_RANK);
+  const CAT_LABEL = { "coding-agent": "编程 Agent", "api-credit": "赠送金", "api-free-models": "免费模型", chat: "对话", ide: "IDE", cli: "CLI" };
+  const REGION_LABEL = { GLOBAL: "国际", CN: "国内", BOTH: "双区" };
+  const TOPIC_LABEL = { "free-tier": "免费额度", "price-cut": "降价", "new-model": "新模型", "cache-pricing": "缓存定价", "agent-launch": "Agent 发布" };
+  const SRC_LABEL = { x: "X", blog: "官方博客", newsroom: "新闻稿" };
+  const EV_KIND = { hackathon: "黑客松", conference: "会议 / 峰会", meetup: "Meetup", workshop: "工作坊", award: "评选 / 影展", other: "其他" };
+  const EV_REGION = { online: "线上", cn: "国内", jp: "日本", us: "美国", eu: "欧洲", asia: "亚洲", other: "其他" };
+  const EV_SRC = { Devpost: "Devpost", Luma: "Luma", AIOS: "AIOS 归档" };
+  const catLabel = (c) => CAT_LABEL[c] || c;
+
+  const state = {
+    tab: (location.hash || "#home").slice(1),
+    q: "", vendor: "all", band: "all", channel: "all",
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", evLimit: 18,
+    freeOnly: false, paidOnly: false, cacheOnly: false,
+    sortKey: "focus", sortDir: 1,
+    hit: 0.7, outShare: 0.2,
+    region: "all", cat: "all", sigSrc: "all", limit: 80, cmpView: "models",
+    fx: null,
+    data: null
+  };
+  if (!TABS.some(t => t.id === state.tab)) state.tab = "home";
+
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function money(n) {
+    if (n == null) return "—";
+    if (n === 0) return "0";
+    if (n >= 100) return n.toFixed(0);
+    if (n >= 1) return n.toFixed(2);
+    return n.toFixed(4);
+  }
+  function ctx(n) {
+    if (!n) return "—";
+    if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 ? 2 : 0) + "M";
+    if (n >= 1000) return Math.round(n / 1000) + "K";
+    return String(n);
+  }
+  const pct = (x) => Math.round(x * 100) + "%";
+  const confTitle = { high: "高置信：实时 API 或官方定价页", med: "中置信：需换算或页面不完整", low: "低置信：未取到原始页面" };
+  const hostOf = (u) => String(u || "").replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+  const isNew = (m) => m.created && (Date.now() / 1000 - m.created) < 14 * 86400;
+
+  /* 有效成本：每 1M 总 token，输入占 (1-s)，输出占 s，输入中命中率 h 走缓存价 */
+  function effort(m) {
+    if (m.input == null) return null;
+    const cr = m.cache_read == null ? m.input : m.cache_read;
+    const h = m.cache_read == null ? 0 : state.hit;
+    return (1 - state.outShare) * ((1 - h) * m.input + h * cr) + state.outShare * m.output;
+  }
+
+  /* ── chrome ── */
+  function renderNav() {
+    const c = state.data.meta.counts;
+    const counts = { free: c.offers, compare: c.models, subs: c.subs, relays: c.relaysLive, events: c.eventsOpen, bench: c.bench, signals: (c.news || 0) + c.signals };
+    const el = $("#nav");
+    el.innerHTML = TABS.map(t => `
+      <button class="nav" role="tab" data-tab="${t.id}" aria-selected="${state.tab === t.id}" title="${esc(t.hint)}">
+        ${esc(t.label)}${counts[t.id] != null ? `<sup>${counts[t.id]}</sup>` : ""}
+      </button>`).join("");
+    // 窄屏时把当前 tab 滚到中间，别让用户猜右边还有什么
+    const on = el.querySelector('[aria-selected="true"]');
+    if (on && el.scrollWidth > el.clientWidth) {
+      el.scrollLeft = on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2;
+    }
+  }
+
+  function renderKpis() {
+    const d = state.data, c = d.meta.counts;
+    const paid = d.models.filter(m => !m.free && m.input != null);
+    const minIn = paid.reduce((a, b) => (a && a.input <= b.input ? a : b), null);
+    const best = d.meta.bestCacheDiscount;
+    const liveRelays = d.relays.filter(r => r.status === "ok");
+    const cheapestSonnet = liveRelays
+      .map(r => ({ r, p: r.prices?.sonnet55 }))
+      .filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly)
+      .sort((a, b) => a.p.input - b.p.input)[0];
+    const cells = [
+      ["免费额度", c.offers, `国际 ${d.offers.filter(o => o.region === "GLOBAL").length} · 国内 ${d.offers.filter(o => o.region === "CN").length}`],
+      ["可计价模型", c.models, `${c.vendors} 家厂商 · 直连 ${c.direct} 条`],
+      ["最大缓存折扣", best ? best.pct + "%" : "—", best ? d.models.find(m => m.id === best.id)?.name || "" : ""],
+      [cheapestSonnet ? "Sonnet 5.5 最低中转价" : "最低付费输入", cheapestSonnet ? "$" + money(cheapestSonnet.p.input) : "$" + money(minIn?.input),
+        cheapestSonnet ? cheapestSonnet.r.name + " · /1M input" : (minIn ? `${minIn.vendor} · ${minIn.name}` : "—")]
+    ];
+    $("#kpis").innerHTML = cells.map(([k, n, s]) => `
+      <div class="kpi"><div class="k">${esc(k)}</div><div class="n">${esc(n)}</div><div class="s" title="${esc(s)}">${esc(s)}</div></div>`).join("");
+  }
+
+  function renderHero() {
+    const h = HERO[state.tab] || HERO.free;
+    $("#heroKicker").textContent = h.k;
+    $("#heroTitle").innerHTML = h.t;
+    $("#heroSub").textContent = h.s;
+    $("#stamp").textContent = "更新 " + new Date(state.data.meta.generated_at).toLocaleString("zh-CN", { hour12: false }).slice(5);
+    $("#hero").classList.toggle("compact", state.tab !== "free");
+    $("#hero").classList.toggle("is-hidden", state.tab === "home");
+  }
+
+  /* ── compare ── */
+  function vendorOptions() {
+    return `<option value="all">全部厂商</option>` + state.data.meta.vendors.map(v => `<option value="${esc(v)}"${state.vendor === v ? " selected" : ""}>${esc(v)}</option>`).join("");
+  }
+
+  function filteredModels() {
+    const q = state.q.trim().toLowerCase();
+    let rows = state.data.models.filter(m => {
+      if (state.vendor !== "all" && m.vendor !== state.vendor) return false;
+      if (state.band !== "all" && m.band !== state.band) return false;
+      if (state.channel !== "all" && m.channelKind !== state.channel) return false;
+      if (state.freeOnly && !m.free) return false;
+      if (state.paidOnly && m.free) return false;
+      if (state.cacheOnly && m.cache_read == null) return false;
+      if (q && !(`${m.id} ${m.name} ${m.vendor}`.toLowerCase().includes(q))) return false;
+      return true;
+    });
+    const dir = state.sortDir, key = state.sortKey;
+    const val = (m) => {
+      if (key === "eff") { const e = effort(m); return e == null ? Infinity : e; }
+      if (key === "cache") return m.cache_read == null || !m.input ? Infinity : m.cache_read / m.input;
+      if (key === "name") return m.name.toLowerCase();
+      if (key === "vendor") return m.vendor.toLowerCase();
+      return m[key] == null ? Infinity : m[key];
+    };
+    rows.sort((a, b) => {
+      if (key === "focus") {
+        const ra = rankOf(a.vendor), rb = rankOf(b.vendor);
+        if (ra !== rb) return ra - rb;
+        const ca = a.created || 0, cb = b.created || 0;
+        if (ca !== cb) return cb - ca;
+        return (a.input ?? 9e9) - (b.input ?? 9e9);
+      }
+      const va = val(a), vb = val(b);
+      if (typeof va === "string") return va.localeCompare(vb) * dir;
+      return (va - vb) * dir;
+    });
+    return rows;
+  }
+
+  function th(key, label, num, mob) {
+    const active = state.sortKey === key;
+    return `<th class="${num ? "num" : ""}${key === "ctx" || key === "cache_write" || mob ? " hidesm" : ""}"
+      data-sort="${key}" tabindex="0" role="button"
+      aria-sort="${active ? (state.sortDir === 1 ? "ascending" : "descending") : "none"}"
+      aria-label="按${esc(label)}排序">${esc(label)}${active ? `<i>${state.sortDir === 1 ? "▲" : "▼"}</i>` : ""}</th>`;
+  }
+
+  function modelRows() {
+    const rows = filteredModels();
+    const bestByFamily = new Map(), bestIdOfFamily = new Map(), familySize = new Map(), secondByFamily = new Map();
+    for (const m of rows) familySize.set(m.family, (familySize.get(m.family) || 0) + 1);
+    for (const m of rows) {
+      if (m.free) continue;
+      const e = effort(m);
+      if (e == null) continue;
+      const cur = bestByFamily.get(m.family);
+      if (cur == null || e < cur) {
+        if (cur != null) secondByFamily.set(m.family, cur);
+        bestByFamily.set(m.family, e); bestIdOfFamily.set(m.family, m.id);
+      } else if (e > cur) {
+        const s2 = secondByFamily.get(m.family);
+        if (s2 == null || e < s2) secondByFamily.set(m.family, e);
+      }
+    }
+    const betterFamily = new Set();
+    for (const [k, v] of bestByFamily) {
+      const s2 = secondByFamily.get(k);
+      if (s2 != null && v < s2 * 0.98) betterFamily.add(k);
+    }
+    const shown = rows.slice(0, state.limit);
+    const tbody = rows.length === 0
+      ? `<tr><td colspan="10" class="empty"><b>没有匹配的模型</b>换个关键词，或把价格带切回「全部」。</td></tr>`
+      : shown.map(m => {
+          const e = effort(m);
+          const isBest = !m.free && betterFamily.has(m.family) && bestIdOfFamily.get(m.family) === m.id;
+          const disc = m.cache_read != null && m.input ? 1 - m.cache_read / m.input : null;
+          return `<tr data-id="${esc(m.id)}">
+            <td><div class="mname">${m.free ? '<span class="tag free">免费</span>' : ""}${isNew(m) ? '<span class="tag new">NEW</span>' : ""}
+              <span class="txt">${esc(m.name)}</span><span class="id hidesm">${esc(m.id)}</span>${isBest ? '<span class="tag direct">最低</span>' : ""}</div></td>
+            <td class="vend hidesm">${esc(m.vendor)}</td>
+            <td class="num hidesm">${ctx(m.ctx)}</td>
+            <td class="num">${m.free ? '<span class="best">0</span>' : money(m.input)}</td>
+            <td class="num hidesm">${m.cache_read == null ? '<span class="dim">—</span>' : money(m.cache_read)}</td>
+            <td class="num hidesm">${m.cache_write == null ? '<span class="dim">—</span>' : money(m.cache_write)}</td>
+            <td class="num">${m.free ? '<span class="best">0</span>' : money(m.output)}</td>
+            <td class="num hidesm">${disc == null ? '<span class="dim">—</span>' : `<span class="${disc > .5 ? "best" : ""}">${pct(disc)}</span>`}</td>
+            <td class="num">${e == null ? "—" : money(e)}</td>
+            <td class="src hidesm"><a href="${esc(m.url)}" target="_blank" rel="noopener"><span class="conf ${m.conf}" title="${esc(confTitle[m.conf] || "")}"></span>${m.channelKind === "direct" ? "官方" : "聚合"} ↗</a></td>
+          </tr>`;
+        }).join("");
+    const tfoot = `<span>显示 ${shown.length} / ${rows.length} 条 · ${state.sortKey === "focus" ? "主流优先（大厂在前、新模型在前）" : "按所选列" + (state.sortDir === 1 ? "升序" : "降序")}</span>
+      ${rows.length > shown.length ? `<button class="more" id="moreBtn" type="button">再加载 ${Math.min(120, rows.length - shown.length)} 条</button>` : ""}
+      <span class="spacer"></span><span>单位 $ / 1M tokens</span>`;
+    return { rows, tbody, tfoot };
+  }
+
+  const cmpSwitch = () => `<div class="controls" style="padding-bottom:0">
+      <div class="chips" role="group" aria-label="视图">
+        <button class="chip" data-cmpview="models" aria-pressed="${state.cmpView === "models"}">按模型</button>
+        <button class="chip" data-cmpview="vendors" aria-pressed="${state.cmpView === "vendors"}">按厂商</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="eyebrow">${state.cmpView === "models" ? state.data.meta.counts.models + " 个可计价模型" : state.data.meta.counts.vendors + " 家厂商"}</span>
+    </div>`;
+
+  function viewCompare() {
+    if (state.cmpView === "vendors") return cmpSwitch() + viewVendors();
+    const { tbody, tfoot } = modelRows();
+    return cmpSwitch() + `
+      <div class="controls">
+        <label class="search"><span class="eyebrow">FIND</span>
+          <input id="q" type="search" placeholder="模型 / 厂商 / id，例如 claude、deepseek、free" value="${esc(state.q)}" autocomplete="off">
+          <kbd>/</kbd>
+        </label>
+        <select class="sel" id="vendor" aria-label="厂商">${vendorOptions()}</select>
+        <div class="chips" role="group" aria-label="价格带">
+          ${[["all","全部"],["free","免费"],["budget","≤$0.25"],["standard","$0.25–1.5"],["premium",">$1.5"]].map(([k,l]) =>
+            `<button class="chip" data-band="${k}" aria-pressed="${state.band === k}">${l}</button>`).join("")}
+        </div>
+        <div class="chips">
+          <button class="chip" data-sortkey="focus" aria-pressed="${state.sortKey === "focus"}">主流优先</button>
+          <button class="chip" data-sortkey="eff" aria-pressed="${state.sortKey === "eff"}">按有效成本</button>
+          <button class="chip" data-sortkey="input" aria-pressed="${state.sortKey === "input"}">按输入价</button>
+        </div>
+        <div class="chips">
+          <button class="chip" data-channel="all" aria-pressed="${state.channel === "all"}">全部渠道</button>
+          <button class="chip" data-channel="aggregator" aria-pressed="${state.channel === "aggregator"}">聚合</button>
+          <button class="chip" data-channel="direct" aria-pressed="${state.channel === "direct"}">官方直连</button>
+          <button class="chip" data-toggle="freeOnly" aria-pressed="${state.freeOnly}">仅免费</button>
+          <button class="chip" data-toggle="paidOnly" aria-pressed="${state.paidOnly}">仅付费</button>
+          <button class="chip" data-toggle="cacheOnly" aria-pressed="${state.cacheOnly}">有缓存价</button>
+        </div>
+      </div>
+      <div class="sliders">
+        <div class="slider"><div class="row"><span class="eyebrow">缓存命中率</span><output id="hitOut">${pct(state.hit)}</output></div>
+          <input type="range" id="hit" min="0" max="100" step="5" value="${Math.round(state.hit * 100)}" aria-label="缓存命中率"></div>
+        <div class="slider"><div class="row"><span class="eyebrow">输出 token 占比</span><output id="outOut">${pct(state.outShare)}</output></div>
+          <input type="range" id="outShare" min="5" max="80" step="5" value="${Math.round(state.outShare * 100)}" aria-label="输出占比"></div>
+        <div class="formula">有效成本 = <b>(1−s)·[(1−h)·输入 + h·缓存读] + s·输出</b> / 1M tokens</div>
+      </div>
+      <div class="tablewrap">
+        <table><caption class="sr">模型 token 价格对比</caption>
+          <thead><tr>
+            ${th("name","模型")}${th("vendor","厂商",false,true)}${th("ctx","上下文",true)}${th("input","输入",true)}
+            ${th("cache","缓存读",true,true)}${th("cache_write","缓存写",true)}${th("output","输出",true)}
+            ${th("cache","折扣",true,true)}${th("eff","有效成本",true)}<th class="hidesm">来源</th>
+          </tr></thead>
+          <tbody id="tbody">${tbody}</tbody>
+        </table>
+      </div>
+      <div class="tfoot" id="tfoot">${tfoot}</div>`;
+  }
+
+  function paintRows() {
+    const { tbody, tfoot } = modelRows();
+    const tb = $("#tbody"); if (tb) tb.innerHTML = tbody;
+    const tf = $("#tfoot"); if (tf) tf.innerHTML = tfoot;
+  }
+
+  /* ── home ── */
+  function viewHome() {
+    const d = state.data, c = d.meta.counts, fx = state.fx?.rate || d.meta.fx.USDCNY;
+    const news = (d.news || []).slice(0, 4);
+    const live = (d.relays || []).filter(r => r.status === "ok");
+    const best = live
+      .map(r => ({ r, p: r.prices?.sonnet55 }))
+      .filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly)
+      .sort((a, b) => a.p.input - b.p.input)[0];
+    const cache = d.meta.bestCacheDiscount;
+    const openEvents = (d.events || []).filter(e => e.status !== "past");
+    const cheapestModel = (d.models || []).filter(m => m.input > 0).sort((a, b) => a.input - b.input)[0];
+
+    const entries = [
+      { id: "free", n: c.offers, u: "个渠道", t: "免费额度", d: "还在送额度的产品" },
+      { id: "compare", n: c.models, u: "个模型", t: "比价", d: "官方 / 聚合 / 中转" },
+      { id: "subs", n: c.subsRegionsRaw, u: "条区价", t: "订阅", d: "官方 + 各区 + 挂单" },
+      { id: "relays", n: c.relaysLive, u: "站有价目", t: "中转站", d: "接口能读到价才算" },
+      { id: "events", n: c.eventsOpen, u: "个开放", t: "AI 活动", d: "黑客松 / 会议 / meetup" },
+      { id: "bench", n: c.bench, u: "个模型", t: "评测", d: "同一批题目的分数" },
+      { id: "signals", n: (c.news || 0) + c.signals, u: "条信息", t: "情报", d: "要闻 + X 一手" }
+    ];
+
+    return `
+      <section class="home-top">
+        <div class="home-lead">
+          <div class="kicker">TODAY · ${esc(d.meta.date)} · 每日采集</div>
+          <h2 class="home-h">AI 的价、量、场，<br>一个入口看完。</h2>
+          <p class="home-sub">白嫖额度、token 单价、订阅区价、中转站报价、活动与评测——七层数据同一套口径，每天自动重采一遍。</p>
+          <div class="home-facts">
+            <div><span class="fk">今日最低 Sonnet</span><span class="fv">${best ? "$" + best.p.input.toFixed(2) : "—"}</span><span class="fd">${best ? esc(best.r.name) + " · /1M 输入" : ""}</span></div>
+            <div><span class="fk">缓存最狠</span><span class="fv">${cache ? cache.pct + "%" : "—"}</span><span class="fd">${cache ? esc(cache.id) : ""}</span></div>
+            <div><span class="fk">能白嫖</span><span class="fv">${c.offers}</span><span class="fd">个渠道 · 国内 ${(d.offers || []).filter(o => o.region === "CN").length}</span></div>
+            <div><span class="fk">开放活动</span><span class="fv">${c.eventsOpen}</span><span class="fd">共收录 ${c.events} 条</span></div>
+          </div>
+        </div>
+        <div class="home-side">
+          <div class="hs-head">今日速览</div>
+          <a class="hs-row" href="#compare"><span>官方直连</span><b>${c.direct}</b></a>
+          <a class="hs-row" href="#compare"><span>聚合平台</span><b>${c.aggregator}</b></a>
+          <a class="hs-row" href="#compare"><span>带缓存价</span><b>${c.withCache}</b></a>
+          <a class="hs-row" href="#relays"><span>中转报价条数</span><b>${c.relayQuotes}</b></a>
+          <a class="hs-row" href="#subs"><span>第三方挂单</span><b>${c.subsThird}</b></a>
+          <a class="hs-row" href="#method"><span>登记来源</span><b>${c.sources}</b></a>
+        </div>
+      </section>
+
+      ${news.length ? `
+      <div class="shead"><h2>今日要闻</h2><span class="desc">从公开新闻源里按主题打分挑出来，价格与模型发布优先。</span><span class="right"><a href="#signals" style="color:var(--dim);text-decoration:underline">全部 ${c.news || news.length} 条 ↗</a></span></div>
+      <div class="newsrow">
+        ${news.map(n => `
+          <article class="ncard">
+            <div class="nmeta"><span class="ntopic">${esc(n.topicLabel || "其他")}</span><span class="ndate">${esc((n.date || "").slice(5))}${n.time ? " " + esc(n.time) : ""}</span></div>
+            <h3><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></h3>
+            ${n.summary ? `<p class="nclamp">${esc(n.summary)}</p>` : ""}
+          </article>`).join("")}
+      </div>` : ""}
+
+      <div class="shead"><h2>三条结论</h2><span class="desc">今天要动手的话，按这个顺序走。</span></div>
+      <div class="threeways">
+        <a class="tway" href="#free"><span class="tn">01</span><h4>先把免费的用完</h4><p>${c.offers} 个渠道在送额度，其中 ${(d.offers || []).filter(o => o.region === "CN").length} 个国内可直接注册；按额度大小和期限排序，别只看广告词。</p><span class="tl">看免费额度 ↗</span></a>
+        <a class="tway" href="#compare"><span class="tn">02</span><h4>再挑最便宜那条价</h4><p>${c.models} 个模型里 ${c.withCache} 个带缓存价；把命中率拉满，${cache ? esc(cache.id) + " 能省 " + cache.pct + "%" : "缓存价能再压一截"}。</p><span class="tl">进比价表 ↗</span></a>
+        <a class="tway" href="#relays"><span class="tn">03</span><h4>官方太贵就走中转</h4><p>${c.relaysLive} 个站有公开价目、${c.relayQuotes} 条报价；接口披露价，不含充值折扣，差 3 倍以上会标「口径?」。</p><span class="tl">看中转行情 ↗</span></a>
+      </div>
+
+      <div class="shead"><h2>七层入口</h2><span class="desc">同一个口径下的七类数据，每块都能单独点开。</span></div>
+      <div class="entries">
+        ${entries.map(e => `
+          <a class="ecard" href="#${e.id}">
+            <div class="ecard-top"><span class="et">${esc(e.t)}</span><span class="eu">${e.n}<em>${esc(e.u)}</em></span></div>
+            <p>${esc(e.d)}</p>
+            <span class="earrow">↗</span>
+          </a>`).join("")}
+      </div>
+
+      <div class="home-foot">
+        <span>${c.vendors} 家厂商 · ${c.models} 个模型 · ${c.relays} 个中转站在册 · ${c.sources} 个来源</span>
+        <span>每天 09:00 自动采集 · <a href="#method" style="color:var(--dim);text-decoration:underline">口径说明 ↗</a></span>
+      </div>`;
+  }
+
+  /* ── free ── */
+  function viewFree() {
+    const offers = state.data.offers;
+    if (!offers.length) return `<div class="empty"><b>免费额度这一层还没入库</b>运行 <code>node collect.mjs</code>。</div>`;
+    const cats = [...new Set(offers.map(o => o.category))];
+    const list = offers.filter(o => (state.region === "all" || o.region === state.region || o.region === "BOTH") && (state.cat === "all" || o.category === state.cat));
+    return `
+      <div class="controls">
+        <div class="chips" role="group" aria-label="地区">
+          ${[["all","全部"],["GLOBAL","国际"],["CN","国内"]].map(([k,l]) =>
+            `<button class="chip" data-region="${k}" aria-pressed="${state.region === k}">${l}</button>`).join("")}
+        </div>
+        <div class="chips" role="group" aria-label="类型">
+          <button class="chip" data-cat="all" aria-pressed="${state.cat === "all"}">全部类型</button>
+          ${cats.map(c => `<button class="chip" data-cat="${esc(c)}" aria-pressed="${state.cat === c}">${esc(catLabel(c))}</button>`).join("")}
+        </div>
+        <span class="spacer"></span><span class="eyebrow">${list.length} 条在架</span>
+      </div>
+      ${list.length === 0 ? `<div class="empty">这个组合下没有渠道。</div>` : `
+      <div class="grid">
+        ${list.map(o => `
+          <article class="card">
+            <div class="hd">
+              <div style="flex:1;min-width:0">
+                <h3>${esc(o.product)}</h3>
+                <div class="sub">${esc(o.vendor || "")} · ${esc(catLabel(o.category))}</div>
+              </div>
+              <span class="tag ${o.region === "GLOBAL" ? "direct" : ""}">${esc(REGION_LABEL[o.region] || o.region || "—")}</span>
+            </div>
+            <p>${esc(o.claim)}</p>
+            <dl>
+              <dt>额度</dt><dd class="mono" style="font-size:12px">${esc(o.quota || "未公开")}</dd>
+              <dt>期限</dt><dd>${esc(o.free_scope || "—")}</dd>
+              ${(o.models || []).length ? `<dt>模型</dt><dd><div class="mchips">${o.models.map(m => `<span class="mchip">${esc(m)}</span>`).join("")}</div></dd>` : ""}
+              ${o.requirements ? `<dt>门槛</dt><dd>${esc(o.requirements)}</dd>` : ""}
+              ${o.price_after && o.price_after !== "未公开" ? `<dt>之后</dt><dd class="mono" style="font-size:11.5px">${esc(o.price_after)}</dd>` : ""}
+            </dl>
+            <div class="foot">
+              ${(o.sources && o.sources.length ? o.sources : [o.source]).slice(0, 3).map((u, i) =>
+                `<a href="${esc(u)}" target="_blank" rel="noopener">${i === 0 ? "来源" : esc(hostOf(u))} ↗</a>`).join("")}
+              ${(o.entries || []).map(e => `<span class="tag">${esc(e)}</span>`).join("")}
+              <span class="tag ${o.conf === "high" ? "free" : o.conf === "low" ? "warn" : ""}" title="信源置信度">${o.conf === "high" ? "已核实" : o.conf === "low" ? "待核实" : "部分核实"}</span>
+            </div>
+          </article>`).join("")}
+      </div>`}`;
+  }
+
+  /* ── subs ── */
+  function viewSubs() {
+    const subs = state.data.subs;
+    const byProduct = new Map();
+    for (const s of subs) {
+      const k = s.product;
+      if (!byProduct.has(k)) byProduct.set(k, []);
+      byProduct.get(k).push(s);
+    }
+    const routes = [
+      ["官方直订", "官网绑卡自付，稳定、可开发票；国区常需外卡或海外号。", "无额外风险，价格最高"],
+      ["低价区订阅", "土耳其 / 尼日利亚 / 印度等区定价更低，需要当地支付方式与账号一致性。", "封号与补差价风险"],
+      ["合租 / 拼车", "多人共享一个 Team 或 Pro 席位，按人头分摊；通常有设备与并发限制。", "隐私与稳定性风险"],
+      ["发卡 / 代充", "第三方平台按次卖账号、兑换码或代充，价格最杂，质量参差。", "跑路、封号、售后风险"]
+    ];
+    return `
+      <div class="shead"><h2>官方订阅价</h2><span class="desc">只收官网能直接读到的月费；人民币按 7.1 折算，仅作横向参考。</span><span class="right">${subs.length} 个档位</span></div>
+      <div class="shop">
+        ${[...byProduct.entries()].map(([product, rows]) => `
+          <section class="plan">
+            <div class="ph"><h3>${esc(product)}</h3><span>${esc(rows[0].vendor)}</span></div>
+            <div class="rows">
+              ${rows.sort((a,b) => a.price - b.price).map(r => `
+                <div class="prow">
+                  <span class="tier">${esc(r.tier)}</span>
+                  <span class="note" title="${esc(r.note)}">${esc(r.note)}</span>
+                  <span class="p">${r.price === 0 ? "免费" : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${r.price}</a>` : "$" + r.price)}<small>${r.price === 0 ? "" : " /" + r.period}</small></span>
+                  <span class="cny">${r.price === 0 ? "—" : "≈¥" + Math.round(r.price * (state.fx?.rate || state.data.meta.fx.USDCNY))}</span>
+                </div>`).join("")}
+            </div>
+          </section>`).join("")}
+      </div>
+
+
+      ${(state.data.subsRegions||[]).length ? `
+      <div class="shead"><h2>各区官方订阅价</h2><span class="desc">App Store 各国家/地区定价，按当日汇率折人民币；点任意一行直达对应区商店页。低价区需要当地支付方式与账号一致。</span><span class="right">${state.data.meta.counts.subsRegions} 个套餐 · ${state.data.meta.counts.subsRegionsRaw} 条区价</span></div>
+      <div class="regions">
+        ${state.data.subsRegions.map(g => `
+          <section class="rcard">
+            <div class="rh"><h3>${esc(g.plan.startsWith(g.app) ? g.plan : g.app)}${g.plan.startsWith(g.app) ? "" : ` <em>${esc(g.plan)}</em>`}</h3><span>${esc(g.duration)} · ${g.total} 区</span></div>
+            <div class="rrows">
+              ${g.rows.slice(0, 6).map((r, i) => `
+                <a class="rrow${i === 0 ? " low" : ""}" href="${esc(r.url)}" target="_blank" rel="noopener">
+                  <span class="idx">${i + 1}</span>
+                  <span class="cty">${esc(r.n)}</span>
+                  <span class="raw">${esc(r.p)}</span>
+                  <span class="cny">¥${r.cny}</span>
+                </a>`).join("")}
+            </div>
+            <div class="rfoot">最便宜 <b>¥${g.cheapest}</b> · 最贵 ¥${g.priciest}</div>
+          </section>`).join("")}
+      </div>` : ""}
+
+      <div class="shead"><h2>买法（路子）</h2><span class="desc">价格之外的四个维度：门槛、稳定性、风险。第三方挂单价按下方的公开挂单页取样。</span></div>
+      <div class="routes">
+        ${routes.map(([name, desc, risk]) => `<div class="route"><h4>${esc(name)}</h4><p>${esc(desc)}</p><div class="risk">${esc(risk)}</div></div>`).join("")}
+      </div>
+      <div class="shead"><h2>第三方挂单（真实链接）</h2><span class="desc">公开发卡平台的在售挂单，每条都带商品页直链；在售优先、同产品按价升序。质保普遍只有几小时，稳定性自负。</span><span class="right">${state.data.subsThird.length} 条 · 在售 ${state.data.subsThird.filter(x => x.status === "in_stock").length}</span></div>
+      <div class="tablewrap" style="max-height:620px">
+        <table style="min-width:0"><caption class="sr">第三方订阅挂单，带商品直链</caption>
+          <thead><tr><th style="cursor:default">产品</th><th style="cursor:default">平台</th><th style="cursor:default">挂单</th><th class="num" style="cursor:default">价格</th><th class="num hidesm" style="cursor:default">折合 $</th><th style="cursor:default">状态</th></tr></thead>
+          <tbody>
+          ${state.data.subsThird.map(x => `<tr>
+            <td><b>${esc(x.product)}</b></td>
+            <td>${esc(x.platform)}</td>
+            <td class="vend"><a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.title)}">${esc(x.title || x.route)}</a></td>
+            <td class="num">${x.currency === "CNY" ? "¥" : "$"}${x.price}</td>
+            <td class="num hidesm">${x.currency === "CNY" ? "$" + (x.price / (state.fx?.rate || state.data.meta.fx.USDCNY)).toFixed(2) : "—"}</td>
+            <td>${x.status === "in_stock" ? '<span class="tag new">在售</span>' : '<span class="tag">缺货</span>'}</td>
+          </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="tfoot"><span>来源：data.aibijia.org 公开挂单 JSON · 商品直链指向发卡平台 · 官方价核实于 ${esc(state.data.meta.date)}</span>
+        <span class="spacer"></span><a href="#method" style="color:var(--dim);text-decoration:underline">口径说明 ↗</a></div>`;
+  }
+
+  /* ── relays ── */
+  function viewRelays() {
+    const rs = state.data.relays;
+    const live = rs.filter(r => r.status === "ok");
+    const cover = live.reduce((n, r) => n + (r.models || 0), 0);
+    const sonnet = live.map(r => ({ r, p: r.prices?.sonnet55 })).filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly).sort((a,b) => a.p.input - b.p.input)[0];
+    const priceCell = (p) => {
+      if (!p) return `<span class="dim">—</span>`;
+      if (p.kind === "per_call") return `<span class="mono">$${money(p.usd)}/次</span>`;
+      return `<span class="mono">${money(p.input)} / ${money(p.output)}</span>${p.anomaly ? ' <span class="tag warn" title="与官方价差异过大，可能为包月或特殊口径">口径?</span>' : ""}`;
+    };
+    const idxCell = (p, official) => {
+      if (!p || p.kind !== "per_1m" || p.anomaly) return `<span class="dim">—</span>`;
+      const idx = p.input / official;
+      const w = Math.max(4, Math.min(100, idx * 45));
+      return `<span class="idx"><span class="bar"><i class="${idx > 1.15 ? "over" : ""}" style="width:${w}%"></i></span><span class="num">${(idx * 100).toFixed(0)}%</span></span>`;
+    };
+    return `
+      <div class="relaybar">
+        <div class="cell"><div class="k">在册站点</div><div class="v">${rs.length}</div></div>
+        <div class="cell"><div class="k">自动采到价目</div><div class="v">${live.length}</div></div>
+        <div class="cell"><div class="k">覆盖模型报价</div><div class="v">${cover.toLocaleString()}</div></div>
+        <div class="cell"><div class="k">Sonnet 5.5 最低</div><div class="v">${sonnet ? "$" + money(sonnet.p.input) : "—"}<small style="font-size:10px;color:var(--faint)"> /1M</small></div></div>
+      </div>
+      <div class="tablewrap" style="max-height:none">
+        <table class="rtable"><caption class="sr">中转站公开价目</caption>
+          <thead><tr>
+            <th style="cursor:default">站点</th><th class="num" style="cursor:default">模型数</th>
+            <th class="num" style="cursor:default">Sonnet 5.5 入/出</th>
+            <th class="num hidesm" style="cursor:default">对官方</th>
+            <th class="num hidesm" style="cursor:default">Opus 5.5</th>
+            <th class="num hidesm" style="cursor:default">GPT-6.1 Sol</th>
+            <th style="cursor:default">状态</th>
+          </tr></thead>
+          <tbody>
+            ${rs.filter(r => r.status === "ok" || r.models).map(r => `
+              <tr data-relay="${esc(r.domain)}">
+                <td><div class="mname"><span class="txt">${esc(r.name)}</span><span class="id hidesm">${esc(r.domain)}</span></div></td>
+                <td class="num">${(r.models || 0).toLocaleString()}</td>
+                <td class="num">${priceCell(r.prices?.sonnet55)}</td>
+                <td class="num hidesm">${idxCell(r.prices?.sonnet55, 2)}</td>
+                <td class="num hidesm">${priceCell(r.prices?.opus55)}</td>
+                <td class="num hidesm">${priceCell(r.prices?.gpt61sol)}</td>
+                <td><span class="status ${r.stale ? "stale" : "ok"}">${r.stale ? "上次成功" : "在采"}</span>
+                  <a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-left:6px">↗</a></td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="shead"><h2>在册但未开放价目</h2><span class="desc">这些站点的价目接口需要登录或未开放，保留在册等人工核价；不做猜测。</span></div>
+      <div class="cand">
+        ${rs.filter(r => !(r.status === "ok" || r.models)).map(r => `<a href="https://${esc(r.domain)}" target="_blank" rel="noopener">${esc(r.name)} · ${esc(r.domain)}</a>`).join("")}
+      </div>
+      <div class="tfoot"><span>口径：OneAPI / NewAPI 的倍率换算（ratio × $2 / 1M），不含各站充值折扣；口径异常已标「口径?」</span></div>`;
+  }
+
+
+  /* ── events ── */
+  function viewEvents() {
+    const all = state.data.events || [];
+    const pass = (e) =>
+      (state.evKind === "all" || e.kind === state.evKind) &&
+      (state.evSrc === "all" || e.source === state.evSrc) &&
+      (state.evRegion === "all" || e.region === state.evRegion);
+
+    const pool = all.filter(pass);
+    const open = pool.filter(e => e.status === "open").sort((a, b) => String(a.end || a.start).localeCompare(String(b.end || b.start)));
+    const upcoming = pool.filter(e => e.status === "upcoming").sort((a, b) => String(a.start).localeCompare(String(b.start)));
+    const past = pool.filter(e => e.status === "past");
+
+    const kindCount = {};
+    for (const e of all.filter(e => e.status !== "past")) kindCount[e.kind] = (kindCount[e.kind] || 0) + 1;
+
+    const card = (e) => `
+      <article class="card">
+        <div class="hd">
+          <div style="flex:1;min-width:0">
+            <h3>${esc(e.title)}</h3>
+            <div class="sub">${esc(e.source)}${e.org ? " · " + esc(e.org) : ""} · ${esc(e.location || "")}</div>
+          </div>
+          <span class="tag ${e.status === "open" ? "free" : ""}">${e.status === "open" ? "报名中" : e.status === "upcoming" ? "将开始" : "已结束"}</span>
+        </div>
+        <dl>
+          <dt>时间</dt><dd class="mono" style="font-size:12px">${esc(e.start || "—")}${e.end && e.end !== e.start ? " → " + esc(e.end) : ""}</dd>
+          ${e.prize ? `<dt>奖励</dt><dd>${esc(e.prize)}${e.regs ? ` · ${e.regs.toLocaleString()} 人报名` : ""}</dd>` : (e.regs ? `<dt>报名</dt><dd>${e.regs.toLocaleString()} 人</dd>` : "")}
+          ${(e.themes || []).length ? `<dt>主题</dt><dd><div class="mchips">${e.themes.slice(0, 4).map(t => `<span class="mchip">${esc(t)}</span>`).join("")}</div></dd>` : ""}
+        </dl>
+        <div class="foot"><a href="${esc(e.url)}" target="_blank" rel="noopener">活动页 ↗</a>
+          <span class="tag">${esc(EV_KIND[e.kind] || "其他")}</span></div>
+      </article>`;
+
+    return `
+      <div class="controls">
+        <div class="chips" role="group" aria-label="活动类型">
+          <button class="chip" data-evkind="all" aria-pressed="${state.evKind === "all"}">全部类型</button>
+          ${Object.entries(EV_KIND).map(([k, l]) =>
+            `<button class="chip" data-evkind="${k}" aria-pressed="${state.evKind === k}">${l}${kindCount[k] ? ` <b style="opacity:.55;font-weight:400">${kindCount[k]}</b>` : ""}</button>`).join("")}
+        </div>
+        <div class="chips" role="group" aria-label="来源">
+          <button class="chip" data-evsrc="all" aria-pressed="${state.evSrc === "all"}">全部来源</button>
+          ${["Devpost", "Luma"].map(k =>
+            `<button class="chip" data-evsrc="${k}" aria-pressed="${state.evSrc === k}">${esc(EV_SRC[k])}</button>`).join("")}
+        </div>
+        <div class="chips" role="group" aria-label="地区">
+          <button class="chip" data-evregion="all" aria-pressed="${state.evRegion === "all"}">全部地区</button>
+          ${Object.entries(EV_REGION).map(([k, l]) =>
+            `<button class="chip" data-evregion="${k}" aria-pressed="${state.evRegion === k}">${l}</button>`).join("")}
+        </div>
+        <span class="spacer"></span><span class="eyebrow">${open.length + upcoming.length} 个在场 · ${past.length} 条归档</span>
+      </div>
+
+      <div class="shead" style="padding-top:18px"><h2>开放中</h2><span class="desc">按截止日期排；点活动页直接报名。</span><span class="right">${open.length} 个</span></div>
+      ${open.length ? `<div class="grid">${open.slice(0, state.evLimit).map(card).join("")}</div>` : `<div class="empty">这个筛选组合下没有开放中的活动。</div>`}
+      ${open.length > state.evLimit ? `<div style="padding:18px 0"><button class="more" data-evmore type="button">再加载 ${Math.min(18, open.length - state.evLimit)} 个活动</button></div>` : ""}
+
+      ${upcoming.length ? `<div class="shead"><h2>即将开始</h2><span class="desc">还没开放报名或刚开始的场次。</span><span class="right">${upcoming.length} 个</span></div><div class="grid">${upcoming.map(card).join("")}</div>` : ""}
+
+      ${past.length ? `<div class="shead"><h2>历史归档</h2><span class="desc">已结束的场次，只作来源对照，不混进「开放中」。</span><span class="right">${past.length} 条</span></div>
+        <div class="cand">${past.slice(0, 30).map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.title)}">${esc(e.title)}</a>`).join("")}</div>` : ""}`;
+  }
+
+  /* ── bench ── */
+  function viewBench() {
+    const b = state.data.bench;
+    const rows = (b?.rows || []);
+    if (!rows.length) return `<div class="empty"><b>评测层还没有数据</b>运行 <code>node collect.mjs</code> 抓取 Vals Index。</div>`;
+    const max = Math.max(...rows.map(r => r.score));
+    return `
+      <div class="relaybar" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div class="cell"><div class="k">数据日期</div><div class="v" style="font-size:16px">${esc(b.as_of || "—")}</div></div>
+        <div class="cell"><div class="k">收录模型</div><div class="v">${rows.length}</div></div>
+        <div class="cell"><div class="k">最高分</div><div class="v">${rows[0].score.toFixed(2)}<small style="font-size:10px;color:var(--faint)"> ${esc(rows[0].model)}</small></div></div>
+      </div>
+      <div class="tablewrap" style="max-height:none">
+        <table><caption class="sr">Vals Index 公开分数</caption>
+          <thead><tr><th style="cursor:default">#</th><th style="cursor:default">模型</th><th style="cursor:default">分数</th>
+            <th class="num" style="cursor:default">较上次</th><th class="num hidesm" style="cursor:default">来源</th></tr></thead>
+          <tbody>
+          ${rows.map(r => `<tr>
+            <td class="num" style="width:34px">${r.rank}</td>
+            <td><b>${esc(r.model)}</b></td>
+            <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:120px"><i style="width:${Math.max(4, (r.score / max) * 100).toFixed(1)}%"></i></span><span class="num">${r.score.toFixed(2)}</span></span></td>
+            <td class="num">${r.delta == null ? '<span class="dim">—</span>' : `<span class="${r.delta < 0 ? "best" : ""}" style="color:${r.delta < 0 ? "var(--warn)" : "var(--dim)"}">${r.delta > 0 ? "+" : ""}${r.delta.toFixed(2)}</span>`}</td>
+            <td class="num hidesm"><a href="${esc(b.source)}" target="_blank" rel="noopener" style="color:var(--faint);font-size:10.5px">Vals ↗</a></td>
+          </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="tfoot"><span>口径：同一套题目的公开总分，跨厂商可比；分数下降标黄，可能是版本回退或渠道掺水，需人工复核。</span></div>`;
+  }
+
+  /* ── vendors ── */
+  function viewVendors() {
+    const by = new Map();
+    for (const m of state.data.models) {
+      const v = by.get(m.vendor) || { vendor: m.vendor, n: 0, minIn: null, minOut: null, bestDisc: null, free: 0, cheapest: null };
+      v.n++;
+      if (m.free) v.free++;
+      if (!m.free && m.input != null) {
+        if (v.minIn == null || m.input < v.minIn) { v.minIn = m.input; v.cheapest = m; }
+        if (v.minOut == null || m.output < v.minOut) v.minOut = m.output;
+        if (m.cache_read != null) {
+          const d = 1 - m.cache_read / m.input;
+          if (v.bestDisc == null || d > v.bestDisc) v.bestDisc = d;
+        }
+      }
+      by.set(m.vendor, v);
+    }
+    const offerCount = new Map();
+    for (const o of state.data.offers) {
+      for (const m of state.data.models) {
+        if (o.vendor && m.vendor && (o.vendor === m.vendor || m.vendor.includes(o.vendor) || o.vendor.includes(m.vendor))) {
+          offerCount.set(m.vendor, (offerCount.get(m.vendor) || 0) + 1); break;
+        }
+      }
+    }
+    const rows = [...by.values()].sort((a, b) => {
+      const fa = FOCUS.has(a.vendor) ? 0 : 1, fb = FOCUS.has(b.vendor) ? 0 : 1;
+      if (fa !== fb) return fa - fb;
+      return (a.minIn ?? Infinity) - (b.minIn ?? Infinity);
+    });
+    return `
+      <div class="tablewrap"><table><caption class="sr">按厂商聚合</caption>
+        <thead><tr>
+          <th style="cursor:default">厂商</th><th class="num" style="cursor:default">模型</th>
+          <th class="num" style="cursor:default">最低输入</th><th class="num" style="cursor:default">最低输出</th>
+          <th class="num hidesm" style="cursor:default">最大缓存折扣</th><th style="cursor:default">最便宜模型</th>
+          <th class="num" style="cursor:default">免费模型</th><th class="num hidesm" style="cursor:default">免费渠道</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map(v => `<tr data-vendor="${esc(v.vendor)}">
+          <td><b>${esc(v.vendor)}</b>${FOCUS.has(v.vendor) ? ' <span class="tag">主流</span>' : ""}</td>
+          <td class="num">${v.n}</td>
+          <td class="num">${v.minIn == null ? '<span class="dim">免费</span>' : "$" + money(v.minIn)}</td>
+          <td class="num">${v.minOut == null ? '<span class="dim">—</span>' : "$" + money(v.minOut)}</td>
+          <td class="num hidesm">${v.bestDisc == null ? '<span class="dim">—</span>' : `<span class="${v.bestDisc > .5 ? "best" : ""}">${pct(v.bestDisc)}</span>`}</td>
+          <td class="vend">${esc(v.cheapest ? v.cheapest.name : "—")}</td>
+          <td class="num">${v.free ? `<span class="best">${v.free}</span>` : '<span class="dim">—</span>'}</td>
+          <td class="num hidesm">${offerCount.get(v.vendor) || 0}</td>
+        </tr>`).join("")}
+        </tbody></table>
+      </div>
+      <div class="tfoot"><span>主流厂商排前，其次按最低输入价升序 · 点一行跳到该厂商比价</span></div>`;
+  }
+
+  /* ── signals ── */
+  function viewSignals() {
+    const news = state.data.news || [];
+    const sig = state.data.signals || [];
+    const sigList = sig.filter(x => state.sigSrc === "all" || x.source_type === state.sigSrc);
+    const nList = news.filter(n => state.newsTopic === "all" || n.topic === state.newsTopic);
+
+    const topicCount = {};
+    for (const n of news) topicCount[n.topic] = (topicCount[n.topic] || 0) + 1;
+    const topicLabel = {};
+    for (const n of news) topicLabel[n.topic] = n.topicLabel || n.topic;
+
+    return `
+      <div class="controls">
+        <div class="chips" role="group" aria-label="要闻分类">
+          <button class="chip" data-newstopic="all" aria-pressed="${state.newsTopic === "all"}">全部要闻</button>
+          ${Object.entries(topicCount).map(([k, n]) =>
+            `<button class="chip" data-newstopic="${k}" aria-pressed="${state.newsTopic === k}">${esc(topicLabel[k] || k)} <b style="opacity:.55;font-weight:400">${n}</b></button>`).join("")}
+        </div>
+        <span class="spacer"></span><span class="eyebrow">${nList.length} 条 · 近三天</span>
+      </div>
+
+      ${nList.length === 0 ? `<div class="empty">这个分类下暂时没有要闻。</div>` : `
+      <div class="newsfld">
+        ${(() => {
+          const groups = new Map();
+          for (const n of nList) {
+            const k = n.date || "";
+            if (!groups.has(k)) groups.set(k, []);
+            groups.get(k).push(n);
+          }
+          const today = state.data.meta.date;
+          const wd = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+          return [...groups.entries()].map(([d, items]) => {
+            const dt = d ? new Date(d + "T00:00:00") : null;
+            const label = d === today ? "今天" : (dt && !isNaN(dt) ? wd[dt.getDay()] : "");
+            return `
+            <section class="nday">
+              <div class="nday-h"><b>${esc(label || d.slice(5))}</b><span>${esc(d.slice(5).replace("-", "/"))} · ${items.length} 条</span></div>
+              <div class="nlist">
+                ${items.map(n => `
+                  <a class="nitem" href="${esc(n.url)}" target="_blank" rel="noopener">
+                    <span class="nkind">${esc(n.topicLabel || "其他")}</span>
+                    <div class="nmain">
+                      <h4>${esc(n.title)}</h4>
+                      ${n.summary ? `<p>${esc(n.summary)}</p>` : ""}
+                    </div>
+                    <span class="ntime">${esc(n.time || "")}</span>
+                  </a>`).join("")}
+              </div>
+            </section>`;
+          }).join("");
+        })()}
+      </div>`}
+
+      <div class="shead" style="padding-top:26px"><h2>X 与官方一手信号</h2><span class="desc">价格、额度、缓存定价的原始出处；只有抓到正文的才收录。</span><span class="right">${sigList.length} 条</span></div>
+      <div class="controls" style="padding-top:0">
+        <div class="chips" role="group" aria-label="信号来源">
+          ${[["all","全部"],["x","X 一手"],["blog","官方博客"],["newsroom","新闻稿"]].map(([k,l]) =>
+            `<button class="chip" data-sigsrc="${k}" aria-pressed="${state.sigSrc === k}">${l}</button>`).join("")}
+        </div>
+      </div>
+      ${sigList.length === 0 ? `<div class="empty">这个来源下还没有情报。</div>` : `<div class="timeline">${sigList.map(x => `
+        <article class="sig">
+          <div class="when"><b>${esc(x.date || "—")}</b>${esc(x.handle || "")}</div>
+          <div>
+            <h4>${esc(TOPIC_LABEL[x.topic] || x.topic || "signal")} <span class="tag">${esc(SRC_LABEL[x.source_type] || x.source_type || "X")}</span>${x.confidence === "medium" ? ' <span class="tag warn">部分核实</span>' : ""}</h4>
+            <blockquote>${esc(x.quote)}</blockquote>
+            <div class="links"><a href="${esc(x.url)}" target="_blank" rel="noopener">原帖 ↗</a>
+              ${(x.affects || []).map(a => `<span class="mchip">${esc(a)}</span>`).join("")}</div>
+          </div>
+        </article>`).join("")}</div>`}`;
+  }
+
+  /* ── method ── */
+  function viewMethod() {
+    const d = state.data, c = d.meta.counts;
+    const directVendors = [...new Set(d.models.filter(m => m.channelKind === "direct").map(m => m.vendor))];
+    return `<div class="doc">
+      <h2>这份数据是什么</h2>
+      <p>七层数据：<strong>免费额度</strong>、<strong>比价</strong>、<strong>订阅</strong>、<strong>中转站</strong>、<strong>AI 活动</strong>、<strong>评测</strong>、<strong>情报</strong>。单位统一 <code>USD / 1M tokens</code>；人民币按 <strong>${d.meta.fx.USDCNY}</strong> 折算（${esc(d.meta.fx.source)}，${esc(d.meta.fx.as_of || "")}，站点每 8 小时自动刷新一次）。</p>
+      <ul>
+        <li><strong>聚合层</strong>（${c.aggregator} 条）：OpenRouter 实时目录，含缓存读写价。</li>
+        <li><strong>官方直连层</strong>（${c.direct} 条 / ${directVendors.length} 家）：官方定价页人工核实，保留原币数字。</li>
+        <li><strong>免费层</strong>（${c.offers} 条）：免费额度、免费模型、赠送金，标注门槛与期限。</li>
+        <li><strong>订阅层</strong>（${c.subs} 档）：官方订阅月费，只收官网读得到的数字。</li>
+        <li><strong>中转层</strong>（${c.relays} 站在册 / ${c.relaysLive} 站公开价目）：读取 OneAPI/NewAPI 的价目接口，按倍率换算。</li>
+        <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.events} 条收录）：Devpost 公开接口（分页 5 页）+ Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。</li>
+        <li><strong>评测层</strong>（${c.bench} 个模型）：Vals Index 的公开分数，每次采集存一份用于对比。</li>
+        <li><strong>情报层</strong>（${c.news || 0} 条要闻 / ${c.signals} 条一手信号）：公开新闻源按价格、模型、融资、政策、安全分类打分，每天留 8 条；X 与官方博客只收抓到正文的。</li>
+      </ul>
+
+      <h2>排序：主流优先，新模型优先</h2>
+      <p>比价表默认不是按价格排，而是按<strong>厂商主流度 + 模型发布时间</strong>：OpenAI、Anthropic、Google、DeepSeek、通义、Kimi、智谱、MiniMax、xAI、Mistral、Meta 等排前，同厂商内新发布在前；点任意表头可换成价格排序。</p>
+
+      <h2>有效成本怎么算</h2>
+      <div class="code">cost_per_1M = (1 − s) · [(1 − h) · input + h · cache_read] + s · output
+h = 缓存命中率       s = 输出 token 占比
+cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</div>
+      <p>默认 <code>h=70%</code>、<code>s=20%</code>；滑块就是这两个变量。</p>
+
+      <h2>中转站口径</h2>
+      <div class="code">挂牌价 = model_ratio × $2 / 1M（input）
+        = model_ratio × completion_ratio × $2 / 1M（output）
+model_price > 0 时按「每次调用」计价，不做换算</div>
+      <p>这是<strong>倍率换算价</strong>，不含各站充值折扣（例如充 ¥100 得 $20 额度）。与官方价差异超过 3 倍会标「口径?」，多半是包月套餐或特殊计费，不参与最低价比较。</p>
+
+      <h2>订阅与第三方挂单</h2>
+      <p>官方订阅只收官网能直接读到的月费（Go / Plus / Pro、Pro / Max、Copilot 各档）。第三方挂单价是<strong>公开挂单页的当日快照</strong>（来源 aibijia.org），只用来判断行情区间：质保通常 1–3 小时，成品号与镜像站的稳定性差别很大，站点不做推荐、不保证可用。</p>
+
+      <h2>活动与评测口径</h2>
+      <p>活动只收<strong>公开可报名</strong>的：Devpost 的 open 状态黑客松、Luma 公开发现流里含 AI/LLM/Agent 关键词的场次，按截止日期排。类型（黑客松 / 会议 / Meetup / 工作坊 / 评选）和地区都由标题、主题与场地推断，可交叉筛选；本地 AIOS 项目的活动库全部已结束，单独归档，只作来源对照，不混进「开放中」。</p>
+      <p>评测取 <a href="https://www.vals.ai/benchmarks/vals_index" target="_blank" rel="noopener" style="color:var(--accent)">Vals Index</a> 的公开总分，每次采集存一份；同一模型分数下跌会标黄——可能是版本回退，也可能是渠道掺水，需要人工复核。LMArena 与 Artificial Analysis 有反爬或需要 key，暂未接入。</p>
+
+      <h2>去重规则</h2>
+      <ol>
+        <li><strong>R1</strong> 聚合层以 OpenRouter model id 为唯一键。</li>
+        <li><strong>R2</strong> 官方直连层以 <code>厂商 + 模型</code> 为唯一键，冲突保留高置信。</li>
+        <li><strong>R3</strong> 两层不合并：渠道是指纹的一部分，只通过 <code>family</code> 做「同族最低」提示。</li>
+        <li><strong>R4</strong> 免费层以产品名为唯一键，多入口合并进 <code>entries</code>。</li>
+        <li><strong>R5</strong> 情报以 URL 为唯一键；中转站以域名唯一。</li>
+      </ol>
+      <p>本次运行：剔除 ${d.meta.dedupe.unpriced_dropped || 0} 条不计价的路由产品、${d.meta.dedupe.aggregator_dropped} 条重复 id；白嫖层合并 ${d.meta.dedupe.offers_merged} 条。</p>
+
+      <h2>已知偏差</h2>
+      <ul>
+        <li>聚合层标价可能与厂商直连价不同步；两个渠道两个价是正常的，站点不替你选边。</li>
+        <li>Batch / 分时 / 优先档是独立 SKU，各自成行，不折叠成「该模型最低价」。</li>
+        <li>中转站价目是<strong>接口披露价</strong>，不等于你充值后的实际单价；未公开价目的站点只登记不猜价。</li>
+        <li>免费额度随时会变，卡片上的日期是核实日期，链接指向官方页。</li>
+      </ul>
+
+      <h2>来源（${c.sources}）</h2>
+      <table class="srcs"><tbody>${d.sources.map(s => `<tr><td class="u"><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.url)}</a></td><td style="width:64px">${esc(s.type)}</td><td style="width:40px;text-align:right">${s.refs}</td></tr>`).join("")}</tbody></table>
+    </div>`;
+  }
+
+  /* ── drawer ── */
+  function openDrawer(id) {
+    const m = state.data.models.find(x => x.id === id);
+    if (!m) return;
+    const e = effort(m);
+    const disc = m.cache_read != null && m.input ? 1 - m.cache_read / m.input : null;
+    const peak = m.peak ? `<dt>分时价</dt><dd>${esc(m.peak.note)}（倍率 ${m.peak.ratio}×）</dd>` : "";
+    const cny = m.cny ? `<dt>原币</dt><dd class="mono">${esc(m.cny.currency)} ${esc(m.cny.input)} / ${esc(m.cny.output)}${m.cny.cache_read != null ? ` · 缓存 ${esc(m.cny.cache_read)}` : ""} 每 1M</dd>` : "";
+    $("#drawer").innerHTML = `
+      <button class="close" type="button" data-close aria-label="关闭">✕</button>
+      <div class="eyebrow">${esc(m.vendor)} · ${esc(m.channel)}</div>
+      <h2>${esc(m.name)}</h2>
+      <div class="sub">${esc(m.id)}</div>
+      <div class="pricegrid">
+        <div class="pcell"><div class="k">输入 /1M</div><div class="v">${m.free ? "0" : "$" + money(m.input)}</div></div>
+        <div class="pcell"><div class="k">输出 /1M</div><div class="v">${m.free ? "0" : "$" + money(m.output)}</div></div>
+        <div class="pcell"><div class="k">缓存读 /1M</div><div class="v">${m.cache_read == null ? "—" : "$" + money(m.cache_read)}</div></div>
+        <div class="pcell"><div class="k">缓存写 /1M</div><div class="v">${m.cache_write == null ? "—" : "$" + money(m.cache_write)}</div></div>
+      </div>
+      <dl>
+        <dt>有效成本</dt><dd class="mono">$${e == null ? "—" : money(e)} /1M <span class="dim">（命中 ${pct(state.hit)}，输出 ${pct(state.outShare)}）</span></dd>
+        <dt>缓存折扣</dt><dd>${disc == null ? '<span class="dim">该渠道未公布缓存价</span>' : pct(disc) + "（命中后输入价降到 " + pct(m.cache_read / m.input) + "）"}</dd>
+        <dt>上下文</dt><dd class="mono">${ctx(m.ctx)} tokens</dd>
+        <dt>模态</dt><dd class="mono">${esc(m.modality || "—")}</dd>
+        <dt>免费</dt><dd>${m.free ? '<span class="tag free">是</span> 挂牌 0 元' : "否"}</dd>
+        ${cny}${peak}
+        <dt>缓存机制</dt><dd>${esc(m.cm || "—")}</dd>
+        <dt>置信度</dt><dd>${esc(m.conf)} <span class="dim">· ${esc(confTitle[m.conf] || "")}</span></dd>
+        <dt>采集日</dt><dd class="mono">${esc(m.seen || "—")}</dd>
+      </dl>
+      <p class="note"><a href="${esc(m.src)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">查看原始来源 ↗</a></p>`;
+    $("#drawer").dataset.open = "1"; $("#drawer").setAttribute("aria-hidden", "false");
+    $("#overlay").dataset.open = "1";
+  }
+  function openRelay(domain) {
+    const r = state.data.relays.find(x => x.domain === domain);
+    if (!r) return;
+    const samples = (r.samples || []).slice(0, 40);
+    $("#drawer").innerHTML = `
+      <button class="close" type="button" data-close aria-label="关闭">✕</button>
+      <div class="eyebrow">RELAY · ${esc(r.status)}</div>
+      <h2>${esc(r.name)}</h2>
+      <div class="sub">${esc(r.domain)}</div>
+      <dl>
+        <dt>模型数</dt><dd class="mono">${(r.models || 0).toLocaleString()}</dd>
+        <dt>更新</dt><dd class="mono">${esc(r.checked_at || "—")}</dd>
+        <dt>价目接口</dt><dd class="mono" style="font-size:11px;word-break:break-all">${esc(r.url)}</dd>
+      </dl>
+      ${samples.length ? `<div class="tablewrap" style="max-height:none;border-top:var(--rule)">
+        <table style="min-width:0"><thead><tr><th style="cursor:default">模型</th><th class="num" style="cursor:default">输入</th><th class="num" style="cursor:default">输出</th></tr></thead>
+        <tbody>${samples.map(x => `<tr><td><span class="mono" style="font-size:11px">${esc(x.n)}</span></td><td class="num">${x.i}</td><td class="num">${x.o}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">这家没开放价目接口，只登记站点。</p>`}
+      <p class="note"><a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">打开店铺 ↗</a> · 价格来自 /api/pricing 倍率换算，不含充值折扣</p>`;
+    $("#drawer").dataset.open = "1"; $("#drawer").setAttribute("aria-hidden", "false");
+    $("#overlay").dataset.open = "1";
+  }
+
+  function closeDrawer() {
+    $("#drawer").dataset.open = "0"; $("#drawer").setAttribute("aria-hidden", "true");
+    $("#overlay").dataset.open = "0";
+  }
+
+  /* ── render ── */
+  function render() {
+    renderNav(); renderHero();
+    const v = $("#view");
+    if (state.tab === "home") v.innerHTML = viewHome();
+    else if (state.tab === "free") v.innerHTML = viewFree();
+    else if (state.tab === "compare") v.innerHTML = viewCompare();
+    else if (state.tab === "subs") v.innerHTML = viewSubs();
+    else if (state.tab === "relays") v.innerHTML = viewRelays();
+    else if (state.tab === "events") v.innerHTML = viewEvents();
+    else if (state.tab === "bench") v.innerHTML = viewBench();
+    else if (state.tab === "vendors") v.innerHTML = viewVendors();
+    else if (state.tab === "signals") v.innerHTML = viewSignals();
+    else v.innerHTML = viewMethod();
+    history.replaceState(null, "", "#" + state.tab);
+  }
+
+  /* ── events ── */
+  function bind() {
+    document.addEventListener("click", (ev) => {
+      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      if (!t) return;
+      if (t.dataset.tab) { state.tab = t.dataset.tab; state.limit = 80; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
+      if (t.dataset.band) { state.band = t.dataset.band; render(); return; }
+      if (t.dataset.toggle) {
+        const k = t.dataset.toggle; state[k] = !state[k];
+        if (k === "freeOnly" && state.freeOnly) state.paidOnly = false;
+        if (k === "paidOnly" && state.paidOnly) state.freeOnly = false;
+        render(); return;
+      }
+      if (t.dataset.cmpview) { state.cmpView = t.dataset.cmpview; render(); return; }
+      if (t.dataset.evmore) { state.evLimit += 18; render(); return; }
+      if (t.dataset.evkind) { state.evKind = t.dataset.evkind; state.evLimit = 18; render(); return; }
+      if (t.dataset.evsrc) { state.evSrc = t.dataset.evsrc; state.evLimit = 18; render(); return; }
+      if (t.dataset.evregion) { state.evRegion = t.dataset.evregion; state.evLimit = 18; render(); return; }
+      if (t.dataset.newstopic) { state.newsTopic = t.dataset.newstopic; render(); return; }
+      if (t.dataset.relay) { if (ev.target.closest("a")) return; openRelay(t.dataset.relay); return; }
+      if (t.dataset.sortkey) { state.sortKey = t.dataset.sortkey; state.sortDir = 1; render(); return; }
+      if (t.dataset.channel) { state.channel = t.dataset.channel; render(); return; }
+      if (t.dataset.sort) {
+        if (state.sortKey === t.dataset.sort) state.sortDir *= -1;
+        else { state.sortKey = t.dataset.sort; state.sortDir = 1; }
+        render(); return;
+      }
+      if (t.dataset.id) { openDrawer(t.dataset.id); return; }
+      if (t.dataset.region) { state.region = t.dataset.region; render(); return; }
+      if (t.dataset.cat) { state.cat = t.dataset.cat; render(); return; }
+      if (t.dataset.sigsrc) { state.sigSrc = t.dataset.sigsrc; render(); return; }
+      if (t.dataset.vendor) { state.tab = "compare"; state.vendor = t.dataset.vendor; state.q = ""; state.band = "all"; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
+      if (t.id === "moreBtn") { state.limit += 120; paintRows(); return; }
+      if (t.id === "themeBtn") {
+        const light = document.documentElement.dataset.theme === "light";
+        document.documentElement.dataset.theme = light ? "dark" : "light";
+        t.setAttribute("aria-pressed", String(!light));
+        t.textContent = light ? "LIGHT" : "DARK";
+        localStorage.setItem("fr.theme", light ? "dark" : "light");
+        return;
+      }
+      if (t.id === "densBtn") {
+        const compact = document.documentElement.dataset.density === "compact";
+        document.documentElement.dataset.density = compact ? "cozy" : "compact";
+        t.setAttribute("aria-pressed", String(!compact));
+        localStorage.setItem("fr.density", compact ? "cozy" : "compact");
+        return;
+      }
+      if (t.dataset.close !== undefined && t.dataset.close === "") { closeDrawer(); return; }
+      if (t.id === "overlay") { closeDrawer(); return; }
+    });
+
+    document.addEventListener("input", (ev) => {
+      const el = ev.target;
+      if (el.id === "q") { state.q = el.value; state.limit = 80; paintRows(); return; }
+      if (el.id === "hit") { state.hit = Number(el.value) / 100; $("#hitOut").textContent = pct(state.hit); paintRows(); return; }
+      if (el.id === "outShare") { state.outShare = Number(el.value) / 100; $("#outOut").textContent = pct(state.outShare); paintRows(); return; }
+    });
+    document.addEventListener("change", (ev) => { if (ev.target.id === "vendor") { state.vendor = ev.target.value; render(); } });
+    document.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") closeDrawer();
+      if ((ev.key === "Enter" || ev.key === " ") && ev.target.matches?.("th[data-sort]")) { ev.preventDefault(); ev.target.click(); }
+      if (ev.key === "/" && !/input|textarea|select/i.test(document.activeElement.tagName)) { ev.preventDefault(); $("#q")?.focus(); }
+    });
+    window.addEventListener("hashchange", () => {
+      const id = location.hash.slice(1);
+      if (id && TABS.some(t => t.id === id) && id !== state.tab) { state.tab = id; state.limit = 80; render(); scrollTo({ top: 0, behavior: "auto" }); }
+    });
+  }
+
+  function renderFxStamp() {
+    const f = state.fx;
+    if (!f) return;
+    const t = new Date(f.ts).toLocaleTimeString("zh-CN", { hour12: false, hour: "2-digit", minute: "2-digit" });
+    $("#fxStamp").textContent = `汇率 ${f.rate.toFixed(4)} · ${t}`;
+    $("#fxStamp").title = `USD/CNY ${f.rate} · ${f.asof || ""} · 每 8 小时刷新`;
+  }
+
+  async function syncFx() {
+    const KEY = "idx.fx";
+    const now = Date.now();
+    let cache = null;
+    try { cache = JSON.parse(localStorage.getItem(KEY) || "null"); } catch {}
+    if (cache && now - cache.ts < 8 * 3600 * 1000) { state.fx = cache; return false; }
+    try {
+      const r = await fetch("https://open.er-api.com/v6/latest/USD", { cache: "no-store" });
+      const j = await r.json();
+      if (j?.rates?.CNY) {
+        state.fx = { rate: Number(j.rates.CNY), ts: now, asof: (j.time_last_update_utc || "").slice(0, 16) };
+        localStorage.setItem(KEY, JSON.stringify(state.fx));
+        return true;
+      }
+    } catch {}
+    if (!state.fx && cache) state.fx = cache;
+    return false;
+  }
+
+  /* ── boot ── */
+  async function boot() {
+    const theme = localStorage.getItem("fr.theme");
+    if (theme === "dark") {
+      document.documentElement.dataset.theme = "dark";
+      $("#themeBtn").setAttribute("aria-pressed", "true");
+      $("#themeBtn").textContent = "LIGHT";
+    }
+    if (localStorage.getItem("fr.density") === "compact") {
+      document.documentElement.dataset.density = "compact";
+      $("#densBtn").setAttribute("aria-pressed", "true");
+    }
+    try {
+      const res = await fetch("data.json", { cache: "no-store" });
+      if (!res.ok) throw new Error(res.status);
+      state.data = await res.json();
+    } catch (e) {
+      $("#kpis").innerHTML = "";
+      $("#view").innerHTML = `<div class="empty"><b>读不到 data.json</b>请用本地服务器打开：<code>python3 -m http.server 4311</code><br>或先运行 <code>node collect.mjs</code> 生成数据。</div>`;
+      return;
+    }
+    const base = state.data.meta.fx || { USDCNY: 7.1, as_of: "", fetched_at: "" };
+    state.fx = { rate: base.USDCNY, ts: Date.parse(base.fetched_at) || Date.now(), asof: base.as_of };
+    renderKpis(); bind(); render(); renderFxStamp();
+    syncFx().then((changed) => { if (changed) { renderFxStamp(); render(); } });
+    $("#footSrc").textContent = `${state.data.meta.counts.sources} 个来源 · 去重丢弃 ${state.data.meta.dedupe.aggregator_dropped + state.data.meta.dedupe.unpriced_dropped} 条`;
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
