@@ -29,7 +29,7 @@ AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中
 
 ```bash
 node serve.mjs 4311        # 本地预览 → http://127.0.0.1:4311/
-node collect.mjs           # 重采一次，约 6 分钟，覆盖 data.json
+node collect.mjs           # 重采一次，约 9 分钟，覆盖 data.json
 node health.mjs            # 单独体检；不达标 exit 1
 ```
 
@@ -77,7 +77,7 @@ node health.mjs            # 单独体检；不达标 exit 1
 | 比价（474） | OpenRouter 实时目录 + 官方定价页核实 | 自动 + 人工 |
 | 订阅（16 档官方 / 18 组区价 774 条 / 209 条挂单） | App Store 公开内购页 + 发卡平台直链 | 自动 |
 | 中转站（约 50 在册 / 约 20 有公开价目） | 各站 `/api/pricing`（OneAPI/NewAPI） | 每次自动探测 |
-| 活动（1727 条 / 1704 在场） | Devpost 分页（open+upcoming）+ Luma 发现流（26 城市地理维度）+ Devfolio + 本地 AIOS 活动库 | 每次自动 |
+| 活动（约 1700 条 / 约 1690 在场） | Devpost 分页（open+upcoming）+ Luma 发现流（27 城市地理维度）+ Devfolio + 本地 AIOS 活动库 | 每次自动 |
 | 工具箱（21） | 人工精选稀缺 skill / CLI，GitHub API 校准星数 | 每次自动 |
 | 评测（163 榜 / 3.2 万条分数 / 1,200 模型） | LMArena 24 榜、SWE-bench 5 榜、Aider、Terminal-Bench、τ-bench、ARC-AGI 2 榜、SimpleBench、Vals、Artificial Analysis 14 榜 | 每次自动 |
 | 情报（每日约 50 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
