@@ -765,80 +765,108 @@ footer.foot a:hover{color:var(--accent)}
 
 .newsfld{margin-bottom:8px}
 
-/* ── 超级大事件 ──
-   这一层要回答两个问题：行业在哪拐弯、拐弯之间隔了多久。
-   所以用「时代色块」（宽度=真实时长）+「节点」（一杆一事）+「两栏详情」。 */
-.ms{margin:8px 0 22px}
-.ms-head{display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-bottom:14px}
-.ms-head h2{margin:0; font-size:15px; font-weight:700; letter-spacing:-.01em}
-.ms-head p{margin:0; font-size:12px; color:var(--faint); line-height:1.6}
-.ms-head p b{color:var(--accent); font-family:var(--mono); font-weight:600}
+/* ── 超级大事件 · 脊线 ──
+   一条连续的脊（不是一排柱子）：横轴=真实时间，纵向高度=事件分量，
+   底色分块=时代。事件本身在脊上是一根短竖线+一个点，hit 区是透明按钮。
+   目的：一屏之内同时看出「在哪拐弯」「拐弯之间隔多久」「哪些年特别密」。 */
+.rt{margin:10px 0 24px; border-top:2px solid var(--ink); padding-top:14px}
+.rt-head{margin-bottom:6px}
+.rt-eyebrow{margin:0 0 8px; font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; color:var(--faint); text-transform:uppercase}
+.rt-head h2{margin:0 0 10px; font-size:clamp(19px,2.2vw,27px); line-height:1.42; font-weight:600; letter-spacing:-.03em}
+.rt-head h2 em{margin-right:.28em}
+.rt-head h2 em{font-style:normal; color:var(--accent); font-variant-numeric:tabular-nums}
+.rt-sub{margin:0 0 4px; font-size:12.5px; line-height:1.7; color:var(--dim); max-width:64ch}
 
-.ms-wrap{border-top:1px solid var(--ink)}
+.rt-fig{position:relative; margin:0; padding:0}
+.rt-svg{display:block; width:100%; height:clamp(96px,11vw,132px); overflow:visible; margin-top:22px}
+.rt-era{fill:var(--panel3); opacity:.55; transition:opacity .18s}
+.rt-era.on{fill:var(--accent); opacity:.075}
+.rt-area{fill:url(#rtFill)}
+.rt-ridge{fill:none; stroke:var(--ink); stroke-width:1.4; stroke-linejoin:round; stroke-linecap:round;
+  vector-effect:non-scaling-stroke}
+.rt-base{stroke:var(--line2); stroke-width:1; vector-effect:non-scaling-stroke}
+/* SVG 透明抓取条：整列都能点，但不产生任何视觉占用 */
+.rt-grab{fill:transparent; cursor:pointer; pointer-events:all}
+.rt-grab:hover{fill:color-mix(in oklab, var(--accent) 8%, transparent)}
+.rt-stem{stroke:var(--line2); stroke-width:1; vector-effect:non-scaling-stroke; transition:stroke .16s}
+.rt-stem.era{stroke:var(--accent); opacity:.55}
+.rt-stem.on{stroke:var(--ink); stroke-width:1.6}
+/* 选中事件：把这一根针画成 accent 并稍粗，用户一眼定位；不再另画通长竖线 */
+.rt-dot{fill:var(--panel); stroke:var(--dim); stroke-width:1.2; vector-effect:non-scaling-stroke; transition:all .16s}
+.rt-dot.era{fill:var(--accent); stroke:var(--accent)}
+.rt-dot.on{fill:var(--ink); stroke:var(--bg); stroke-width:2; r:5}
+.rt-node.on .rt-mo{opacity:1; color:var(--ink); font-weight:600}
+.rt-node.on::after{content:""; position:absolute; top:100%; left:50%; width:4px; height:4px;
+  transform:translate(-50%, -2px) rotate(45deg); background:var(--accent)}
 
-/* 时代带：色块按真实时长铺开；相邻块之间用底色切分 */
-.ms-eras{position:relative; height:46px}
-.ms-era{appearance:none; border:0; padding:0 9px; cursor:pointer;
-  position:absolute; left:var(--l); width:var(--w); top:0; bottom:0;
-  display:flex; flex-direction:column; justify-content:center; gap:3px;
-  text-align:left; overflow:hidden; color:var(--dim);
-  border-left:1px solid var(--bg); background:var(--panel3); transition:background .16s, color .16s}
-.ms-era:first-child{border-left:0}
-.ms-era b{font-size:11.5px; font-weight:600; letter-spacing:.02em; white-space:nowrap}
-.ms-era i{font-style:normal; font-family:var(--mono); font-size:9.5px; color:var(--faint); letter-spacing:.03em; white-space:nowrap}
-.ms-era:hover{background:var(--panel2); color:var(--ink)}
-.ms-era.is-on{background:var(--ink); color:var(--bg)}
-.ms-era.is-on i{color:color-mix(in oklab, var(--bg) 62%, var(--ink))}
+/* 透明命中区：每个事件一个竖条，比视觉节点宽，好点 */
+.rt-hit{position:absolute; left:0; right:0; top:22px; bottom:0}
+/* 命中区只占顶部标签带（22px），不再铺满整块——否则 hover/选中会变成一条贯穿到图例的高亮列 */
+.rt-node{position:absolute; left:var(--x); top:0; height:22px; width:26px; margin-left:-13px;
+  background:none; border:0; padding:0; cursor:pointer}
+/* 月份标签挂在节点顶部（脊线上方那条 26px 的空白里），不和底部刻度打架 */
+/* 月份只在选中时出现，且落在基线下方（卡片之间那条空白），不压曲线也不压刻度 */
+.rt-mo{position:absolute; bottom:-2px; left:50%; transform:translate(-50%, 100%); font-family:var(--mono);
+  font-size:9.5px; letter-spacing:.01em; color:var(--faint); white-space:nowrap; opacity:0;
+  background:var(--bg); padding:0 4px; transition:opacity .15s, color .15s}
+.rt-node.era .rt-mo{opacity:.85; color:var(--accent)}
+.rt-node:hover .rt-mo,.rt-node.on .rt-mo{opacity:1; color:var(--ink); font-weight:600}
+.rt-node:hover .rt-mo{opacity:1; color:var(--ink)}
 
-/* 节点层：竖杆落在自己的槽位，标签竖排向上错开 */
-.ms-track{position:relative; height:calc(34px + var(--lanes,1) * 18px)}
-.ms-base{position:absolute; left:0; right:0; bottom:34px; height:1px; background:var(--line2)}
-.ms-node{position:absolute; left:var(--x); bottom:34px; transform:translateX(-50%);
-  background:none; border:0; padding:0; cursor:pointer; display:flex; flex-direction:column;
-  align-items:center; justify-content:flex-end; height:calc(12px + var(--l) * 18px); z-index:1}
-.ms-node .ms-pin{display:block; width:1px; height:12px; background:var(--line2); transition:background .14s, width .14s, height .14s}
-.ms-node em{position:absolute; bottom:100%; left:calc(50% + (var(--lx) - var(--x)) * 1% ); transform:translateX(-50%); margin-bottom:3px;
-  font-style:normal; font-family:var(--mono); font-size:9.5px; line-height:1; color:var(--faint);
-  letter-spacing:.01em; white-space:nowrap; opacity:.72; max-width:22ch; overflow:hidden; text-overflow:ellipsis}
-.ms-node.is-era .ms-pin{width:2px; height:16px; background:var(--accent)}
-.ms-node.is-era em{color:var(--accent); opacity:1; font-weight:500; font-family:var(--sans); font-size:10.5px}
-.ms-node:hover{z-index:3}
-.ms-node:hover .ms-pin{background:var(--ink); width:2px; height:20px}
-.ms-node.is-on{z-index:4}
-.ms-node.is-on .ms-pin{background:var(--ink); width:3px; height:24px}
-.ms-node.is-on em{opacity:1; color:var(--ink); font-weight:600; font-family:var(--sans); font-size:10.5px;
-  background:var(--bg); padding:0 3px; border-radius:1px}
+.rt-origin{position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--ink); opacity:.12; pointer-events:none}
+.rt-origin span{position:absolute; left:6px; bottom:2px; font-family:var(--mono); font-size:9px;
+  letter-spacing:.12em; color:var(--faint); white-space:nowrap}
+.rt-eraLegend{display:flex; gap:0; margin-top:18px; border-top:1px solid var(--line); padding-bottom:2px}
+.rt-chip{appearance:none; flex:1 1 0; min-width:0; border:0; border-right:1px solid var(--line);
+  background:none; padding:7px 8px 6px; cursor:pointer; text-align:left; color:var(--dim);
+  display:flex; flex-direction:column; gap:2px; transition:background .15s, color .15s}
+.rt-chip:last-child{border-right:0}
+.rt-chip b{font-size:11.5px; font-weight:600; letter-spacing:.02em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rt-chip i{font-style:normal; font-family:var(--mono); font-size:9.5px; color:var(--faint); white-space:nowrap}
+.rt-chip:hover{background:var(--panel2); color:var(--ink)}
+.rt-chip.on{color:var(--ink); box-shadow:inset 0 2px 0 var(--accent)}
+.rt-chip.on i{color:var(--accent)}
+.rt-fig figcaption{margin-top:6px; font-family:var(--mono); font-size:10px; color:var(--faint);
+  letter-spacing:.05em; display:flex; justify-content:space-between; gap:12px}
+.rt-k{opacity:.7; text-align:center}
 
-.ms-scale{display:flex; justify-content:space-between; align-items:baseline; gap:12px;
-  border-top:1px solid var(--line); padding:5px 0 0; font-family:var(--mono); font-size:10.5px; color:var(--faint)}
-.ms-k{opacity:.85}
-
-/* 详情卡：左窄右宽，左栏只放身份，右栏放判断 */
-.ms-card{display:grid; grid-template-columns:190px minmax(0,1fr); gap:26px;
-  padding:18px 0 4px; margin-top:12px; border-top:2px solid var(--ink)}
-.ms-when{display:flex; flex-direction:column; gap:7px; align-items:flex-start}
-.ms-when time{font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:-.02em; line-height:1}
-.ms-era-tag{font-size:12px; color:var(--dim)}
-.ms-tier,.ms-ver{font-family:var(--mono); font-size:9.5px; letter-spacing:.06em;
-  padding:2px 6px; border:1px solid var(--line2); border-radius:2px; color:var(--faint)}
-.ms-tier.era{border-color:var(--accent); color:var(--accent)}
-.ms-ver.ok{border-color:var(--good); color:var(--good)}
-.ms-ver.part{border-color:var(--warn); color:var(--warn)}
-.ms-ver.no{border-style:dashed}
-.ms-body h3{margin:0 0 8px; font-size:21px; line-height:1.3; font-weight:600; letter-spacing:-.02em}
-.ms-body p{margin:0 0 10px; font-size:13.5px; line-height:1.8; color:var(--dim); max-width:74ch}
-.ms-meta{display:flex; flex-direction:column; gap:5px; font-size:12px}
-.ms-upd{color:var(--dim); font-family:var(--mono); font-size:11px}
-.ms-src{color:var(--accent); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2); width:max-content}
-.ms-near{color:var(--faint); font-size:11.5px; line-height:1.7}
-.ms-near a{color:var(--dim); text-decoration-color:var(--line)}
-.ms-near a:hover{color:var(--accent)}
+/* 详情：两栏，左窄右宽；不再用「小标签堆叠」，用一条竖线把身份和判断分开 */
+.rt-card{display:grid; grid-template-columns:minmax(150px,196px) minmax(0,1fr); gap:clamp(18px,3vw,40px);
+  margin-top:6px; padding:20px 0 6px; border-top:1px solid var(--ink)}
+.rt-when{display:flex; flex-direction:column; gap:8px}
+.rt-when time{font-family:var(--mono); font-size:clamp(19px,2vw,23px); font-weight:600; letter-spacing:-.03em; line-height:1}
+.rt-when .rt-era{margin:0; font-size:12.5px; color:var(--dim); letter-spacing:.02em}
+.rt-flags{display:flex; gap:6px; flex-wrap:wrap; margin-top:2px}
+.rt-tier,.rt-ver{font-family:var(--mono); font-size:9.5px; letter-spacing:.07em; padding:2px 6px;
+  border:1px solid var(--line2); border-radius:2px; color:var(--faint); white-space:nowrap}
+.rt-tier.era{border-color:var(--accent); color:var(--accent)}
+.rt-ver.ok{border-color:color-mix(in oklab, var(--good) 55%, transparent); color:var(--good)}
+.rt-ver.part{border-color:color-mix(in oklab, var(--warn) 55%, transparent); color:var(--warn)}
+.rt-ver.no{border-style:dashed}
+.rt-body h3{margin:0 0 10px; font-size:clamp(19px,2.1vw,26px); line-height:1.28; font-weight:600; letter-spacing:-.025em}
+.rt-note{margin:0 0 14px; font-size:13.5px; line-height:1.85; color:var(--dim); max-width:70ch}
+.rt-meta{margin:0; display:grid; gap:6px}
+.rt-meta > div{display:grid; grid-template-columns:44px minmax(0,1fr); gap:10px; align-items:baseline}
+.rt-meta dt{font-family:var(--mono); font-size:10px; letter-spacing:.1em; color:var(--faint); text-transform:uppercase}
+.rt-meta dd{margin:0; font-size:12px; color:var(--dim); line-height:1.6}
+.rt-meta a{color:var(--accent); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
+.rt-near a{display:inline-block; margin-right:12px; color:var(--dim); text-decoration-color:var(--line)}
+.rt-near a:hover{color:var(--accent)}
 @media (max-width:760px){
-  .ms-card{grid-template-columns:1fr; gap:10px}
-  .ms-track{height:calc(28px + var(--lanes,1) * 16px)}
-  .ms-node em{display:none}
-  .ms-node.is-era em,.ms-node.is-on em{display:block}
-  .ms-era i{display:none}
+  .rt-card{grid-template-columns:1fr; gap:12px}
+  .rt-head h2{font-size:19px; line-height:1.45}
+  .rt-eyebrow{font-size:9.5px; letter-spacing:.12em}
+  .rt-sub{font-size:12px}
+  .rt-svg{height:92px}
+  .rt-chip{padding:7px 5px 6px}
+  .rt-chip b{font-size:10.5px}
+  .rt-chip i{display:none}
+  .rt-mo{font-size:8.5px}
+  .rt-meta > div{grid-template-columns:38px minmax(0,1fr)}
+  .rt-focus{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .rt *{transition:none !important}
 }
 
 /* 情报密度带：一条 26px 高的横条装下整段跨度，颜色深浅=条数，小点=有重大 */
@@ -2209,12 +2237,14 @@ const MOTION = (() => {
       </div>`;
 
     // 来源按真实出现的值生成，AIOS / 以后新增的源都会自己出现
+    // 来源按该源的全部条数算（含归档），否则全是 past 的源会显示成 0，点进去一片空
     const srcCount = {}; for (const e of all.filter(e => pass(e, "src"))) srcCount[e.source || ""] = (srcCount[e.source || ""] || 0) + 1;
-    const kindCount = {}; for (const e of all.filter(e => pass(e, "kind") && e.status !== "past")) kindCount[e.kind || ""] = (kindCount[e.kind || ""] || 0) + 1;
+    // 三个维度的数字都等于「点下去会看到的条数」，所以都不能再额外剔掉 past
+    const kindCount = {}; for (const e of all.filter(e => pass(e, "kind"))) kindCount[e.kind || ""] = (kindCount[e.kind || ""] || 0) + 1;
     const regionCount = {}; for (const e of all.filter(e => pass(e, "region"))) regionCount[e.region || ""] = (regionCount[e.region || ""] || 0) + 1;
     const byN = (o) => Object.entries(o).sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
-    const allSrc = all.filter(e => e.status !== "past").length;
-    const allCnt = { all: all.filter(e => pass(e, "kind") && e.status !== "past").length };
+    const allSrc = all.filter(e => pass(e, "src")).length;
+    const allCnt = { all: all.filter(e => pass(e, "kind")).length };
 
     // 时间轴每类只画前 EV_TL_CAP 条；真实的「画了多少 / 一共多少」由 renderTimeline 渲染后写进这一行
     const tlNote = `<div class="tl-more"><span data-tlnote></span></div>`;
@@ -2560,41 +2590,71 @@ const MOTION = (() => {
 
     let total = 0;
     let drawn = 0;
+    // 同类型活动可能全挤在同几天（实测 331 场 meetup 集中在 5 天里）。
+    // 直接取前 N 条只会画出那两天，泳道成一条缝——改为沿时间轴等距抽样，覆盖整段。
+    const sample = (list, n) => {
+      if (list.length <= n) return list;
+      const step = (list.length - 1) / (n - 1);
+      const out = [];
+      for (let i = 0; i < n; i++) out.push(list[Math.round(i * step)]);
+      return out;
+    };
     const lanes = kinds.map(k => {
       const list = [...groups[k]].sort((a, b) => (t(a.end) - t(b.end)) || (t(a.start) - t(b.start)));
-      const shown = list.slice(0, EV_TL_CAP);
+      const shown = sample(list, EV_TL_CAP);
       drawn += shown.length;
       total += list.length;
       return { k, list, shown };
     });
 
-    const W = 1200, padL = 64, padR = 4, top = 20, rowH = 12, laneGap = 18, axisH = 26;
-    const laneH = (n) => Math.max(18, n * rowH);
-    const H = top + lanes.reduce((s, l) => s + laneH(l.shown.length) + laneGap, 0) + axisH;
-    const bot = H - axisH;
+    const W = 1200, padL = 64, padR = 4, top = 20, laneGap = 16, axisH = 26;
+    const rowH = 9;
+    // 行数由下面的区间贪心直接算出，行数 = 并发度
+    const laneH = (n) => Math.max(14, n * rowH);
+    let H = 0, bot = 0;   // 真实行数要等 placed 算完，下面才能定高度
 
     const starts = all.map(e => t(e.start) || now);
     const ends = all.map(e => t(e.end) || now);
-    const minD = Math.min(now - 7 * DAY, ...starts);
-    const maxD = Math.max(now + 21 * DAY, ...ends);
+    // 右边界用分位数而不是绝对最大值：一个 2028 年结束的长尾活动会把 759 天全拉开，
+    // 600 多场活动就挤成一根竖线。取 85% 分位，剩下的在图上标出来。
+    const sortedEnds = [...ends].sort((a, b) => a - b);
+    const p85 = sortedEnds[Math.min(sortedEnds.length - 1, Math.floor(sortedEnds.length * 0.85))];
+    // 左边不画没有活动的月份：从「今天 - 7 天」与「最早一场」里更靠近今天的那个开始，
+    // 避免半年的空白把 10 月那一簇挤到右边缘；右边同样用 85% 分位，长尾不拉开版面。
+    const earliest = Math.min(...starts.filter(v => v >= now - 30 * DAY).concat([now]));
+    const minD = Math.min(now - 7 * DAY, earliest);
+    const maxD = Math.max(now + 21 * DAY, p85);
+    const tailN = ends.filter(v => v > maxD).length;
     const X = (d) => padL + (d - minD) / (maxD - minD) * (W - padL - padR);
 
     let bars = "", y = top;
     for (const l of lanes) {
-      const h = laneH(l.shown.length);
       const col = colors[l.k] || "#b9b9b9";
-      l.shown.forEach((e, i) => {
-        const x1 = X(t(e.start)), x2 = Math.max(X(t(e.end)), x1 + 2);
-        const yy = y + i * rowH;
-        bars += `<rect class="tl-bar" x="${x1.toFixed(1)}" y="${yy.toFixed(1)}" width="${Math.max(2, x2 - x1).toFixed(1)}"
-          height="${(rowH - 3).toFixed(1)}" fill="${col}" opacity=".72" rx="1"><title>${esc(e.title)} · ${esc(e.dates || "")} · ${esc(EV_LABEL(EV_SRC, e.source))}</title></rect>`;
+      // 区间贪心：能塞进已有行就复用，塞不下才新开一行——行数 = 并发度，不会互相盖住
+      const rowEnds = [];
+      const placed = l.shown.map(e => {
+        const a = Math.max(t(e.start), minD), b = Math.min(t(e.end), maxD);
+        let r = rowEnds.findIndex(end => a > end);
+        if (r < 0) { r = rowEnds.length; rowEnds.push(b); } else { rowEnds[r] = b; }
+        return { e, a, b, r };
       });
-      // 泳道标签：类型 + 该类型真实总数（图上画的可能只是前 26 个）
+      const h = laneH(rowEnds.length);
+      for (const { e, a, b, r } of placed) {
+        const x1 = X(a), x2 = Math.max(X(b), x1 + 2);
+        const yy = y + r * rowH;
+        // 长活动（最长 300 天）会被窗口裁切：两端各留一个缺口，并且 title 里永远写完整区间
+        const clipL = t(e.start) < minD, clipR = t(e.end) > maxD;
+        bars += `<rect class="tl-bar" x="${x1.toFixed(1)}" y="${yy.toFixed(1)}" width="${Math.max(2, x2 - x1).toFixed(1)}"
+          height="${(rowH - 2.5).toFixed(1)}" fill="${col}" opacity=".72" rx="1"${clipL || clipR ? ' stroke-dasharray="3 2" stroke="' + col + '" stroke-width="1"' : ""}><title>${esc(e.title)} · ${esc(e.dates || "")} · ${esc(EV_LABEL(EV_SRC, e.source))}${clipL || clipR ? " · 超出图示范围" : ""}</title></rect>`;
+      }
       const rest = l.list.length > l.shown.length ? ` +${l.list.length - l.shown.length}` : "";
       bars += `<text class="tl-lane" x="0" y="${(y + Math.min(h, rowH) / 2 + 3.5).toFixed(1)}">${esc(EV_LABEL(EV_KIND, l.k))} ` +
         `<tspan style="opacity:.55">${l.list.length}${rest}</tspan></text>`;
       y += h + laneGap;
     }
+    // 泳道画完才知道真实行数：高度按 y 定，图底不空一大截
+    H = y - laneGap + axisH;
+    bot = H - axisH;
 
     // 月份刻度
     let grid = "";
@@ -2621,9 +2681,11 @@ const MOTION = (() => {
     if (note) {
       const line = note.querySelector("[data-tlnote]");
       const more = all.length - drawn;
-      if (line) line.textContent = more > 0
-        ? `时间轴显示最先到期的 ${drawn} 条，另有 ${more} 条在下方列表`
-        : `时间轴显示全部 ${drawn} 条`;
+      if (line) line.textContent = [
+        more > 0 ? `时间轴显示 ${drawn} 条，另有 ${more} 条在下方列表` : `时间轴显示全部 ${drawn} 条`,
+        // 右边界是 85% 分位，尾巴上的远期场次不在图内——数字要能对得上
+        tailN > 0 ? `${tailN} 场结束日在图示范围之外` : "",
+      ].filter(Boolean).join(" · ");
       note.style.display = "";
     }
   }
@@ -3233,133 +3295,161 @@ const MOTION = (() => {
 
     const dayOf = (n) => n.date.slice(5).replace("-", "/");
 
-    /* ── 超级大事件：两根带子 + 一层节点 ──
-       1) 时代带：每个分期自成一个色块，宽度由该分期首末事件决定（不是均分）——
-          一眼能看出「对话时代只有 4 个月、智能体时代已经超过一年」。
-       2) 节点层：每条事件一根竖杆 + 短标签（转折点带完整标题，其余给编号），
-          密集处自动错轨；hover 出完整标题，点击锁定并展开下方详情。
-       3) 详情卡：左栏是身份与核验状态，右栏是它改变了什么 + 同期真实归档。
-       坐标全部基于「当前窗口」，和下面的密度带共用一根横轴。 */
+    /* ── 超级大事件：一条山脊 ──
+       问题不是「缺装饰」，是这层要在一屏内回答三件事：
+         1) 行业在哪几处拐了弯（时间位置）
+         2) 每一段是什么气候（时代）
+         3) 相邻事件的疏密差多少（节奏）
+       所以用一条连续的脊线把事件串起来：脊的高度 = 事件严重度，脊上下的
+       明暗 = 时代，节点是钉在脊上的刻度。全部按真实时间比例铺，不做等距。 */
     const winStartMs = Math.min(barStart, EPOCH0);
     const winEndMs = today;
     const spanMs = Math.max(1, winEndMs - winStartMs);
     const scaleX = (ts) => Math.max(0, Math.min(100, ((ts - winStartMs) / spanMs) * 100));
-    const msAll = (Array.isArray(state.ms) ? state.ms : []).slice().sort((a, b) => a.d.localeCompare(b.d));
     const tsOf = (d) => Date.parse(d + "T00:00:00+08:00");
+    const msAll = (Array.isArray(state.ms) ? state.ms : []).slice().sort((a, b) => a.d.localeCompare(b.d));
     const msIn = msAll.filter(e => { const t = tsOf(e.d); return Number.isFinite(t) && t >= winStartMs && t <= winEndMs + 864e5; });
-
-    /* 时代带：分期首末事件 → 色块区间；首末相接不留缝，但每段之间画 1px 分隔 */
     const meta = state.msMeta || [];
-    const eras = meta.map((m, i) => {
-      const own = msIn.filter(e => e.e === m.id);
-      const first = own.length ? tsOf(own[0].d) : null;
-      const last = own.length ? tsOf(own[own.length - 1].d) : null;
-      const nextFirst = (() => {
-        for (let j = i + 1; j < meta.length; j += 1) {
-          const s = msIn.filter(e => e.e === meta[j].id);
-          if (s.length) return tsOf(s[0].d);
-        }
-        return winEndMs;
-      })();
-      return { ...m, n: own.length, x0: first == null ? 0 : scaleX(first), x1: last == null ? 0 : scaleX(nextFirst) };
-    });
-    const liveEras = eras.filter(e => e.n > 0);
+    const eraOf = (id) => meta.find(x => x.id === id) || { name: "—", full: "—", span: "" };
 
-    /* 节点层：按标签实际宽度错轨。
-       标签是横排文字，宽度≈字数×9.5px×0.55（中文按 1em 算），换成百分比后用
-       「上一条的右沿 < 本条的左沿」判断能否共用轨道——固定像素阈值会让长标题直接叠在一起。 */
-    // 轨道宽度取内容区实际宽度（不是 window.innerWidth，后者包含页面留白会低估百分比）
-    const trackEl = typeof document !== "undefined" ? document.querySelector(".wrap") : null;
-    const trackPx = (trackEl && trackEl.clientWidth) || (typeof window !== "undefined" ? window.innerWidth : 1280) || 1280;
-    // 实测：10.5px 中文 ≈ 11px/字，9.5px mono ≈ 6px/字；再多留 1.5 个字的呼吸位
-    const labelW = (e) => {
-      const txt = e.tier === "era" ? e.title : (eraOf0(e.e) || "—");
-      const px = [...txt].reduce((n, ch) => n + (ch.charCodeAt(0) > 255 ? 11.2 : 6.2), 0);
-      return ((px + 14) / trackPx) * 100;
-    };
-    function eraOf0(id) { return (state.msMeta || []).find(x => x.id === id)?.name; }
-    const lanes = [];   // 每轨记录「最后占用到的 x」
-    const placed = msIn.map((e) => {
-      const t = tsOf(e.d);
-      const x = scaleX(t);
-      const w = Math.min(labelW(e), 92);
-      // 标签默认以竖杆居中；贴近左右边缘时整体推入，避免被容器裁掉
-      const lx = Math.max(w / 2 + 0.4, Math.min(100 - w / 2 - 0.4, x));
-      const left = lx - w / 2, right = lx + w / 2;
-      let lane = lanes.findIndex((lastRight) => left > lastRight + 1.2);
-      if (lane < 0) { lane = lanes.length; lanes.push(right); } else { lanes[lane] = right; }
-      return { ...e, x, lx, lane, w, ts: t };
+    /* 每个事件算一个「严重度」：转折点 2.4，关键节点 1，越近的略高一点（近期更值得注意） */
+    const pts = msIn.map((e, i) => {
+      const ts = tsOf(e.d);
+      const x = scaleX(ts);
+      const recency = (ts - winStartMs) / spanMs;            // 0→1
+      const h = (e.tier === "era" ? 2.4 : 1) + recency * 0.5;
+      return { ...e, ts, x, h, i };
     });
-    const laneCount = Math.max(1, lanes.length);
+
+    /* 脊线：每个事件是一个「峰」，峰的两侧用高斯衰减落到低谷（不是零基线）。
+       低谷 = 安静的时期，峰 = 事件发生；这样曲线形状才和数据一一对应。
+       两端不额外补点——补 0 会凭空长出一段下坠，是没依据的形状。 */
+    const VW = 1000, VH = 150, BASE = VH - 26, FLOOR = BASE - 8;
+    const sx = (p) => (p / 100) * VW;
+    const maxH = Math.max(1, ...pts.map(p => p.h));
+    const sy = (h) => BASE - (h / maxH) * (BASE - 16);
+    /* 每个点的「影响半径」= 与左右邻居时间距离的一半，避免人挤的地方互相淹没 */
+    const SIG = pts.map((p, i) => {
+      const l = i > 0 ? (p.x - pts[i - 1].x) : (pts[1] ? (pts[1].x - p.x) : 6);
+      const r = i < pts.length - 1 ? (pts[i + 1].x - p.x) : l;
+      return Math.max(1.1, Math.min(l, r) * 0.42);
+    });
+    const curveY = (x) => {
+      let v = 0;
+      for (let i = 0; i < pts.length; i += 1) {
+        const dz = (x - pts[i].x) / SIG[i];
+        const g = Math.exp(-dz * dz * 0.5);
+        // 平台：离事件足够近时保持满高，脊线在事件处不会「被抹圆」
+        const flat = Math.abs(x - pts[i].x) <= SIG[i] * 0.5 ? 1 : g;
+        v += Math.max(g, flat) * pts[i].h;
+      }
+      return Math.min(maxH, v);
+    };
+    let ridge = "", area = "";
+    if (pts.length) {
+      const SAMP = 420;
+      const xs = [];
+      for (let k = 0; k <= SAMP; k += 1) xs.push((k / SAMP) * 100);
+      // 采样点 + 精确落在每个事件 x 上，保证峰顶被点到
+      const x0 = pts[0].x, x1 = pts[pts.length - 1].x;
+      // 每个事件周围取一条「平台」（宽度 = 影响半径的一半），让峰顶是平的，
+      // 钉点正好落在平台上——否则高斯平滑会把点抬到曲线上方，看起来点没落在线上。
+      const plateau = pts.flatMap(p => {
+        const half = SIG[pts.indexOf(p)] * 0.5;
+        return [p.x - half, p.x, p.x + half];
+      });
+      const allX = [...new Set([x0, x1, ...xs.filter(x => x > x0 && x < x1), ...plateau])]
+        .sort((a, b) => a - b);
+      const d = allX.map((x, i) => `${i ? "L" : "M"} ${sx(x).toFixed(1)} ${sy(curveY(x)).toFixed(1)}`).join(" ");
+      ridge = d;
+      area = `${d} L ${sx(x1).toFixed(1)} ${BASE} L ${sx(x0).toFixed(1)} ${BASE} Z`;
+    }
+
+    /* 时代分段：用真实首末事件切，每一段画一条淡色底 */
+    const eras = meta.map((m, i) => {
+      const own = pts.filter(p => p.e === m.id);
+      if (!own.length) return null;
+      let nextX = 100;
+      for (let j = i + 1; j < meta.length; j += 1) {
+        const nxt = pts.filter(p => p.e === meta[j].id);
+        if (nxt.length) { nextX = nxt[0].x; break; }
+      }
+      return { ...m, x0: own[0].x, x1: nextX, n: own.length };
+    }).filter(Boolean);
 
     const keyOf = (e) => e.d + "|" + e.title;
-    const eraOf = (id) => meta.find(x => x.id === id) || { name: "—", full: "—" };
     const pick = state.msSel && msAll.find(m => keyOf(m) === state.msSel);
-    const sel = pick || placed.find(e => e.tier === "era") || placed[0] || null;
-    const VERIFY = {
-      checked: { t: "已核实", cls: "ok" },
-      part: { t: "部分核实", cls: "part" },
-      unchecked: { t: "待核实", cls: "no" },
-    };
+    const sel = pick || pts.find(p => p.tier === "era") || pts[0] || null;
+    const VERIFY = { checked: { t: "已核实", cls: "ok" }, part: { t: "部分核实", cls: "part" }, unchecked: { t: "待核实", cls: "no" } };
+    const ver = (sel && VERIFY[sel.v]) || VERIFY.unchecked;
     const nearNews = sel ? newsItems()
       .filter(n => { const t = newsDay(n.date); return Math.abs(t - sel.ts) <= 10 * 864e5; })
-      .sort((a, b) => Math.abs(newsDay(a.date) - sel.ts) - Math.abs(newsDay(b.date) - sel.ts))
-      .slice(0, 3) : [];
+      .sort((a, b) => Math.abs(newsDay(a.date) - sel.ts) - Math.abs(newsDay(b.date) - sel.ts)).slice(0, 3) : [];
+    const gaps = pts.slice(1).map((p, i) => ({ days: Math.round((p.ts - pts[i].ts) / 864e5), from: pts[i], to: p }));
+    const longest = gaps.slice().sort((a, b) => b.days - a.days)[0];
 
     const strip = msAll.length ? `
-      <section class="ms" aria-label="超级大事件">
-        <header class="ms-head">
-          <h2>超级大事件</h2>
-          <p>从 ChatGPT 上线起，行业只拐了 <b>${msAll.length}</b> 次弯。挑出这些节点，是为了让下面两千多条流水有个参照。</p>
+      <section class="rt" aria-label="超级大事件">
+        <header class="rt-head">
+          <p class="rt-eyebrow">TIMELINE · ${msAll.length} 个改变路线的日子</p>
+          <h2>从 ChatGPT 上线到今天<br><em>${meta.length} 个时代</em>　<em>${msAll.filter(e => e.tier === "era").length} 次改道</em></h2>
+          <p class="rt-sub">${longest ? `最长的静默是 ${longest.days} 天——${esc(longest.from.title)} 到 ${esc(longest.to.title)}。` : ""}下面这条脊线按真实时间比例画，节点高度是它的分量。</p>
         </header>
 
-        <div class="ms-wrap">
-          <div class="ms-eras" role="list">
-            ${liveEras.map(m => `
-              <button class="ms-era ${sel && sel.e === m.id ? "is-on" : ""}" role="listitem"
-                style="--l:${m.x0}%; --w:${Math.max(m.x1 - m.x0, 4)}%"
-                data-msepoch="${esc(m.id)}"
-                title="${esc(m.full)} · ${esc(m.span)} · ${m.n} 件">
-                <b>${esc(m.name)}</b><i>${esc(m.span)}</i>
+        <figure class="rt-fig">
+          <svg class="rt-svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="rtFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent)" stop-opacity=".16"/>
+                <stop offset="100%" stop-color="var(--accent)" stop-opacity=".01"/>
+              </linearGradient>
+            </defs>
+            ${eras.map(m => `<rect class="rt-era ${sel && sel.e === m.id ? "on" : ""}" x="${sx(m.x0).toFixed(1)}" y="0" width="${Math.max(sx(m.x1) - sx(m.x0), 8).toFixed(1)}" height="${BASE}"></rect>`).join("")}
+            <path class="rt-area" d="${area}"></path>
+            <path class="rt-ridge" d="${ridge}"></path>
+            <line class="rt-base" x1="0" y1="${BASE}" x2="${VW}" y2="${BASE}"></line>
+            ${pts.map(p => `
+              <line class="rt-stem ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
+                x1="${sx(p.x).toFixed(1)}" y1="${sy(curveY(p.x)).toFixed(1)}" x2="${sx(p.x).toFixed(1)}" y2="${BASE}"></line>
+              <circle class="rt-dot ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
+                cx="${sx(p.x).toFixed(1)}" cy="${sy(curveY(p.x)).toFixed(1)}" r="${p.tier === "era" ? 4.2 : 2.4}"></circle>`).join("")}
+            ${pts.map(p => `<rect class="rt-grab" x="${(sx(p.x) - 7).toFixed(1)}" y="0" width="14" height="${BASE}"
+                data-ms="${esc(keyOf(p))}"></rect>`).join("")}
+          </svg>
+          <div class="rt-origin"><span>起点</span></div>
+          <div class="rt-hit">
+            ${pts.map(p => `
+              <button class="rt-node ${p.tier === "era" ? "era" : ""} ${sel && keyOf(sel) === keyOf(p) ? "on" : ""}"
+                style="--x:${p.x}%" data-ms="${esc(keyOf(p))}" aria-label="${esc(p.d + " " + p.title)}">
+                <span class="rt-mo">${esc(p.d.slice(2, 7).replace("-", "."))}</span>
               </button>`).join("")}
           </div>
-
-          <div class="ms-track" style="--lanes:${laneCount}">
-            <div class="ms-base"></div>
-            ${placed.map((e, i) => `
-              <button class="ms-node ${e.tier === "era" ? "is-era" : ""} ${sel && keyOf(sel) === keyOf(e) ? "is-on" : ""}"
-                style="--x:${e.x}%; --lx:${e.lx}%; --l:${e.lane}; --i:${i}"
-                data-ms="${esc(keyOf(e))}"
-                title="${esc(e.d)} · ${esc(e.title)}${e.note ? " — " + esc(e.note) : ""}">
-                <em>${e.tier === "era" ? esc(e.title) : esc(eraOf(e.e).name)}</em>
-                <span class="ms-pin"></span>
-              </button>`).join("")}
+          <div class="rt-eraLegend">
+            ${eras.map(m => `<button class="rt-chip ${sel && sel.e === m.id ? "on" : ""}" data-msepoch="${esc(m.id)}" title="${esc(m.desc || "")}">
+              <b>${esc(m.name)}</b><i>${esc(m.span || "")}</i></button>`).join("")}
           </div>
-
-          <div class="ms-scale">
-            <span>${esc(newsFmt(winStartMs, "m"))}</span>
-            <span class="ms-k">竖杆 = 一件大事 · 红 = 改变路线的那一下 · 悬停看全文</span>
-            <span>${esc(newsFmt(winEndMs, "m"))}</span>
-          </div>
-        </div>
+          <figcaption>左 ${esc(newsFmt(winStartMs, "m"))}　·　按日等宽　·　右 ${esc(newsFmt(winEndMs, "m"))}</figcaption>
+        </figure>
 
         ${sel ? `
-        <article class="ms-card">
-          <div class="ms-when">
+        <article class="rt-card">
+          <div class="rt-when">
             <time>${esc(sel.d)}</time>
-            <span class="ms-era-tag">${esc(eraOf(sel.e).full)}</span>
-            <span class="ms-tier ${sel.tier === "era" ? "era" : ""}">${sel.tier === "era" ? "转折点" : "关键节点"}</span>
-            <span class="ms-ver ${(VERIFY[sel.v] || VERIFY.unchecked).cls}">${(VERIFY[sel.v] || VERIFY.unchecked).t}</span>
-          </div>
-          <div class="ms-body">
-            <h3>${esc(sel.title)}</h3>
-            ${sel.note ? `<p>${esc(sel.note)}</p>` : ""}
-            <div class="ms-meta">
-              ${sel.update ? `<span class="ms-upd">↳ ${esc(sel.update.d)}　${esc(sel.update.text)}</span>` : ""}
-              <a class="ms-src" href="${esc(sel.src)}" target="_blank" rel="noopener">出处：${esc(sel.srcNote || hostOf(sel.src))} ↗</a>
-              ${nearNews.length ? `<span class="ms-near">那几天我们收到的：${nearNews.map(n =>
-                `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.summary || n.title)}">${esc(n.title.length > 22 ? n.title.slice(0, 21) + "…" : n.title)}</a>`).join("")}</span>` : ""}
+            <p class="rt-era">${esc(eraOf(sel.e).full)}</p>
+            <div class="rt-flags">
+              <span class="rt-tier ${sel.tier === "era" ? "era" : ""}">${sel.tier === "era" ? "改道" : "铺垫"}</span>
+              <span class="rt-ver ${ver.cls}">${ver.t}</span>
             </div>
+          </div>
+          <div class="rt-body">
+            <h3>${esc(sel.title)}</h3>
+            ${sel.note ? `<p class="rt-note">${esc(sel.note)}</p>` : ""}
+            <dl class="rt-meta">
+              ${sel.update ? `<div><dt>之后</dt><dd>${esc(sel.update.d)}　${esc(sel.update.text)}</dd></div>` : ""}
+              <div><dt>出处</dt><dd><a href="${esc(sel.src)}" target="_blank" rel="noopener">${esc(sel.srcNote || "打开原始来源")} ↗</a></dd></div>
+              ${nearNews.length ? `<div><dt>同期</dt><dd class="rt-near">${nearNews.map(n =>
+                `<a href="${esc(n.url)}" target="_blank" rel="noopener" title="${esc(n.summary || n.title)}">${esc(n.title.length > 24 ? n.title.slice(0, 23) + "…" : n.title)}</a>`).join("")}</dd></div>` : ""}
+            </dl>
           </div>
         </article>` : ""}
       </section>` : `
@@ -3648,7 +3738,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
         render(); return;
       }
       if (t.dataset.cmpview) { state.cmpView = t.dataset.cmpview; render(); return; }
-      if (t.dataset.evmore) { state.evLimit = Math.max(state.evLimit * 40, state.evLimit + 600); render(); return; }
+      if (t.dataset.evmore) { state.evLimit = 100000; render(); return; }
       if (t.dataset.evpastmore) { state.evPastLimit = 100000; render(); return; }
       if (t.dataset.evkind) { state.evKind = t.dataset.evkind; state.evLimit = 18; render(); return; }
       if (t.dataset.evsrc) { state.evSrc = t.dataset.evsrc; state.evLimit = 18; render(); return; }

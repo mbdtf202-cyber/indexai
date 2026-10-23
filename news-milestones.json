@@ -1,174 +1,190 @@
 {
-  "note": "超级大事件时间轴（2022-11-30 ChatGPT 上线 → 今天）。epoch = 分类编号，数字只增不改，视觉顺序靠 order；每条 title 是站内中文标题，note 是「它改变了什么」的一句话；src 是逐条核实过的公开出处（日期都在链接页里能找到）。",
+  "note": "超级大事件：每条都带来源，v = 核验状态。checked = 在 Wikipedia 正文或 OpenRouter 发布日里找到同日期/同事实；part = 只核到相邻事实（例如同月公告、后续版本）；unchecked = 未找到可核验出处。update = 该条后续修正。",
+  "verified_at": "2026-10-24",
   "epochs": [
-    { "id": "0", "name": "对话时代", "en": "CHAT", "order": 1 },
-    { "id": "1", "name": "多模态", "en": "MULTIMODAL", "order": 2 },
-    { "id": "2", "name": "开源拼杀", "en": "OPEN WEIGHTS", "order": 3 },
-    { "id": "3", "name": "推理时代", "en": "REASONING", "order": 4 },
-    { "id": "4", "name": "智能体", "en": "AGENTS", "order": 5 }
+    { "id": "c", "name": "对话", "full": "对话时代", "span": "22.11 – 23.03", "desc": "机器第一次能「聊」；注意力从模型分数转向产品。" },
+    { "id": "m", "name": "多模态", "full": "多模态", "span": "23.07 – 24.07", "desc": "图片、视频、语音逐项进入主力模型；开源权重开始商用。" },
+    { "id": "o", "name": "开源", "full": "开源追平", "span": "24.07 – 24.12", "desc": "开放权重首次与前沿同档，价格曲线被强行拉直。" },
+    { "id": "r", "name": "推理", "full": "推理时代", "span": "24.09 – 25.04", "desc": "思考成为新的扩展维度，推理从付费特权变成默认能力。" },
+    { "id": "a", "name": "智能体", "full": "智能体", "span": "25.05 – 至今", "desc": "模型从「回答」走向「交付」；成本由缓存与吞吐决定。" }
   ],
   "events": [
     {
-      "d": "2022-11-30", "e": "0", "tier": "era",
-      "title": "ChatGPT 发布",
-      "note": "对话式大模型第一次走进大众。两个月破一亿月活，是史上最快的消费级应用增长；整个行业的叙事从「模型分数」改成「能不能用」。",
-      "src": "https://en.wikipedia.org/wiki/ChatGPT"
+      "d": "2022-11-30", "e": "c", "tier": "era", "v": "checked",
+      "title": "ChatGPT 上线",
+      "note": "对话式模型第一次面向公众。两个月月活破亿，是当时增长最快的消费级应用；行业叙事从「模型分数」转向「能不能用」。",
+      "src": "https://en.wikipedia.org/wiki/ChatGPT",
+      "srcNote": "Wikipedia · 引言首句即为 November 30, 2022"
     },
     {
-      "d": "2023-02-24", "e": "0", "tier": "major",
-      "title": "Meta 开源 LLaMA",
-      "note": "7B–65B 权重在学术许可下放出，两个月内被完整泄露。此后所有人的「低成本基线」都是 LLaMA 派系。",
-      "src": "https://arxiv.org/abs/2302.13971"
+      "d": "2023-02-24", "e": "c", "tier": "major", "v": "checked",
+      "title": "Meta 发布 LLaMA 权重",
+      "note": "7B–65B 权重按研究许可放出，数周后被公开泄露。此后所有低成本基线都从这一系派生。",
+      "src": "https://arxiv.org/abs/2302.13971",
+      "srcNote": "Wikipedia Llama 词条：announced on February 24, 2023"
     },
     {
-      "d": "2023-03-14", "e": "0", "tier": "major",
-      "title": "OpenAI 发布 GPT-4",
-      "note": "多模态输入 + 第一次在高难度人类考试上接近人类水平；也第一次把「能力评估」做成公开报告。",
-      "src": "https://openai.com/index/gpt-4-research/"
+      "d": "2023-03-14", "e": "c", "tier": "era", "v": "checked",
+      "title": "GPT-4 发布",
+      "note": "多模态输入 + 首次在多项人类考试上接近人类水平，并公开系统卡。能力评估开始变成产品的一部分。",
+      "src": "https://openai.com/index/gpt-4-research/",
+      "srcNote": "Wikipedia GPT-4 词条：March 14, 2023"
     },
     {
-      "d": "2023-03-23", "e": "0", "tier": "major",
+      "d": "2023-03-23", "e": "c", "tier": "major", "v": "part",
       "title": "ChatGPT 接入插件",
-      "note": "模型第一次能调用外部工具。后来的 function calling、MCP、Agent 生态，都从这一步开始长。",
-      "src": "https://openai.com/index/chatgpt-plugins/"
+      "note": "模型第一次能调用外部工具。后来的 function calling、MCP、Agent 生态都从这一步长出来。",
+      "src": "https://openai.com/index/chatgpt-plugins/",
+      "srcNote": "仅核到 2023 年 3 月这一批发布，未见独立核实页面"
     },
     {
-      "d": "2023-07-18", "e": "1", "tier": "major",
-      "title": "Meta 发布 Llama 2",
-      "note": "开源权重第一次允许商用。开源模型从「研究玩具」变成可以装进产品的零件。",
-      "src": "https://ai.meta.com/llama/"
+      "d": "2023-07-18", "e": "m", "tier": "major", "v": "checked",
+      "title": "Llama 2 允许商用",
+      "note": "开放权重首次可用于商业产品。开源模型从研究玩具变成可交付的零件。",
+      "src": "https://ai.meta.com/llama/",
+      "srcNote": "Wikipedia：On July 18, 2023, in partnership with Microsoft, Meta announced Llama 2"
     },
     {
-      "d": "2023-09-25", "e": "1", "tier": "major",
-      "title": "GPT-4V：视觉进入主力模型",
-      "note": "图像理解进入生产 API，图像不再只是生成，而是被读取、校验、自动化。",
-      "src": "https://openai.com/index/gpt-4v-system-card/"
+      "d": "2023-09-25", "e": "m", "tier": "major", "v": "checked",
+      "title": "GPT-4V 开放视觉",
+      "note": "图像理解进入主力 API。图片不再只是被生成，而是被读取、校验、接进自动化流程。",
+      "src": "https://openai.com/index/gpt-4v-system-card/",
+      "srcNote": "Wikipedia GPT-4 词条内引用 NYT：September 25, 2023"
     },
     {
-      "d": "2024-02-15", "e": "2", "tier": "era",
-      "title": "OpenAI 发布 Sora",
-      "note": "文本直接生成一分钟视频。把「生成」从静态推进到时间维度，视频模型从此是基准项。",
-      "src": "https://openai.com/index/sora/"
+      "d": "2024-02-15", "e": "m", "tier": "era", "v": "checked",
+      "title": "OpenAI 公布 Sora",
+      "note": "文本直接生成一分钟视频。生成首次推进到时间维度，视频模型成为新的基准项。",
+      "src": "https://openai.com/index/sora/",
+      "srcNote": "Wikipedia Sora 词条：公开于 February 15, 2024（对外可用是 2024-12-09）",
+      "update": { "d": "2024-12-09", "text": "Sora 正式向 Plus / Pro 用户开放" }
     },
     {
-      "d": "2024-03-04", "e": "2", "tier": "major",
+      "d": "2024-03-04", "e": "m", "tier": "major", "v": "checked",
       "title": "Anthropic 发布 Claude 3",
-      "note": "Haiku / Sonnet / Opus 三档定价成型，「按任务选档位」取代「一个模型打天下」。",
-      "src": "https://www.anthropic.com/news/claude-3-family"
+      "note": "Haiku / Sonnet / Opus 三档形成。「按任务选档位」取代一个模型打天下，价格第一次分层。",
+      "src": "https://www.anthropic.com/news/claude-3-family",
+      "srcNote": "Wikipedia：Claude 3 was released on March 4, 2024"
     },
     {
-      "d": "2024-04-18", "e": "2", "tier": "major",
+      "d": "2024-04-18", "e": "m", "tier": "major", "v": "checked",
       "title": "Meta 发布 Llama 3",
-      "note": "8B / 70B 的开放权重在多数任务上追平闭源中档模型，开源第一次真正参与前沿竞争。",
-      "src": "https://ai.meta.com/blog/meta-llama-3/"
+      "note": "8B / 70B 开放权重在多数任务上追平闭源中档；15 万亿 token 训练，开源第一次真正参与竞争。",
+      "src": "https://ai.meta.com/blog/meta-llama-3/",
+      "srcNote": "Wikipedia：On April 18, 2024, Meta released Llama 3"
     },
     {
-      "d": "2024-05-13", "e": "2", "tier": "major",
-      "title": "GPT-4o：语音、视觉、文本同一个模型",
-      "note": "端到端多模态 + 实时语音对话，人均可用成本大幅下探；也把「延迟」变成了可感知的产品指标。",
-      "src": "https://openai.com/index/hello-gpt-4o/"
+      "d": "2024-05-13", "e": "m", "tier": "era", "v": "checked",
+      "title": "GPT-4o：语音、视觉、文本同模型",
+      "note": "端到端多模态 + 实时语音。延迟成为可感知的产品指标，「人均可用成本」大幅下探。",
+      "src": "https://openai.com/index/hello-gpt-4o/",
+      "srcNote": "OpenRouter 首发日 2024-05-13，与官方发布日一致"
     },
     {
-      "d": "2024-06-20", "e": "3", "tier": "major",
-      "title": "Anthropic 发布 Claude 3.5 Sonnet",
-      "note": "编码与长上下文的分水岭。此后「编程能力」成为模型换代的主战场，Sonnet 系列长期是编码默认选。",
-      "src": "https://www.anthropic.com/news/claude-3-5-sonnet"
+      "d": "2024-06-20", "e": "m", "tier": "major", "v": "checked",
+      "title": "Claude 3.5 Sonnet",
+      "note": "编码与长上下文的分水岭。此后「编程能力」成为每代模型的主战场。",
+      "src": "https://www.anthropic.com/news/claude-3-5-sonnet",
+      "srcNote": "Wikipedia：On June 20, 2024, Anthropic released Claude 3.5 Sonnet"
     },
     {
-      "d": "2024-07-18", "e": "2", "tier": "major",
-      "title": "Llama 3.1 405B：开源追到前沿档",
-      "note": "规模最大的开放权重模型之一，配套工具链一起放出，开源阵营第一次有「前沿同档」的完整选项。",
-      "src": "https://ai.meta.com/blog/meta-llama-3-1/"
+      "d": "2024-07-23", "e": "o", "tier": "major", "v": "checked",
+      "title": "Llama 3.1 405B 开源",
+      "note": "开放权重首次达到前沿同档规模（8B / 70B / 405B），配套工具链一起放出。",
+      "src": "https://ai.meta.com/blog/meta-llama-3-1/",
+      "srcNote": "Wikipedia：Llama 3.1 was released on July 23, 2024（初稿误写 07-18）"
     },
     {
-      "d": "2024-09-12", "e": "3", "tier": "era",
+      "d": "2024-09-12", "e": "r", "tier": "era", "v": "checked",
       "title": "OpenAI o1：先想再答",
-      "note": "推理时计算成为新的扩展维度——不再只靠堆预训练，而是让模型在回答前思考。整条路线由此分叉。",
-      "src": "https://openai.com/index/introducing-openai-o1-preview/"
+      "note": "推理时计算成为新的扩展维度。不再只堆预训练，而是让模型在作答前思考——路线在这里分叉。",
+      "src": "https://openai.com/index/introducing-openai-o1-preview/",
+      "srcNote": "Wikipedia OpenAI o1 词条：September 12, 2024"
     },
     {
-      "d": "2024-12-26", "e": "3", "tier": "major",
+      "d": "2024-12-26", "e": "o", "tier": "major", "v": "checked",
       "title": "DeepSeek-V3 发布",
-      "note": "671B 总参数、37B 激活，把 MoE 的训练与推理成本压到同档前沿模型的零头，直接改写了价格曲线的斜率。",
-      "src": "https://api-docs.deepseek.com/news/news250120"
+      "note": "671B 总参数、37B 激活。MoE 把同档能力的训练与推理成本压到零头，价格曲线从此被拉直。",
+      "src": "https://zh.wikipedia.org/wiki/DeepSeek-V3",
+      "srcNote": "中文维基：DeepSeek-V3 於 2024年12月26日 發佈"
     },
     {
-      "d": "2025-01-20", "e": "3", "tier": "era",
-      "title": "DeepSeek-R1：推理能力被开源",
-      "note": "同档推理能力以开放权重 + 论文形式公开，API 价格是同期闭源推理模型的百分之几。推理从「付费特权」变成默认能力。",
-      "src": "https://github.com/deepseek-ai/DeepSeek-R1"
+      "d": "2025-01-20", "e": "r", "tier": "era", "v": "checked",
+      "title": "DeepSeek-R1：推理开源",
+      "note": "同档推理能力以开放权重 + 论文公开，API 价格是同期闭源推理模型的百分之几。推理从付费特权变成默认能力。",
+      "src": "https://github.com/deepseek-ai/DeepSeek-R1",
+      "srcNote": "Wikipedia：A model released on 20 January 2025, DeepSeek-R1"
     },
     {
-      "d": "2025-01-31", "e": "3", "tier": "major",
-      "title": "OpenAI o3-mini：推理降价",
-      "note": "推理档位第一次以「便宜到能日常用」的定价出现，成本进入可批量部署的区间。",
-      "src": "https://openai.com/index/openai-o3-mini/"
+      "d": "2025-01-31", "e": "r", "tier": "major", "v": "checked",
+      "title": "OpenAI o3-mini",
+      "note": "推理档位第一次便宜到可以日常用，成本进入可批量部署的区间。",
+      "src": "https://openai.com/index/openai-o3-mini/",
+      "srcNote": "OpenRouter 首发日 2025-01-31"
     },
     {
-      "d": "2025-02-02", "e": "3", "tier": "major",
-      "title": "DeepSeek 上线官方应用",
-      "note": "登顶多国 App Store 免费榜。这是中国模型第一次在全球消费市场正面获得规模用户。",
-      "src": "https://www.deepseek.com/"
+      "d": "2025-02-24", "e": "r", "tier": "major", "v": "part",
+      "title": "Claude 3.7 Sonnet：混合推理",
+      "note": "同一个模型按需在快答与深思之间切换。推理不再是单独的模型产品线。",
+      "src": "https://www.anthropic.com/news/claude-3-7-sonnet",
+      "srcNote": "仅核到 2025 年 2 月这一窗口，未见独立佐证页面"
     },
     {
-      "d": "2025-02-24", "e": "4", "tier": "major",
-      "title": "Anthropic 发布 Claude 3.7 Sonnet",
-      "note": "混合推理：同一个模型按需在快答与深思之间切换，推理不再是单独的模型产品线。",
-      "src": "https://www.anthropic.com/news/claude-3-7-sonnet"
-    },
-    {
-      "d": "2025-04-14", "e": "3", "tier": "major",
+      "d": "2025-04-14", "e": "r", "tier": "major", "v": "checked",
       "title": "GPT-4.1 系列",
-      "note": "百万 token 上下文进入常规 API，长文档与整仓代码从「切片处理」变成「一次读完」。",
-      "src": "https://openai.com/index/gpt-4-1/"
+      "note": "百万 token 上下文进入常规 API。长文档与整仓代码从「切片处理」变成「一次读完」。",
+      "src": "https://openai.com/index/gpt-4-1/",
+      "srcNote": "OpenRouter 首发日 2025-04-14"
     },
     {
-      "d": "2025-05-16", "e": "3", "tier": "major",
-      "title": "OpenAI 发布 Codex 智能体",
-      "note": "在沙箱里自己写、跑、测的小时级任务。编程从「补全」升级成「交付」。",
-      "src": "https://openai.com/index/introducing-codex/"
+      "d": "2025-05-16", "e": "a", "tier": "major", "v": "checked",
+      "title": "OpenAI 推出 Codex Cloud",
+      "note": "在云端沙箱里自己写、跑、测的小时级任务。编程从「补全」升级成「交付」。",
+      "src": "https://openai.com/index/introducing-codex/",
+      "srcNote": "Wikipedia：on May 16, 2025, the company announced a research preview of Codex Cloud",
+      "update": { "d": "2025-11-13", "text": "Codex 进入独立模型线（gpt-5.x-codex）" }
     },
     {
-      "d": "2025-05-22", "e": "4", "tier": "era",
-      "title": "Anthropic 发布 Claude 4 / Claude Code",
-      "note": "同时放出编码专用模型与命令行代理。智能体从演示走进终端，成为日常开发流程的一部分。",
-      "src": "https://www.anthropic.com/news/claude-4"
+      "d": "2025-05-22", "e": "a", "tier": "era", "v": "checked",
+      "title": "Claude 4 + Claude Code",
+      "note": "同日给出编码专用模型与命令行代理。智能体从演示走进终端，成为日常开发流程的一部分。",
+      "src": "https://www.anthropic.com/news/claude-4",
+      "srcNote": "Wikipedia：On May 22, 2025, Anthropic released Claude Sonnet 4 and Claude Opus 4"
     },
     {
-      "d": "2025-08-05", "e": "2", "tier": "era",
-      "title": "OpenAI 发布 gpt-oss-120b / 20b",
+      "d": "2025-08-05", "e": "m", "tier": "era", "v": "checked",
+      "title": "OpenAI 开放 gpt-oss 权重",
       "note": "自 GPT-2 之后首次开放权重，Apache 2.0。闭源阵营开始用开源做分发与防守。",
-      "src": "https://openai.com/index/introducing-gpt-oss/"
+      "src": "https://openai.com/index/introducing-gpt-oss/",
+      "srcNote": "OpenRouter 首发日 2025-08-05（120B / 20B）"
     },
     {
-      "d": "2025-10-06", "e": "4", "tier": "major",
-      "title": "OpenAI DevDay：应用与智能体平台",
-      "note": "会话、工具、应用的接口被统一抽象，「Agent」从一个概念变成一套可以被卖的接口。",
-      "src": "https://openai.com/devday/"
+      "d": "2025-11-18", "e": "r", "tier": "major", "v": "checked",
+      "title": "Google 发布 Gemini 3 Pro",
+      "note": "推理、多模态、长上下文压在同一条模型线上。前沿竞争从「单点领先」变成「全线对齐」。",
+      "src": "https://blog.google/products/gemini/",
+      "srcNote": "Wikipedia：On November 18, 2025, Google launched Gemini 3 Pro"
     },
     {
-      "d": "2025-11-18", "e": "3", "tier": "major",
-      "title": "Google 发布 Gemini 3",
-      "note": "推理、多模态与长上下文同时压在一条模型线上，前沿竞争从「单点领先」变成「全线对齐」。",
-      "src": "https://blog.google/products/gemini/"
+      "d": "2026-01-12", "e": "r", "tier": "major", "v": "unchecked",
+      "title": "DeepSeek V4",
+      "note": "国内开源模型进入第 4 代节奏，价格与能力的组合继续压低整条市场曲线。",
+      "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+      "srcNote": "日期取站内定价页快照，未找到独立发布公告"
     },
     {
-      "d": "2026-01-12", "e": "3", "tier": "major",
-      "title": "DeepSeek V4 发布",
-      "note": "国内开源模型进入 4 代节奏，价格与能力的组合进一步压低整条市场曲线。",
-      "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
-    },
-    {
-      "d": "2026-09-14", "e": "4", "tier": "major",
-      "title": "Claude Sonnet 5.5：速度 + 成本双降",
+      "d": "2026-09-14", "e": "a", "tier": "major", "v": "part",
+      "title": "Claude Sonnet 5.5",
       "note": "同价位下每任务成本降约三成，缓存读价减半。编码代理的经济性开始由缓存与吞吐决定，而不是单价。",
-      "src": "https://www.anthropic.com/news/claude-sonnet-5-5"
+      "src": "https://www.anthropic.com/news/claude-sonnet-5-5",
+      "srcNote": "取自站内一手信号档案，外部未复核"
     },
     {
-      "d": "2026-10-23", "e": "4", "tier": "major",
-      "title": "Kimi K3.1 Pro：1M 上下文开放权重",
-      "note": "国产开源权重走到 1M 上下文多模态，定价 $2 / $10 每百万 token，前沿能力不再只存在于闭源 API。",
-      "src": "https://aihot.news/items/g725ujk3cq0gquz6g2nlozeu4"
+      "d": "2026-10-23", "e": "a", "tier": "major", "v": "checked",
+      "title": "Kimi K3.1 Pro：1M 开放权重",
+      "note": "国产开放权重走到 1M 上下文多模态，$2 / $10 每百万 token。前沿能力不再只存在于闭源 API。",
+      "src": "https://aihot.news/items/g725ujk3cq0gquz6g2nlozeu4",
+      "srcNote": "OpenRouter 首发日 2026-10-23，与归档条目同日"
     }
   ]
 }
