@@ -27,6 +27,7 @@
   --sans:"Inter","PingFang SC","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --pad:clamp(16px,3vw,40px);
+  --sect:clamp(30px,3.6vw,46px);
   --rule:1px solid var(--line);
 }
 [data-theme="dark"]{
@@ -106,6 +107,43 @@ button,input,select{font:inherit; color:inherit}
 .distbar .db-pt.on{fill:var(--accent); opacity:.95}
 .distbar .db-lbl{font-family:var(--mono); font-size:10.5px; fill:var(--faint)}
 
+
+/* ── 中转站价格轴 ── */
+.rax{margin:6px 0 20px; padding:18px 0 6px; border-top:1px solid var(--line)}
+.raxhead{display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; margin-bottom:8px}
+.raxhead h3{margin:0; font-size:clamp(16px,1.5vw,19px); font-weight:600; letter-spacing:-.02em}
+.raxhead p{margin:0; font-size:12.5px; color:var(--faint); max-width:60ch; line-height:1.6}
+.raxbars{display:flex; flex-direction:column; gap:1px; margin-top:6px}
+.rb{display:grid; grid-template-columns:clamp(96px,12vw,150px) 1fr 62px clamp(56px,7vw,84px);
+  align-items:center; gap:12px; padding:5px 0; text-decoration:none; color:inherit;
+  border-bottom:1px solid var(--line); transition:background .2s}
+.rb:hover{background:var(--panel2)}
+.rb-n{font-size:12.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.rb-bar{position:relative; height:6px; background:var(--panel3); border-radius:1px; overflow:hidden}
+.rb-bar i{display:block; height:100%; background:var(--ink); opacity:.75; transition:width .8s cubic-bezier(.16,1,.3,1)}
+.rb.low .rb-bar i{background:#0f7b4f}
+.rb.high .rb-bar i{background:var(--accent)}
+.rb-v{font-family:var(--mono); font-size:12.5px; text-align:right; font-variant-numeric:tabular-nums}
+.rb-x{font-family:var(--mono); font-size:11px; color:var(--faint); text-align:right; white-space:nowrap}
+.rb.high .rb-x{color:var(--accent)}
+.rb.low .rb-x{color:#0f7b4f}
+@media (max-width:760px){.rb{grid-template-columns:96px 1fr 54px}.rb-x{display:none}}
+
+
+/* ── 订阅区间条 ── */
+.sbars{display:flex; flex-direction:column; gap:1px; margin-bottom:var(--sect)}
+.sb{display:grid; grid-template-columns:clamp(120px,15vw,190px) 1fr clamp(110px,14vw,168px) 62px;
+  align-items:center; gap:12px; padding:6px 0; text-decoration:none; color:inherit;
+  border-bottom:1px solid var(--line); transition:background .2s}
+.sb:hover{background:var(--panel2)}
+.sb-n{font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.sb-track{position:relative; height:7px; background:var(--panel3); border-radius:1px}
+.sb-track i{position:absolute; top:0; bottom:0; background:linear-gradient(90deg, #0f7b4f, var(--accent));
+  border-radius:1px; opacity:.9; transition:left .8s cubic-bezier(.16,1,.3,1), width .8s cubic-bezier(.16,1,.3,1)}
+.sb-v{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
+.sb-x{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--accent); white-space:nowrap}
+@media (max-width:760px){.sb{grid-template-columns:110px 1fr 56px}.sb-v{display:none}}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -150,7 +188,7 @@ button,input,select{font:inherit; color:inherit}
 
 /* ── section header ── */
 .shead{display:flex; align-items:baseline; gap:14px; padding:26px 0 14px; border-bottom:var(--rule); flex-wrap:wrap}
-.shead h2{margin:0; font-size:19px; letter-spacing:-.02em; font-weight:600}
+.shead h2{margin:0; font-size:clamp(20px,2vw,26px); letter-spacing:-.03em; font-weight:600}
 .shead .desc{font-size:12.5px; color:var(--dim); max-width:70ch}
 .shead .right{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--faint)}
 
@@ -285,7 +323,7 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 
 /* ── method ── */
 .doc{max-width:840px; margin:0 auto; padding:22px 0 60px}
-.doc h2{font-size:12px; font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+.doc h2{font-size:13px; font-family:var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
   font-weight:400; margin:32px 0 12px; padding-bottom:8px; border-bottom:var(--rule)}
 .doc h2:first-child{margin-top:0}
 .doc p{margin:0 0 12px; color:var(--dim); line-height:1.75}
@@ -402,7 +440,7 @@ footer.foot a:hover{color:var(--accent)}
 .hs-row:hover b{color:var(--accent)}
 
 .newsrow{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
-  border-top:1px solid var(--ink); margin-bottom:34px}
+  border-top:1px solid var(--ink); margin-bottom:var(--sect)}
 .newsrow .ncard{border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:16px 18px 20px 0}
 .newsrow .ncard:nth-child(4n){border-right:0; padding-right:0}
 .ncard{background:transparent; padding:16px 18px 18px 0; display:flex; flex-direction:column; gap:8px; transition:background .22s}
@@ -416,7 +454,7 @@ footer.foot a:hover{color:var(--accent)}
 .ncard p.nclamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
 
 .entries{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
-  border-top:1px solid var(--ink); margin-bottom:34px}
+  border-top:1px solid var(--ink); margin-bottom:var(--sect)}
 .entries .ecard{border-bottom:1px solid var(--line); border-right:1px solid var(--line); padding:16px 18px 20px 0}
 .entries .ecard:nth-child(4n){border-right:0; padding-right:0}
 .ecard{position:relative; background:transparent; text-decoration:none; color:inherit; transition:background .22s}
@@ -443,7 +481,7 @@ footer.foot a:hover{color:var(--accent)}
 .home-top{margin-top:0}
 
 .threeways{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0; background:transparent;
-  border-top:1px solid var(--ink); border-bottom:1px solid var(--line); margin-bottom:34px}
+  border-top:1px solid var(--ink); border-bottom:1px solid var(--line); margin-bottom:var(--sect)}
 .threeways .tway{border-right:1px solid var(--line); padding:18px 22px 22px 0}
 .threeways .tway:last-child{border-right:0}
 .tway{position:relative; background:var(--panel); padding:18px 20px 20px; text-decoration:none; color:inherit; display:block; transition:background .16s}
@@ -504,7 +542,7 @@ footer.foot a:hover{color:var(--accent)}
   .kpi .s{font-size:11.5px}
 
   .shead{padding:18px 0 10px; gap:8px}
-  .shead h2{font-size:16px}
+  .shead h2{font-size:17px}
   .shead .desc{font-size:12px; max-width:100%; flex-basis:100%}
   .shead .right{font-size:11.5px}
 
@@ -1252,6 +1290,9 @@ const MOTION = (() => {
       ["发卡 / 代充", "第三方平台按次卖账号、兑换码或代充，价格最杂，质量参差。", "跑路、封号、售后风险"]
     ];
     return `
+      <div class="shead"><h2>同一订阅，换个区多少钱</h2></div>
+      <div class="sbars" id="subBars"></div>
+
       <div class="shead"><h2>官方订阅价</h2><span class="desc">只收官网能直接读到的月费；人民币按 7.1 折算，仅作横向参考。</span><span class="right">${subs.length} 个档位</span></div>
       <div class="shop">
         ${[...byProduct.entries()].map(([product, rows]) => `
@@ -1317,6 +1358,16 @@ const MOTION = (() => {
   function viewRelays() {
     const rs = state.data.relays;
     const live = rs.filter(r => r.status === "ok");
+    const opusPts = live
+      .map(r => ({ name: r.name, p: r.prices?.opus55 }))
+      .filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly)
+      .map(x => ({ name: x.name, v: x.p.input }))
+      .sort((a, b) => a.v - b.v);
+    const nOpus = opusPts.length;
+    const minOpus = nOpus ? opusPts[0].v : 0;
+    const maxOpus = nOpus ? opusPts[nOpus - 1].v : 0;
+    const official = (state.data.models || []).find(m => /opus/i.test(m.name) && m.channelKind === "direct" && m.input > 0)?.input || 5;
+    const spreadTxt = minOpus > 0 ? `${(maxOpus / minOpus).toFixed(1).replace(/\.0$/, "")} 倍价差` : "";
     const cover = live.reduce((n, r) => n + (r.models || 0), 0);
     const sonnet = live.map(r => ({ r, p: r.prices?.sonnet55 })).filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly).sort((a,b) => a.p.input - b.p.input)[0];
     const priceCell = (p) => {
@@ -1331,6 +1382,13 @@ const MOTION = (() => {
       return `<span class="idx"><span class="bar"><i class="${idx > 1.15 ? "over" : ""}" style="width:${w}%"></i></span><span class="num">${(idx * 100).toFixed(0)}%</span></span>`;
     };
     return `
+      <section class="rax">
+        <div class="raxhead">
+          <h3>Opus 5.5：同一模型，${spreadTxt}</h3>
+          <p>${nOpus} 家公开了 Opus 5.5 的输入价，最低 $${money(minOpus)}、最高 $${money(maxOpus)}。条长即价格，红的是高于官方 $${money(official)} 的。</p>
+        </div>
+        <div class="raxbars" id="relayBars"></div>
+      </section>
       <p class="tnote">共 ${cover.toLocaleString()} 条模型报价 · ${live.length} 家能读到公开价目</p>
       <div class="tablewrap" style="max-height:none">
         <table class="rtable"><caption class="sr">中转站公开价目</caption>
@@ -1617,6 +1675,60 @@ const MOTION = (() => {
     }).join("");
     const ticks = [base, Math.pow(10, Math.log10(base) * 0.5 + Math.log10(top) * 0.5), top];
     host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${dots}</svg>`;
+  }
+
+
+  /* ── 中转站：Opus 5.5 各站价格条 ── */
+  function renderRelayAxis() {
+    const host = document.getElementById("relayBars");
+    if (!host) return;
+    const live = (state.data.relays || []).filter(r => r.status === "ok");
+    const rows = live.map(r => ({ name: r.name, url: r.url, p: r.prices?.opus55 }))
+      .filter(x => x.p && x.p.kind === "per_1m" && !x.p.anomaly)
+      .map(x => ({ name: x.name, url: x.url, v: x.p.input }))
+      .sort((a, b) => a.v - b.v);
+    if (!rows.length) { host.parentElement.style.display = "none"; return; }
+
+    const official = (state.data.models || []).find(m => /opus/i.test(m.name) && m.channelKind === "direct" && m.input > 0)?.input || 5;
+    const max = rows[rows.length - 1].v;
+    const min = rows[0].v;
+
+    host.innerHTML = rows.map((r) => {
+      const pct = Math.max(6, (r.v / max) * 100);
+      const ratio = r.v / official;
+      const cls = ratio < 0.99 ? "low" : ratio > 1.01 ? "high" : "";
+      const tag = ratio < 0.99 ? "低于官方" : ratio > 1.01 ? `${ratio.toFixed(1)}× 官方` : "官方价";
+      return `<a class="rb ${cls}" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
+        <span class="rb-n">${esc(r.name)}</span>
+        <span class="rb-bar"><i style="width:${pct.toFixed(1)}%"></i></span>
+        <span class="rb-v">$${money(r.v)}</span>
+        <span class="rb-x">${tag}</span>
+      </a>`;
+    }).join("");
+  }
+
+
+  /* ── 订阅：跨区价格区间 ── */
+  function renderSubBars() {
+    const host = document.getElementById("subBars");
+    if (!host) return;
+    const plans = (state.data.subsRegions || []).filter(p => p.cheapest > 0 && p.priciest > 0);
+    if (!plans.length) { host.style.display = "none"; return; }
+    const gMin = Math.min(...plans.map(p => p.cheapest));
+    const gMax = Math.max(...plans.map(p => p.priciest));
+    const SPAN = Math.log10(gMax) - Math.log10(gMin) || 1;
+    const pos = (v) => (Math.log10(v) - Math.log10(gMin)) / SPAN * 100;
+
+    host.innerHTML = [...plans].sort((a, b) => (b.priciest / b.cheapest) - (a.priciest / a.cheapest)).map(p => {
+      const l = pos(p.cheapest), r = pos(p.priciest);
+      const ratio = (p.priciest / p.cheapest);
+      return `<a class="sb" href="${esc(p.rows?.[0]?.url || "#")}" target="_blank" rel="noopener">
+        <span class="sb-n">${esc(p.plan)}</span>
+        <span class="sb-track"><i style="left:${l.toFixed(1)}%; width:${Math.max(2, r - l).toFixed(1)}%"></i></span>
+        <span class="sb-v">¥${Math.round(p.cheapest)} → ¥${Math.round(p.priciest)}</span>
+        <span class="sb-x">${ratio.toFixed(1).replace(/\.0$/, "")}×</span>
+      </a>`;
+    }).join("");
   }
 
   /* ── bench ── */
@@ -1918,7 +2030,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     else if (state.tab === "signals") v.innerHTML = viewSignals();
     else v.innerHTML = viewMethod();
     history.replaceState(null, "", "#" + state.tab);
-    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); });
+    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'relays') renderRelayAxis(); if (state.tab === 'subs') renderSubBars(); });
   }
 
   /* ── events ── */
