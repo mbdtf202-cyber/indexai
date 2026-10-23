@@ -164,6 +164,29 @@ button,input,select{font:inherit; color:inherit}
 .tllegend span{display:flex; align-items:center; gap:6px}
 .tllegend i{width:10px; height:8px; border-radius:1px}
 
+
+/* ── 工具箱星数带 ── */
+.starband{display:flex; flex-direction:column; gap:1px; margin:0 0 var(--sect); border-top:1px solid var(--ink)}
+.sbrow{display:grid; grid-template-columns:clamp(120px,17vw,220px) 1fr 58px;
+  align-items:center; gap:12px; padding:4px 0; border-bottom:1px solid var(--line); text-decoration:none; color:inherit}
+.sbrow:hover{background:var(--panel2)}
+.sbrow .n{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--dim)}
+.sbrow .t{position:relative; height:4px; background:var(--panel3)}
+.sbrow .t i{display:block; height:100%; background:var(--ink); opacity:.7; width:0;
+  animation:growbar .85s cubic-bezier(.16,1,.3,1) forwards; animation-delay:calc(var(--i,0)*30ms)}
+.sbrow .s{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--faint); font-variant-numeric:tabular-nums}
+.sbrow:hover .n{color:var(--ink)}
+@media (max-width:760px){.sbrow{grid-template-columns:110px 1fr 48px}}
+
+
+/* ── 键盘可达性 ── */
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+a:focus-visible,button:focus-visible{outline-offset:3px; border-radius:2px}
+.skip{position:absolute; left:-9999px; top:0; z-index:9999; background:var(--ink); color:var(--bg);
+  padding:10px 16px; font-size:13px; text-decoration:none}
+.skip:focus{left:8px; top:8px}
+.tablewrap:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -672,10 +695,11 @@ body.ready{opacity:1}
 </style>
 </head>
 <body>
+<a class="skip" href="#view">跳到主内容</a>
 
 <header class="top">
   <div class="wrap">
-    <a class="brand" href="#home" aria-label="IndexAI">
+    <a class="brand" href="#home" aria-label="IndexAI 首页">
       <i class="glyph" aria-hidden="true"></i>
       <b>IndexAI</b><span>PRICE&nbsp;·&nbsp;FREE&nbsp;·&nbsp;BENCH</span>
     </a>
@@ -1169,7 +1193,7 @@ const MOTION = (() => {
           <input type="range" id="outShare" min="5" max="80" step="5" value="${Math.round(state.outShare * 100)}" aria-label="输出占比"></div>
         <div class="formula">有效成本 = <b>(1−s)·[(1−h)·输入 + h·缓存读] + s·输出</b> / 1M tokens</div>
       </div>
-      <div class="tablewrap">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动">
         <table><caption class="sr">模型 token 价格对比</caption>
           <thead><tr>
             ${th("name","模型")}${th("vendor","厂商",false,true)}${th("ctx","上下文",true)}${th("input","输入",true)}
@@ -1395,7 +1419,7 @@ const MOTION = (() => {
         ${routes.map(([name, desc, risk]) => `<div class="route"><h4>${esc(name)}</h4><p>${esc(desc)}</p><div class="risk">${esc(risk)}</div></div>`).join("")}
       </div>
       <div class="shead"><h2>第三方挂单（真实链接）</h2><span class="desc">公开发卡平台的在售挂单，每条都带商品页直链；在售优先、同产品按价升序。质保普遍只有几小时，稳定性自负。</span><span class="right">${state.data.subsThird.length} 条 · 在售 ${state.data.subsThird.filter(x => x.status === "in_stock").length}</span></div>
-      <div class="tablewrap" style="max-height:620px">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:620px">
         <table style="min-width:0"><caption class="sr">第三方订阅挂单，带商品直链</caption>
           <thead><tr><th style="cursor:default">产品</th><th style="cursor:default">平台</th><th style="cursor:default">挂单</th><th class="num" style="cursor:default">价格</th><th class="num hidesm" style="cursor:default">折合 $</th><th style="cursor:default">状态</th></tr></thead>
           <tbody>
@@ -1450,7 +1474,7 @@ const MOTION = (() => {
         <div class="raxbars" id="relayBars"></div>
       </section>
       <p class="tnote">共 ${cover.toLocaleString()} 条模型报价 · ${live.length} 家能读到公开价目</p>
-      <div class="tablewrap" style="max-height:none">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none">
         <table class="rtable"><caption class="sr">中转站公开价目</caption>
           <thead><tr>
             <th style="cursor:default">站点</th><th class="num" style="cursor:default">模型数</th>
@@ -1592,7 +1616,7 @@ const MOTION = (() => {
           <a class="tcard${r.archived ? " stale" : ""}" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
             <div class="th">
               <h3>${esc(r.title)}</h3>
-              <span class="tstars">${kfmt(r.stars)}<em>★</em></span>
+              <span class="tstars"><i class="starmini" style="--w:${Math.min(100, (Math.log10(Math.max(r.stars,1)) / 5.5) * 100).toFixed(0)}%"></i>${kfmt(r.stars)}<em>★</em></span>
             </div>
             <p class="why">${esc(r.why)}</p>
             <div class="tm">
@@ -1895,6 +1919,27 @@ const MOTION = (() => {
   }
 
 
+
+  /* ── 工具箱：星数带（对数刻度） ── */
+  function renderStarBand() {
+    const host = document.getElementById("starBand");
+    if (!host) return;
+    const rows = (state.data.resources || []).filter(r => r.status === "ok" && r.stars > 0)
+      .sort((a, b) => b.stars - a.stars);
+    if (!rows.length) { host.style.display = "none"; return; }
+    const lo = Math.log10(rows[rows.length - 1].stars);
+    const hi = Math.log10(rows[0].stars);
+    const span = hi - lo || 1;
+    host.innerHTML = rows.map((r, i) => {
+      const pct = ((Math.log10(r.stars) - lo) / span) * 100;
+      return `<a class="sbrow" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
+        <span class="n">${esc(r.title)}</span>
+        <span class="t"><i style="--w:${Math.max(3, pct).toFixed(1)}%; --i:${i}"></i></span>
+        <span class="s">${kfmt(r.stars)}</span>
+      </a>`;
+    }).join("");
+  }
+
   /* ── bench ── */
   function viewBench() {
     const b = state.data.bench;
@@ -1907,7 +1952,7 @@ const MOTION = (() => {
         <div class="cell"><div class="k">收录模型</div><div class="v">${rows.length}</div></div>
         <div class="cell"><div class="k">最高分</div><div class="v">${rows[0].score.toFixed(2)}<small style="font-size:11.5px;color:var(--faint)"> ${esc(rows[0].model)}</small></div></div>
       </div>
-      <div class="tablewrap" style="max-height:none">
+      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none">
         <table><caption class="sr">Vals Index 公开分数</caption>
           <thead><tr><th style="cursor:default">#</th><th style="cursor:default">模型</th><th style="cursor:default">分数</th>
             <th class="num" style="cursor:default">较上次</th><th class="num hidesm" style="cursor:default">来源</th></tr></thead>
@@ -1956,7 +2001,7 @@ const MOTION = (() => {
       return (a.minIn ?? Infinity) - (b.minIn ?? Infinity);
     });
     return `
-      <div class="tablewrap"><table><caption class="sr">按厂商聚合</caption>
+      <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动"><table><caption class="sr">按厂商聚合</caption>
         <thead><tr>
           <th style="cursor:default">厂商</th><th class="num" style="cursor:default">模型</th>
           <th class="num" style="cursor:default">最低输入</th><th class="num" style="cursor:default">最低输出</th>
@@ -2165,7 +2210,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
         <dt>更新</dt><dd class="mono">${esc(r.checked_at || "—")}</dd>
         <dt>价目接口</dt><dd class="mono" style="font-size:12px;word-break:break-all">${esc(r.url)}</dd>
       </dl>
-      ${samples.length ? `<div class="tablewrap" style="max-height:none;border-top:var(--rule)">
+      ${samples.length ? `<div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none;border-top:var(--rule)">
         <table style="min-width:0"><thead><tr><th style="cursor:default">模型</th><th class="num" style="cursor:default">输入</th><th class="num" style="cursor:default">输出</th></tr></thead>
         <tbody>${samples.map(x => `<tr><td><span class="mono" style="font-size:12px">${esc(x.n)}</span></td><td class="num">${x.i}</td><td class="num">${x.o}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">这家没开放价目接口，只登记站点。</p>`}
       <p class="note"><a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">打开店铺 ↗</a> · 价格来自 /api/pricing 倍率换算，不含充值折扣</p>`;
