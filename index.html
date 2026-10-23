@@ -120,7 +120,9 @@ button,input,select{font:inherit; color:inherit}
 .rb:hover{background:var(--panel2)}
 .rb-n{font-size:12.5px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .rb-bar{position:relative; height:6px; background:var(--panel3); border-radius:1px; overflow:hidden}
-.rb-bar i{display:block; height:100%; background:var(--ink); opacity:.75; transition:width .8s cubic-bezier(.16,1,.3,1)}
+.rb-bar i{display:block; height:100%; background:var(--ink); opacity:.75; width:0;
+  animation:growbar .9s cubic-bezier(.16,1,.3,1) forwards; animation-delay:calc(var(--i,0) * 35ms)}
+@keyframes growbar{to{width:var(--w,0%)}}
 .rb.low .rb-bar i{background:#0f7b4f}
 .rb.high .rb-bar i{background:var(--accent)}
 .rb-v{font-family:var(--mono); font-size:12.5px; text-align:right; font-variant-numeric:tabular-nums}
@@ -139,7 +141,8 @@ button,input,select{font:inherit; color:inherit}
 .sb-n{font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .sb-track{position:relative; height:7px; background:var(--panel3); border-radius:1px}
 .sb-track i{position:absolute; top:0; bottom:0; background:linear-gradient(90deg, #0f7b4f, var(--accent));
-  border-radius:1px; opacity:.9; transition:left .8s cubic-bezier(.16,1,.3,1), width .8s cubic-bezier(.16,1,.3,1)}
+  border-radius:1px; opacity:.9; width:0; animation:growbar 1s cubic-bezier(.16,1,.3,1) forwards;
+  animation-delay:calc(var(--i,0) * 35ms)}
 .sb-v{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
 .sb-x{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--accent); white-space:nowrap}
 @media (max-width:760px){.sb{grid-template-columns:110px 1fr 56px}.sb-v{display:none}}
@@ -1568,6 +1571,32 @@ const MOTION = (() => {
   }
 
 
+
+  /* 图形入场：条从 0 长到目标宽度 */
+  function growBars(sel, prop = "width") {
+    const els = [...document.querySelectorAll(sel)];
+    if (!els.length) return;
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    els.forEach((el) => {
+      const target = el.style[prop] || getComputedStyle(el)[prop];
+      el.dataset.target = target;
+      el.style[prop] = prop === "width" ? "0%" : "0px";
+      el.style.transition = "none";
+    });
+    const io2 = new IntersectionObserver((es) => {
+      es.forEach((e) => {
+        if (!e.isIntersecting) return;
+        const el = e.target;
+        requestAnimationFrame(() => {
+          el.style.transition = reduce ? "none" : `${prop} 1s cubic-bezier(.16,1,.3,1)`;
+          el.style[prop] = el.dataset.target;
+        });
+        io2.unobserve(el);
+      });
+    }, { threshold: 0.15 });
+    els.forEach((el) => io2.observe(el));
+  }
+
   /* ── 价格轴：453 个模型在对数刻度上的分布 ── */
   function renderAxis() {
     const svg = document.getElementById("priceAxis");
@@ -1725,14 +1754,14 @@ const MOTION = (() => {
     const max = rows[rows.length - 1].v;
     const min = rows[0].v;
 
-    host.innerHTML = rows.map((r) => {
+    host.innerHTML = rows.map((r, i) => {
       const pct = Math.max(6, (r.v / max) * 100);
       const ratio = r.v / official;
       const cls = ratio < 0.99 ? "low" : ratio > 1.01 ? "high" : "";
       const tag = ratio < 0.99 ? "低于官方" : ratio > 1.01 ? `${ratio.toFixed(1)}× 官方` : "官方价";
       return `<a class="rb ${cls}" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
         <span class="rb-n">${esc(r.name)}</span>
-        <span class="rb-bar"><i style="width:${pct.toFixed(1)}%"></i></span>
+        <span class="rb-bar"><i style="--w:${pct.toFixed(1)}%; --i:${i}"></i></span>
         <span class="rb-v">$${money(r.v)}</span>
         <span class="rb-x">${tag}</span>
       </a>`;
@@ -1751,12 +1780,12 @@ const MOTION = (() => {
     const SPAN = Math.log10(gMax) - Math.log10(gMin) || 1;
     const pos = (v) => (Math.log10(v) - Math.log10(gMin)) / SPAN * 100;
 
-    host.innerHTML = [...plans].sort((a, b) => (b.priciest / b.cheapest) - (a.priciest / a.cheapest)).map(p => {
+    host.innerHTML = [...plans].sort((a, b) => (b.priciest / b.cheapest) - (a.priciest / a.cheapest)).map((p, i) => {
       const l = pos(p.cheapest), r = pos(p.priciest);
       const ratio = (p.priciest / p.cheapest);
       return `<a class="sb" href="${esc(p.rows?.[0]?.url || "#")}" target="_blank" rel="noopener">
         <span class="sb-n">${esc(p.plan)}</span>
-        <span class="sb-track"><i style="left:${l.toFixed(1)}%; width:${Math.max(2, r - l).toFixed(1)}%"></i></span>
+        <span class="sb-track"><i style="left:${l.toFixed(1)}%; --w:${Math.max(2, r - l).toFixed(1)}%; --i:${i}"></i></span>
         <span class="sb-v">¥${Math.round(p.cheapest)} → ¥${Math.round(p.priciest)}</span>
         <span class="sb-x">${ratio.toFixed(1).replace(/\.0$/, "")}×</span>
       </a>`;
