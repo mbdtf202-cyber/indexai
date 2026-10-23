@@ -1,3 +1,12 @@
 node_modules/
 .DS_Store
 *.log
+
+# 本地构建 / 部署产物
+.wrangler/
+dist/
+
+# 采集的中间产物（data.json 每天 700KB，提交会撑爆仓库；只上传到 Pages）
+# 注意：data.json 当前仍在版本控制里作为「基线快照」，如需彻底停止跟踪，
+# 执行 git rm --cached data.json 后取消下面这行注释。
+# data.json

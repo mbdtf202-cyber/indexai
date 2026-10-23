@@ -1,6 +1,10 @@
 # IndexAI
 
-AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中转站价目、活动、公开评测**，每天采集一次。
+AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中转站价目、活动、公开评测**，每天自动采集一次。
+
+线上：**https://indexai.pages.dev/** · 仓库：https://github.com/mbdtf202-cyber/indexai
+
+---
 
 ## 文件
 
@@ -8,58 +12,98 @@ AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中
 |---|---|
 | `index.html` | 站点本体（单文件、无构建，默认浅色，首屏总览） |
 | `collect.mjs` | 采集 / 归一 / 去重 / 探测，产出 `data.json` |
-| `serve.mjs` | 零依赖静态服务器（本地预览用，`node serve.mjs 4311`） |
-| `favicon.svg` | 站点图标 |
+| `health.mjs` | 分层健康检查：基线阈值 + 语义校验，采集和 CI 共用 |
+| `serve.mjs` | 零依赖静态服务器（本地预览用） |
+| `deploy.mjs` | 本机一键采集 + 发布（CI 的本地等价物，备用） |
 | `data.json` | 站点唯一数据源（每次运行覆盖） |
-| `README.md` | 这份说明 |
+| `news-history.json` | 新闻历史（逐日累积，进仓库，用来撑「近一周／一月」跨度） |
+| `_headers` | Cloudflare 缓存头 |
+| `favicon.svg` | 站点图标 |
+
+---
 
 ## 跑起来
 
-站点：**http://127.0.0.1:4311/** —— 已由 launchd 常驻，开机自启、进程挂了自动重拉，不用手动起。
-
-手动重采一次：
-
 ```bash
-node collect.mjs          # 约 18 秒，覆盖 data.json（页面刷新即生效）
+node serve.mjs 4311        # 本地预览 → http://127.0.0.1:4311/
+node collect.mjs           # 重采一次，约 25 秒，覆盖 data.json
+node health.mjs            # 单独体检；不达标 exit 1
 ```
 
-## 每天自动更新（已装好）
+---
 
-两个 LaunchAgent，已在 `gui/$(id -u)` 里生效：
+## 数据健康：这套东西为什么不会悄悄烂掉
 
-| Label | 作用 | 时间 |
-|---|---|---|
-| `com.raki.indexai.collect` | 跑 `collect.mjs`，日志 `/tmp/indexai-collect.log` | 每天 09:00 |
-| `com.raki.indexai.serve` | 常驻 `serve.mjs 4311`，日志 `/tmp/indexai-server.log` | 开机 + 崩溃重拉 |
+这是本项目最重要的一条设计，也是踩过坑之后加的。
 
-```bash
-# 查看状态
-launchctl print gui/$(id -u)/com.raki.indexai.collect | head -5
-launchctl print gui/$(id -u)/com.raki.indexai.serve   | head -5
+**问题**：所有数据源都包在 `try/catch` 里，失败就返回空数组。采集脚本照常写出 `data.json` 并发布，
+站点看起来一切正常，实际上某一层已经空了好几天。曾经的真实事故：
 
-# 立刻手动触发一次采集
-launchctl kickstart -p gui/$(id -u)/com.raki.indexai.collect
+- `SUBSCRIPTIONS = []`（死常量），页面照常渲染「官方档位 0」，README 却写着「订阅 10 档」
+- `bench` 里把对象当数组 `.map()`，每次抛错被吞掉，「评测下跌标黄」从来没生效过
+- Devpost 活动一律硬编码 `status: 'open'`，25 个已截止的活动还挂在「开放中」
+- Devpost 日期解析只认一种格式，20/65 个活动日期变 null、被标成「未知」
 
-# 改时间：编辑 ~/Library/LaunchAgents/com.raki.indexai.collect.plist 的 Hour/Minute 后
-launchctl bootout   gui/$(id -u)/com.raki.indexai.collect
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect.plist
-```
+**现在的机制**：
 
-> 注意：node 必须走绝对路径 `/Users/raki/.local/node/current/bin/node`（launchd 不读 shell 的 PATH）；
-> 别用 `/usr/bin/python3 -m http.server`，Xcode 自带 python 在 launchd 下被 macOS TCC 挡住读不到桌面。
+1. **逐层记账**（`collect.mjs` 的 `makeTracker`）。每个数据源记 `fresh / stale / failed`，
+   写进 `meta.collect[]`。某层本次为空但有上一版 → 沿用上一版并打 `stale`；
+   两版都没有 → `failed`。前端和方法页都能读到这个状态。
+2. **硬门禁**（`health.mjs` 的 `assertLayers`）。每层设 `min`（绝对红线）和 `shrink`（相对缩水比例）。
+   任一红线不过 → **抛错，不写 `data.json`，线上保持上一版**。残缺数据绝不覆盖好数据。
+3. **语义校验**。数量够 ≠ 数据对，另外检查：
+   - `status=open` 的活动不能已过截止日
+   - 模型不能 `input=0` 但 `output>0`，不能没有任何价格，不能没有来源 URL
+   - `generated_at` 不能是未来、不能超过 48 小时
+   - 汇率必须在合理区间
+   - 所有中转站不能全部探测失败
+4. **CI 二次校验**。`node health.mjs` 作为独立 step 再跑一遍，
+   防止将来改 `collect.mjs` 时绕过内嵌门禁。
+5. **失败可见**。job 失败自动开 GitHub issue（已存在则追加评论），
+   首屏有健康横幅（数据陈旧／某层空掉时出现，平时完全不存在）。
+
+紧急情况下想强行发布残缺数据：`ALLOW_DEGRADED=1 node collect.mjs`。会有明显警告。
+
+---
 
 ## 八层数据
 
 | 层 | 来源 | 更新 |
 |---|---|---|
 | 免费额度（37） | 官方活动页 / 文档，写在 `CURATED_OFFERS` | 人工 |
-| 比价（473） | OpenRouter 实时目录 + 官方定价页核实 | 自动 + 人工 |
-| 订阅（10 档 + 18 套餐区价 777 条 + 240 条挂单） | 官网订阅页 + App Store 各区价 + 发卡平台直链 | 自动 |
-| 中转站（54 在册 / 22 有公开价目 / 6,963 条报价） | 各站 `/api/pricing`（OneAPI/NewAPI） | 每次自动探测 |
-| 活动（111 条 / 88 开放中） | Devpost 分页 + Luma 发现流 + 本地 AIOS 活动库，按类型/地区打标 | 每次自动 |
-| 评测（16） | Vals Index 公开分数 | 每次自动，存快照比 Δ |
-| 情报（24 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
-| 工具箱（21 个） | 人工精选稀缺 skill / CLI，按用途分类；GitHub API 校准星数与更新时间 | 每次自动 |
+| 比价（474） | OpenRouter 实时目录 + 官方定价页核实 | 自动 + 人工 |
+| 订阅（16 档官方 / 18 组区价 774 条 / 209 条挂单） | App Store 公开内购页 + 发卡平台直链 | 自动 |
+| 中转站（约 50 在册 / 约 20 有公开价目） | 各站 `/api/pricing`（OneAPI/NewAPI） | 每次自动探测 |
+| 活动（111 条 / 约 88 开放中） | Devpost 分页 + Luma 发现流 + 本地 AIOS 活动库 | 每次自动 |
+| 工具箱（21） | 人工精选稀缺 skill / CLI，GitHub API 校准星数 | 每次自动 |
+| 评测（16） | Vals Index 公开分数 + Artificial Analysis 智能指数（266） | 每次自动，存快照比 Δ |
+| 情报（每日约 50 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
+
+另有几个辅助层：OpenRouter 应用榜（25）、模型调用量榜（20）、Hacker News 民间声量（16）、来源登记表（125）。
+
+### 订阅层的口径
+
+官方档位**不是手写的**，全部从 App Store 美国区的公开内购价派生：
+`apple_subscriptions.json` → 取每个 plan 的美国区 `price_value` → 一档一行，带 `app_store_url`。
+拿不到美国区价格的档位直接跳过，不猜价、不用历史值填。
+
+> 曾经这里是 `const SUBSCRIPTIONS = []`，而 README 写着「10 档」。现在派生不出来就是 health 红线。
+
+### 活动层的口径
+
+状态**只由日期决定**，不照抄数据源的 `status` 字段：
+
+```
+past     —— end 已过（没有 end 就用 start）
+upcoming —— start 在未来
+open     —— 正在进行中
+unknown  —— 两个日期都没有 → 标未知，不假装开放
+```
+
+Devpost 的 `submission_period_dates` 有三种真实写法，解析器都要认：
+`Oct 05 - Nov 12, 2026` / `Oct 05 - 27, 2026` / `Jul 16, 2026 - Jan 15, 2027`。
+
+---
 
 ## 口径
 
@@ -73,38 +117,23 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 - 汇率来自 `open.er-api.com`，站点每 8 小时刷新一次，失败时沿用上次值。
 - 中转站价目是接口披露价，不含充值折扣；与官方差 3 倍以上标「口径?」。
 - 第三方挂单来自 `data.aibijia.org` 公开 JSON，**每条带商品页直链**；质保通常几小时，不推荐、不保证可用。
-- 各区订阅价来自 `data.aibijia.org/apple_subscriptions.json`（App Store 公开页），每个国家都能点进对应区商店。
-- 中转站域名池来自开源清单（awesome-ai-proxy / relayAPI / ai-coding-welfare / relaywatch），脚本逐个探 `/api/pricing`，探到才算「有价目」。
+- 各区订阅价同源（App Store 公开页），每个国家都能点进对应区商店。
 - 评测分数下跌标黄，提示可能的版本回退或渠道掺水，需人工复核。
 
-## 加东西
+---
 
-- 官方直连：往 `CURATED_OFFICIAL` 加一条（USD/1M）。
-- 免费额度：往 `CURATED_OFFERS` 加一条（带 `source`、`conf`）。
-- 新闻：`data.aibijia.org/news-frontline.yaml`，`NEWS_TOPICS` 控制分类、`scoreNews` 控制精选权重。
-- 中转站：往 `RELAYS` 加 `{domain, name, auto}`，`auto: true` 会每天探 `/api/pricing`；一次批量探测见 `probeRelays()` 的并发写法。
-- 活动：默认读 `AIOS_OPPORTUNITIES` 指向的 AIOS 导出文件，可用环境变量覆盖。
-
-## 边界
-
-- 只采公开页面与公开接口；**不注册账号、不绕过登录**去拿需要授权的价格。
-- 挂牌价 ≠ 账单：不含税、企业折扣、区域加价。
-- `data.json` 不要提交到公开仓库（含大量第三方页面链接）。
-
-## 部署到公网
-
-**线上地址：https://indexai.pages.dev/**
-仓库：https://github.com/mbdtf202-cyber/indexai
-
-纯静态（HTML + JSON），没有后端、没有数据库。
-
-### 运行模式：云端
+## 每天自动更新（云端）
 
 ```
 GitHub Actions  .github/workflows/daily-collect.yml   每天 09:00（UTC 01:00）
-      ├─ node collect.mjs                       重采全部数据
-      ├─ 组装 dist/                              index.html + data.json + _headers
-      └─ wrangler pages deploy                   → Cloudflare Pages
+      ├─ 拉线上 data.json 当基线   ← 保证 delta 与缩水检测有真实上一版
+      ├─ node collect.mjs          采集（内含健康门禁）
+      ├─ node health.mjs           二次独立校验
+      ├─ 组装 dist/                 index.html + data.json + _headers
+      ├─ 校验 Cloudflare token     权限不对立刻报错并给出修法
+      ├─ wrangler pages deploy     → Cloudflare Pages
+      ├─ 线上验证                   确认线上确实是本轮数据
+      └─ on failure → 自动开 issue
 ```
 
 不依赖任何一台机器开机。手动触发：
@@ -112,74 +141,63 @@ GitHub Actions  .github/workflows/daily-collect.yml   每天 09:00（UTC 01:00�
 ```bash
 gh workflow run daily-collect -R mbdtf202-cyber/indexai
 gh run list -R mbdtf202-cyber/indexai --limit 3
+gh run view <run-id> -R mbdtf202-cyber/indexai --log-failed
 ```
 
-需要的仓库 Secret（已配置）：
+### 需要的仓库 Secret
 
 | Secret | 说明 |
 |---|---|
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token，权限需含 **Account → Cloudflare Pages → Edit** |
+| `CLOUDFLARE_API_TOKEN` | 权限需含 **Account → Cloudflare Pages → Edit** |
+| `CLOUDFLARE_ACCOUNT_ID` | 账号 ID（也可直接写在 workflow 里） |
 
-> 踩过的坑：如果用 R2 模板创建 token，`/tokens/verify` 会返回 `active`，但调 Pages API 会报 `Authentication error [code: 10000]`。要选 **Edit Cloudflare Workers** 模板或手动加 Pages 权限。
+> **踩过的坑**：用 R2 模板创建的 token，`/tokens/verify` 会返回 `active`，
+> 但调 Pages API 报 `Authentication error [code: 10000]`。
+> 要选 **Edit Cloudflare Workers** 模板，或手动加 Pages 权限。
+> 现在 token 预检这一步会明确告诉你这个原因，而不是抛一串 wrangler 原始报错。
 
-**本地备用**：`node deploy.mjs` 仍可一键采集 + 发布（走本机 wrangler 登录态）。原来的 launchd 定时已停用，避免和云端重复部署。
+### 为什么 data.json 不进仓库
 
-### 为什么本地用 Node 驱动
+每天 700 KB，一年 +250 MB。CI 只把它上传到 Pages，不 commit。
+`news-history.json` 则进仓库——它需要逐日累积才能撑出时间跨度，且体积小。
 
-macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取（`Operation not permitted`），但 node 二进制不受此限制。所以本地编排写在 `deploy.mjs` 里，plist 直接执行 node，不经过 shell。云端无此限制。
+---
 
-一条命令手动发版：
-
-```bash
-node deploy.mjs                # 采集 + 发布
-node deploy.mjs --skip-collect # 只发布，不重采
-```
-
-部署日志：`/tmp/indexai-deploy.log`
-
-### 部署相关的三个文件
-
-| 文件 | 作用 |
-|---|---|
-| `deploy.mjs` | 采集 + 构建 dist + `wrangler pages deploy`（必须用 node 跑，见下） |
-| `_headers` | Cloudflare 缓存头：`index.html` 不缓存、`data.json` 缓存 5 分钟 |
-| `.github/workflows/daily-collect.yml` | 备选：GitHub Actions 版定时采集（当前未启用） |
-
-### 为什么必须用 Node 驱动
-
-macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取（`Operation not permitted`），但 node 二进制不受此限制。所以部署编排写在 `deploy.mjs` 里，plist 直接执行 node，不经过 shell。
-
-### 定时任务
+## 本地备用
 
 ```bash
-launchctl print gui/$(id -u)/com.raki.indexai.collect   # 看状态
-launchctl kickstart -p gui/$(id -u)/com.raki.indexai.collect  # 立刻跑一次
+node deploy.mjs                # 采集 + 发布（走本机 wrangler 登录态）
+node deploy.mjs --skip-collect # 只发布
 ```
 
-plist 在 `~/Library/LaunchAgents/com.raki.indexai.collect.plist`，改时间改 `Hour`/`Minute` 后 `bootout` + `bootstrap`。
+日志 `/tmp/indexai-deploy.log`。
 
-### 备选：交给 Cloudflare 自己构建
+本机还有一个 launchd 常驻的本地预览服务：`com.raki.indexai.serve`（`serve.mjs 4311`，开机自启、崩溃重拉）。
+**它只服务本地，不参与发布。**
 
-如果想让 Cloudflare 直接从 GitHub 构建（不依赖本机开机）：
+```bash
+launchctl print gui/$(id -u)/com.raki.indexai.serve | head -5
+```
 
-1. Cloudflare Dash → Workers & Pages → `indexai` → Settings → Builds & deployments → Connect Git
-2. 构建设置：Build command **留空**，Output directory **`/`**
-3. 再在仓库 Settings → Secrets 里加 `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`，把 `.github/workflows/daily-collect.yml` 的最后一步换成 `wrangler pages deploy`
+> **踩过的坑**：macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取
+> （`Operation not permitted`），但 node 二进制不受此限制。
+> 所以 plist 直接执行 node，不经过 shell。
 
-### 成本
+---
 
-| 方案 | 月成本 | 国内访问 | 上线时间 |
-|---|---|---|---|
-| **Cloudflare Pages（当前）** | **¥0** | 中等 | 已完成 |
-| Vercel Hobby | ¥0 | 较好 | 5 分钟 |
-| GitHub Pages | ¥0 | 慢 | 3 分钟 |
-| 阿里云 OSS + CDN | ¥5~15（需备案） | 快 | 1–3 天 |
+## 加东西
 
-无限带宽、免费 SSL、免费 `*.pages.dev` 域名。要绑自己的域名不用备案（走香港/新加坡节点）。
+- 官方直连：往 `CURATED_OFFICIAL` 加一条（USD/1M，带 `src`）。
+- 免费额度：往 `CURATED_OFFERS` 加一条（带 `source`、`conf`）。
+- 新闻：`data.aibijia.org/news-frontline.yaml`，`NEWS_TOPICS` 控制分类、`scoreNews` 控制精选权重。
+- 中转站：往 `RELAYS` 加 `{domain, name, auto}`，`auto: true` 会每天探 `/api/pricing`。
+- 活动：默认读 `AIOS_OPPORTUNITIES` 指向的 AIOS 导出文件；该层可选，读不到会明确提示并跳过。
+- 新增数据层：**同时**在 `collect.mjs` 用 `T.run(...)` 包起来、在 `health.mjs` 的 `LAYERS` 里加阈值。
 
-### 上线前要知道的
+---
 
-- **仓库体积**：`data.json` 600 KB，如果每天都 commit，一年 +200 MB。当前自动部署**不**提交 data.json（只上传到 Pages），仓库不会膨胀。
-- **本机依赖**：定时采集跑在这台 Mac 上，关机就不跑。要彻底去机器依赖，用上面的「备选」接 Cloudflare Git 构建。
-- **CI 里少一层数据**：`collect.mjs` 的 AIOS 活动读本地文件，非本机环境读不到 → 只有 Devpost + Luma。
-- **没有密钥**：全部走公开接口，仓库里不放 token。
+## 边界
+
+- 只采公开页面与公开接口；**不注册账号、不绕过登录**去拿需要授权的价格。
+- 挂牌价 ≠ 账单：不含税、企业折扣、区域加价。
+- 免费额度随时会变，卡片上的日期是核实日期，链接指向官方页。

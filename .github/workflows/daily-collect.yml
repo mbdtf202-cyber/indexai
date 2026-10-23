@@ -1,18 +1,30 @@
 name: daily-collect
 
-# 云端采集 + 发布：不再依赖本机开机。
-# 每天 UTC 01:00（北京 09:00）跑 collect.mjs，然后直传 Cloudflare Pages。
+# 云端采集 + 发布：不依赖本机开机。
+# 每天 UTC 01:00（北京 09:00）跑 collect.mjs，门禁通过后才发布到 Cloudflare Pages。
+#
+# 三道防线（以前一道都没有）：
+#   1. 发布前健康门禁 —— 任一层为空/异常缩水，job 直接红，线上保持上一版
+#   2. token 预检      —— Cloudflare token 权限不对时立刻失败并说清原因
+#   3. 失败告警        —— job 失败自动开 issue，不再靠人去翻 Actions 列表
+
 on:
   schedule:
     - cron: "0 1 * * *"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write      # 提交 news-history.json
+  issues: write        # 失败时开 issue
 
 concurrency:
   group: daily-collect
   cancel-in-progress: false
+
+env:
+  # 线上这份就是「上一次成功发布的状态」，作为采样的基线比仓库里的旧 data.json 准
+  PREV_DATA_URL: https://indexai.pages.dev/data.json
+  SITE_URL: https://indexai.pages.dev/
 
 jobs:
   collect-and-deploy:
@@ -26,24 +38,38 @@ jobs:
         with:
           node-version: "20"
 
+      # 拿线上现网数据当 prev：这样「相对上次缩水」的检测、bench 的 delta、
+      # 各层失败时的回退，都有真实的上一版可用，而不是仓库里某个旧快照。
+      - name: 拉取线上基线数据
+        run: |
+          if curl -fsS --max-time 30 "$PREV_DATA_URL" -o data.json; then
+            echo "基线已获取：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
+          else
+            echo "::warning::拿不到线上 data.json，本轮将按首次采集处理（delta 与缩水检测会缺失）"
+          fi
+
       # collect.mjs 只用内置 fetch，没有 npm install
-      - name: 采集
+      - name: 采集（内含健康门禁）
         env:
-          # 用内置 token 拉 GitHub API，限额从 60/h 提到 5000/h
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node collect.mjs
+
+      # 二次独立校验：把 data.json 当独立产物再验一遍，
+      # 防止将来有人改 collect.mjs 绕过内嵌门禁
+      - name: 健康检查门禁
+        run: node health.mjs
 
       - name: 组装发布目录
         run: |
           mkdir -p dist
           cp index.html data.json dist/
-          [ -f favicon.svg ] && cp favicon.svg dist/ || true
-          [ -f logo-preview.html ] && cp logo-preview.html dist/ || true
-          [ -f directions.html ] && cp directions.html dist/ || true
-          [ -f _headers ] && cp _headers dist/ || true
+          for f in favicon.svg logo-preview.html directions.html _headers; do
+            [ -f "$f" ] && cp "$f" dist/ || true
+          done
           du -sh dist
 
-      # 新闻历史要跟着仓库走，才能逐日累积出「近一周 / 近一月 / 近一年」的跨度
+      # 新闻历史要跟着仓库走，才能逐日累积出「近一周 / 近一月 / 近一年」的跨度。
+      # data.json 不提交（每天 700 KB，一年会撑爆仓库），只上传到 Pages。
       - name: 提交新闻历史
         run: |
           if [ -n "$(git status --porcelain news-history.json)" ]; then
@@ -53,13 +79,40 @@ jobs:
             git commit -m "data: news history $(date -u +%F)"
             git push
           else
-            echo "no history change"
+            echo "新闻历史无变化"
           fi
+
+      # 先验 token 再部署：权限不对时给出可操作的报错，而不是 wrangler 的裸 10000
+      - name: 校验 Cloudflare token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::缺少 secret CLOUDFLARE_API_TOKEN"
+            echo "在仓库 Settings → Secrets and variables → Actions 里添加。" >&2
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/cf.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/indexai")
+          if [ "$code" != "200" ]; then
+            echo "::error::Cloudflare token 无权读取 Pages 项目（HTTP $code）"
+            cat /tmp/cf.json >&2 || true
+            echo "" >&2
+            echo "常见原因：token 用了 R2 模板创建——/tokens/verify 会返回 active，" >&2
+            echo "但 Pages API 报 Authentication error [code: 10000]。" >&2
+            echo "修法：重新建 token，模板选 Edit Cloudflare Workers，或手动加" >&2
+            echo "Account → Cloudflare Pages → Edit 权限。" >&2
+            exit 1
+          fi
+          echo "token 有效，可访问 Pages 项目 indexai"
 
       - name: 发布到 Cloudflare Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: 7beaa67bbff49099132fb4a13b99fb2b
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           npx --yes wrangler@4 pages deploy dist \
             --project-name=indexai \
@@ -67,11 +120,68 @@ jobs:
             --commit-dirty=true \
             --commit-message="ci: $(date -u +%FT%TZ)"
 
+      # 发完再验一次线上：能拿到、且确实是这一轮生成的数据
+      - name: 线上验证
+        run: |
+          set -euo pipefail
+          sleep 5
+          curl -fsS --max-time 30 "$PREV_DATA_URL" -o /tmp/live.json
+          local_gen=$(node -p 'require("./data.json").meta.generated_at')
+          live_gen=$(node -p 'require("/tmp/live.json").meta.generated_at')
+          echo "本地生成: $local_gen"
+          echo "线上返回: $live_gen"
+          if [ "$local_gen" != "$live_gen" ]; then
+            echo "::warning::线上数据与本次生成不一致（CDN 缓存或部署未生效），data.json 缓存 300 秒，可稍后复查"
+          else
+            echo "线上已是本轮数据"
+          fi
+          curl -fsS -o /dev/null -w "首页 HTTP %{http_code}，%{size_download} 字节\n" --max-time 30 "$SITE_URL"
+
       - name: 摘要
         run: |
+          node health.mjs >> /dev/null 2>&1 || true
           node -e '
             const d = require("./data.json");
             const c = d.meta.counts;
-            const rows = Object.entries(c).map(([k,v]) => `| ${k} | ${v} |`).join("\n");
-            console.log("## 采集完成\n\n| 指标 | 数量 |\n|---|---|\n" + rows);
+            const h = d.meta.health || {};
+            const badge = h.ok ? "✅ 通过" : "❌ 未通过";
+            const lines = [];
+            lines.push(`## 采集完成 · 健康检查 ${badge}`);
+            lines.push("");
+            lines.push("| 数据层 | 数量 |");
+            lines.push("|---|---|");
+            for (const [k, v] of Object.entries(c)) lines.push(`| ${k} | ${v} |`);
+            if (h.warn && h.warn.length) {
+              lines.push("");
+              lines.push("**警告**");
+              for (const w of h.warn) lines.push(`- ${w}`);
+            }
+            const stale = (d.meta.collect || []).filter(x => x.status !== "fresh");
+            if (stale.length) {
+              lines.push("");
+              lines.push("**非正常层**");
+              for (const s of stale) lines.push(`- ${s.layer}: ${s.status}${s.error ? " — " + s.error : ""}`);
+            }
+            lines.push("");
+            lines.push(`数据生成时间：${d.meta.generated_at}`);
+            console.log(lines.join("\n"));
           ' >> "$GITHUB_STEP_SUMMARY"
+
+      # 失败要响：自动开 issue（已存在同名 open issue 时不重复开）
+      - name: 失败告警
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="采集失败：$(date -u +%F)"
+          BODY=$(printf '每日采集任务失败。\n\n**运行记录**：%s\n\n**排查顺序**\n1. 看这一步的日志，health.mjs 会指出是哪一层不达标\n2. 若是 Cloudflare token：重新建 token，模板选 Edit Cloudflare Workers\n3. 若是某个数据源改版：在 collect.mjs 里看对应 fetch 的错误日志，修解析器\n4. 确认线上仍是上一版（旧数据比残缺数据好），修复后手动 workflow_dispatch 重跑\n\n> 线上站点在此期间保持上一次成功发布的数据。\n' "$RUN_URL")
+          existing=$(gh issue list --label collect-failure --state open --json number --jq 'length')
+          if [ "$existing" != "0" ]; then
+            echo "已有未关闭的失败 issue，追加评论"
+            gh issue comment "$(gh issue list --label collect-failure --state open --json number --jq '.[0].number')" --body "$BODY"
+          else
+            gh label create collect-failure --color B60205 --description "每日采集失败" 2>/dev/null || true
+            gh issue create --title "$TITLE" --body "$BODY" --label collect-failure
+          fi

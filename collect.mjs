@@ -219,10 +219,10 @@ const RELAYS = [
   { domain: 'api.openai-sb.com', name: 'OpenAI-SB', auto: true },
   { domain: 'api.gptapi.us', name: 'GPTAPI', auto: true },
   { domain: 'api.subapi.cc', name: 'SubAPI', auto: true },
-  { domain: 'api.apifox.com', name: 'Apifox', auto: true },
   { domain: 'api.oneapi.dev', name: 'OneAPI 演示站', auto: true },
-  { domain: 'api.dujiaoka.com', name: 'Dujiaoka', auto: false },
-  { domain: 'api.linshiyouxiang.net', name: '临时邮箱（参考）', auto: false },
+  // 2026-10 移除：api.apifox.com（API 文档工具）、api.dujiaoka.com（发卡面板）、
+  // api.linshiyouxiang.net（临时邮箱）。三者都不是中转站，来自清单误收，
+  // 曾以「在册站点」出现在页面上，污染在册数。
 
   // 2026-10 从 open-source 中转站清单（awesome-ai-proxy / relayAPI /
   // ai-coding-welfare / relaywatch）批量探测出的公开价目站
@@ -244,14 +244,35 @@ const RELAYS = [
   { domain: 'chuan.sylu.cc', name: '川流 API', auto: true },
 ];
 
-// 用来对比的旗舰模型：key 固定，正则匹配上游命名差异
+// 用来对比的旗舰模型：key 固定，正则匹配上游命名差异。
+// 正则只负责「圈定家族」，变体（-thinking/-high/-low/日期尾巴）由 pickFlagship 剔除。
 const FLAGSHIP = [
-  { key: 'sonnet55', label: 'Claude Sonnet 5.5', re: /claude.*sonnet.*5[.\-]?5/i, official: [2, 10] },
-  { key: 'opus55', label: 'Claude Opus 5.5', re: /claude.*opus.*5[.\-]?5/i, official: [4, 20] },
-  { key: 'gpt61sol', label: 'GPT-6.1 Sol', re: /gpt[.\-]?6[.\-]?1[.\-]?sol/i, official: [2, 10] },
-  { key: 'gemini4argon', label: 'Gemini 4 Argon', re: /gemini[.\-]?4[.\-]?argon/i, official: [2, 10] },
-  { key: 'deepseekflash', label: 'DeepSeek V4.1 Flash', re: /deepseek.*flash/i, official: [0.1408, 0.5634] },
+  { key: 'sonnet55', label: 'Claude Sonnet 5.5', re: /claude[-_ ]?sonnet[-_ ]?5[.\-]?5/i, official: [2, 10] },
+  { key: 'opus55', label: 'Claude Opus 5.5', re: /claude[-_ ]?opus[-_ ]?5[.\-]?5/i, official: [4, 20] },
+  { key: 'gpt61sol', label: 'GPT-6.1 Sol', re: /gpt[-_ ]?6[.\-]?1[-_ ]?sol/i, official: [2, 10] },
+  { key: 'gemini4argon', label: 'Gemini 4 Argon', re: /gemini[-_ ]?4[-_ ]?argon/i, official: [2, 10] },
+  // deepseek-flash 与 deepseek-v4-1-flash 是两个不同的模型，
+  // 旧正则 /deepseek.*flash/ 会先命中前者（75/150），把正确价（2/8）挤掉。
+  { key: 'deepseekflash', label: 'DeepSeek V4.1 Flash', re: /deepseek[-_ ]?v?4[.\-]?1[-_ ]?flash/i, official: [0.1408, 0.5634] },
 ];
+
+// 有效成本画像：agent 编程的典型 token 构成
+// h = 缓存命中比例，s = 输出占全部计费 token 的比例，w = 缓存写入比例
+const WORKLOAD = { h: 0.7, s: 0.3, w: 0.0, label: 'agent 编程' };
+
+/**
+ * 把一个报价折成「每百万有效 token 的美元成本」。
+ * 有效成本 = (1−s)·[(1−h−w)·input + h·cache_read + w·cache_write] + s·output
+ * 缺缓存价时按「无折扣」处理（cache_read := input），宁可高估不虚构折扣。
+ */
+function effectiveCost(p) {
+  if (!p || p.kind !== 'per_1m') return null;
+  const { h, s } = WORKLOAD;
+  const cacheRead = p.cacheRead != null ? p.cacheRead : p.input;
+  const cacheWrite = p.input;
+  const inPart = (1 - h - WORKLOAD.w) * p.input + h * cacheRead + WORKLOAD.w * cacheWrite;
+  return Number(((1 - s) * inPart + s * p.output).toFixed(4));
+}
 
 /* ────────────────────────── helpers ────────────────────────── */
 const per1M = (v) => {
@@ -388,15 +409,217 @@ function dedupeOffers(list) {
 }
 
 
-/* ────────────────────────── 中转站探测 ────────────────────────── */
-function relayPrice(row) {
+/* ────────────────────────── 中转站探测 ──────────────────────────
+ * OneAPI / NewAPI 的零售价有两套并存的写法，优先级从高到低：
+ *
+ * ① billing_expr　表达式计费（NewAPI 新版，实测 183/1308 行使用）
+ *      tier("base", p * 2 + c * 10 + cr * 0.1)
+ *      p=输入 c=输出 cr=缓存读 cc=缓存写；这是真实挂牌价。
+ * ② model_ratio × group_ratio × 2　倍率计费（老版 OneAPI）
+ *      到手价 = model_ratio × 分组倍率 × 2
+ *      output = 上式 × completion_ratio
+ *      缓存读 = 上式 × cache_ratio
+ *
+ * 踩过的坑（本站最严重的一次）：
+ *  - 只采 model_ratio，把它当唯一价格 → 全行业都是同一个常量，页面「所有站一个价」；
+ *  - 站点同时给了 billing_expr 和 model_ratio 时优先信 model_ratio → 得到 75/75 这种
+ *    与真实价（$2/$10）毫无关系的数，再把它们当「口径?异常」标出来，属于自己造异常；
+ *  - 分组倍率跨站差 20–220 倍（Nova 0.0001→2，年华 0.05→11），不采就等于丢弃真实价差。
+ */
+
+/** 分组倍率表：OneAPI 顶层 group_ratio 是 {组名: 倍率}，也见过数组形式 */
+function groupRatioTable(j) {
+  const raw = j?.group_ratio ?? j?.groupRatio;
+  if (!raw) return null;
+  if (Array.isArray(raw)) {
+    const map = {};
+    for (const g of raw) {
+      const nm = g?.name ?? g?.group ?? g?.key;
+      const v = Number(g?.ratio ?? g?.value);
+      if (nm != null && Number.isFinite(v) && v > 0) map[String(nm)] = v;
+    }
+    return Object.keys(map).length ? map : null;
+  }
+  if (typeof raw === 'object') {
+    const map = {};
+    for (const [k, v] of Object.entries(raw)) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) map[k] = n;
+    }
+    return Object.keys(map).length ? map : null;
+  }
+  return null;
+}
+
+/** 该行可用的分组倍率（只看 enable_groups 里列出的） */
+function rowGroups(row, table) {
+  const names = Array.isArray(row.enable_groups) ? row.enable_groups.map(String) : [];
+  const all = table
+    ? names.filter((n) => table[n] != null).map((n) => ({ name: n, ratio: table[n] }))
+    : names.map((n) => ({ name: n, ratio: null }));
+  const fallback = () => (table && table.default != null ? [{ name: 'default', ratio: table.default }] : [{ name: 'default', ratio: null }]);
+  if (!all.length) return fallback();
+
+  /*
+   * 代表分组 = default（或倍率最接近 1 的公开组）。
+   * 直接取最小值会踩坑：最便宜的分组通常是「测试」「Claude-Code 专属」「公益」，
+   * 那些渠道往往不可用或功能受限，拿它做跨站比较等于用别人的地板价充自己的招牌价。
+   *
+   * 但「最低可达价」本身是用户最关心的信息（AIGCBest 的 Claude-Code 组 0.8×
+   * 就是实打实八折），所以两个值都留：rep 用于横向比较，lo 用于「这家最低能到多少」。
+   */
+  const byDefault = all.filter((g) => /^(default|自动|auto)$/i.test(g.name));
+  const pool = byDefault.length ? byDefault : all.filter((g) => g.ratio != null && g.ratio > 0);
+  const sorted = (pool.length ? pool : all).slice().sort((a, b) => {
+    const ka = a.ratio == null ? 9 : Math.abs(Math.log(a.ratio));
+    const kb = b.ratio == null ? 9 : Math.abs(Math.log(b.ratio));
+    return ka - kb;
+  });
+  const rep = sorted[0];
+
+  // 排除明显不可用的渠道：测试 / 调试 / probation（试用）
+  const USABLE_SKIP = /(测试|调试|probation|test|dummy|演示)/i;
+  const usable = all.filter((g) => g.ratio != null && !USABLE_SKIP.test(g.name));
+  const lo = usable.length ? usable.reduce((m, g) => (g.ratio < m.ratio ? g : m)) : null;
+  const hi = usable.length ? usable.reduce((m, g) => (g.ratio > m.ratio ? g : m)) : null;
+  return [{
+    ...rep,
+    lo: lo?.ratio ?? null, loName: lo?.name ?? null,
+    hi: hi?.ratio ?? null, hiName: hi?.name ?? null,
+    count: all.length,
+  }];
+}
+
+/** 从表达式里抠系数：先长后缀再单字母，避免 c 命中 cc / cr 的开头 */
+function exprCoefficients(body) {
+  const num = (re) => {
+    const m = body.match(re);
+    if (!m) return null;
+    const v = Number(m[1]);
+    return Number.isFinite(v) ? v : null;
+  };
+  return {
+    p: num(/\bp\s*\*\s*([\d.]+)/),
+    c: num(/\bc\s*\*\s*([\d.]+)/),
+    cr: num(/\bcr\s*\*\s*([\d.]+)/),
+    cc: num(/\bcc(?!1h)\s*\*\s*([\d.]+)/) ?? num(/\bcc1h\s*\*\s*([\d.]+)/),
+    fixed: num(/fixed\s*\(\s*([\d.]+)\s*\)/),
+    secs: num(/\bu\("seconds"\)\s*\*\s*([\d.]+)/),
+  };
+}
+
+/** 切出所有 tier("name", ...)，括号按深度平衡（表达式里有嵌套三元） */
+function tierBranches(expr) {
+  const out = [];
+  const re = /tier\s*\(\s*"([^"]+)"\s*,/g;
+  let m;
+  while ((m = re.exec(expr))) {
+    let i = re.lastIndex;
+    let depth = 1;
+    const start = i;
+    for (; i < expr.length && depth > 0; i++) {
+      const ch = expr[i];
+      if (ch === '(') depth++;
+      else if (ch === ')') depth--;
+    }
+    out.push({ name: m[1], body: expr.slice(start, i - 1).trim() });
+  }
+  return out;
+}
+
+const TIER_PRIORITY = ['base', 'standard', 'auto', 'default', 'off_peak', 'peak', 'short', 'none'];
+
+/**
+ * 解析 billing_expr。选档 base > standard > 其他，
+ * 避免取到 long_context（长上下文档通常直接翻倍）。
+ */
+function parseBillingExpr(expr) {
+  if (!expr || typeof expr !== 'string') return null;
+  const branches = tierBranches(expr);
+  if (!branches.length) return null;
+
+  const priced = [];
+  for (const b of branches) {
+    const co = exprCoefficients(b.body);
+    if (co.p == null && co.fixed == null && co.secs == null) continue;
+    priced.push({ name: b.name, ...co });
+  }
+  if (!priced.length) return null;
+
+  const rank = (n) => {
+    const i = TIER_PRIORITY.indexOf(String(n).toLowerCase());
+    return i < 0 ? 50 : i;
+  };
+  const sorted = priced.slice().sort((a, b) => rank(a.name) - rank(b.name));
+  const main = sorted[0];
+  const alt = sorted.find((x) => x !== main && x.p != null);
+  const branchesNote = priced.length > 1
+    ? priced.map((x) => ({ name: x.name, input: x.p, output: x.c, cacheRead: x.cr }))
+    : null;
+
+  if (main.fixed != null) return { kind: 'per_call', usd: Number(main.fixed.toFixed(4)), via: 'expr' };
+  if (main.secs != null) return { kind: 'per_unit', unit: 'second', perUnit: Number(main.secs.toFixed(6)), via: 'expr' };
+  if (main.p == null) return null;
+
+  return {
+    kind: 'per_1m',
+    input: Number(main.p.toFixed(4)),
+    output: Number((main.c ?? main.p).toFixed(4)),
+    ...(main.cr != null ? { cacheRead: Number(main.cr.toFixed(4)) } : {}),
+    ...(main.cc != null ? { cacheWrite: Number(main.cc.toFixed(4)) } : {}),
+    comp: main.c != null && main.p > 0 ? Number((main.c / main.p).toFixed(4)) : 1,
+    tier: main.name,
+    via: 'expr',
+    ...(branchesNote ? { branches: branchesNote } : {}),
+    ...(alt ? { longContext: { name: alt.name, input: alt.p, output: alt.c } } : {}),
+  };
+}
+
+/**
+ * 单价。优先 billing_expr（真实挂牌价），退回 model_ratio 倍率法。
+ *
+ * 这是本页曾经「所有站一个价」和「11 家 75/75 异常」两个 bug 的正解：
+ * 有 billing_expr 的站点，其 model_ratio 是废弃占位字段，
+ * 拿它算出来的 $75 与挂牌 $2 毫无关系，必须让表达式优先。
+ */
+function relayPrice(row, group) {
   const n = (x) => (x == null || x === '' ? null : Number(x));
+  const g = group?.ratio == null ? 1 : group.ratio;
+
+  // ① 表达式计费
+  const viaExpr = parseBillingExpr(row.billing_expr);
+  if (viaExpr) {
+    if (viaExpr.kind !== 'per_1m') return { ...viaExpr, group: group?.name ?? null };
+    // 表达式里的系数已是美元价，不再乘分组倍率（分组倍率只作用于 model_ratio 体系）
+    return {
+      ...viaExpr,
+      comp: viaExpr.comp ?? 1,
+      group: group?.name ?? null,
+      groupKnown: group?.ratio != null,
+    };
+  }
+
+  // ② 倍率计费
   const perCall = n(row.model_price ?? row.modelPrice);
-  if (perCall && perCall > 0) return { kind: 'per_call', usd: Number(perCall.toFixed(4)) };
+  if (perCall && perCall > 0) return { kind: 'per_call', usd: Number(perCall.toFixed(4)), group: group?.name ?? null };
   const ratio = n(row.model_ratio ?? row.modelRatio ?? row.ratio);
+  if (ratio == null || !Number.isFinite(ratio) || ratio <= 0) return null;
   const comp = n(row.completion_ratio ?? row.completionRatio) || 1;
-  if (ratio == null || !Number.isFinite(ratio)) return null;
-  return { kind: 'per_1m', input: Number((ratio * 2).toFixed(4)), output: Number((ratio * comp * 2).toFixed(4)) };
+  const cache = n(row.cache_ratio);
+  const out = {
+    kind: 'per_1m',
+    input: Number((ratio * 2 * g).toFixed(4)),
+    output: Number((ratio * comp * 2 * g).toFixed(4)),
+    comp: Number(comp.toFixed(4)),
+    group: group?.name ?? 'default',
+    groupKnown: group?.ratio != null,
+    via: 'ratio',
+  };
+  if (cache != null && Number.isFinite(cache) && cache >= 0) {
+    out.cacheRead = Number((ratio * cache * 2 * g).toFixed(4));
+    out.cacheRatio = Number(cache.toFixed(4));
+  }
+  return out;
 }
 
 function parseJsonLoose(text) {
@@ -412,37 +635,165 @@ async function probeRelay(entry) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 9000);
   try {
-    const res = await fetch(url, { signal: ac.signal, headers: { 'User-Agent': 'FreeAI-Radar/2.0', Accept: 'application/json' } });
+    // 部分站 /api/pricing 301 到另一个域（如 aigcbest → api2.aigcbest.top），
+    // 不跟随就会把它们误判成 http_404 或 unreachable。
+    const res = await fetchRetry(url, {
+      signal: ac.signal, redirect: 'follow',
+      headers: { 'User-Agent': 'FreeAI-Radar/2.0', Accept: 'application/json' },
+    }, { tries: 2, baseMs: 300, label: `relay/${entry.domain}` });
     if (!res.ok) return { ...entry, status: `http_${res.status}`, url };
     const text = await res.text();
     const j = parseJsonLoose(text);
     const rows = Array.isArray(j?.data) ? j.data : Array.isArray(j) ? j : [];
     if (!rows.length) return { ...entry, status: 'no_pricing', url };
+
+    const gTable = groupRatioTable(j);
+    const gValues = gTable ? [...new Set(Object.values(gTable))].sort((a, b) => a - b) : [];
     const models = new Set();
     for (const r of rows) { const n = r.model_name || r.modelName || r.id; if (n) models.add(n); }
+
     const prices = {};
+    let flagPicked = [];
     for (const f of FLAGSHIP) {
-      const hit = rows.find((r) => f.re.test(String(r.model_name || r.modelName || r.id || '')));
-      if (!hit) continue;
-      const p = relayPrice(hit);
-      if (!p) continue;
-      const anomaly = p.kind === 'per_1m' && (p.input > f.official[0] * 3 + 1 || p.output > f.official[1] * 3 + 1);
-      prices[f.key] = { ...p, model: hit.model_name || hit.modelName || hit.id, anomaly: !!anomaly };
+      const picked = pickFlagship(rows, f, gTable);
+      if (!picked) continue;
+      const { row, price, candidates, groupCount, tiered, variant, floor } = picked;
+      const anomaly = price.kind === 'per_1m' && (price.input > f.official[0] * 3 + 1 || price.output > f.official[1] * 3 + 1);
+      prices[f.key] = {
+        ...price,
+        model: String(row.model_name || row.modelName || row.id),
+        anomaly: !!anomaly,
+        variants: candidates,
+        groups: groupCount,
+        ...(floor ? { floor } : {}),
+        // 只有变体可选时如实标注，不假装是基础版
+        ...(variant ? { variantOnly: true } : {}),
+        ...(tiered ? { tiered: true } : {}),
+      };
+      flagPicked.push(f.key);
     }
+
+    // 样本：按官方价格档位分层抽样，保证旗舰与低价模型都能进样本
     const samples = [];
-    for (const r of rows) {
-      const nm = r.model_name || r.modelName || r.id;
-      if (!nm) continue;
-      const pr = relayPrice(r);
-      if (!pr || pr.kind !== 'per_1m') continue;
-      if (pr.input > 60 || pr.output > 200) continue;
-      samples.push({ n: String(nm).slice(0, 48), i: pr.input, o: pr.output });
-      if (samples.length >= 40) break;
+    const seen = new Set();
+    const priced = rows
+      .map((r) => {
+        const grp = rowGroups(r, gTable)[0];
+        const pr = relayPrice(r, grp);
+        const nm = String(r.model_name || r.modelName || r.id || '').slice(0, 48);
+        return pr && pr.kind === 'per_1m' && nm ? { n: nm, i: pr.input, o: pr.output, c: pr.comp } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.i - b.i);
+    // 从最便宜到最贵等距取，避免「前 40 条全是小模型」
+    const step = Math.max(1, Math.floor(priced.length / 40));
+    for (let k = 0; k < priced.length && samples.length < 40; k += step) {
+      const s = priced[k];
+      if (seen.has(s.n)) continue;
+      seen.add(s.n);
+      samples.push(s);
     }
-    return { ...entry, status: 'ok', url, models: models.size, prices, samples, checked_at: new Date().toISOString().slice(0, 10) };
+
+    return {
+      ...entry,
+      status: 'ok',
+      url,
+      resolved: res.url && res.url !== url ? res.url : undefined,
+      models: models.size,
+      prices,
+      samples,
+      groups: gTable ? {
+        count: Object.keys(gTable).length,
+        min: gValues[0],
+        max: gValues[gValues.length - 1],
+        spread: gValues.length > 1 ? Number((gValues[gValues.length - 1] / gValues[0]).toFixed(1)) : 1,
+        names: Object.keys(gTable).slice(0, 40),
+      } : null,
+      checked_at: new Date().toISOString().slice(0, 10),
+    };
   } catch (e) {
     return { ...entry, status: e.name === 'AbortError' ? 'timeout' : 'unreachable', url };
   } finally { clearTimeout(t); }
+}
+
+/**
+ * 在一个站的价目行里挑出「基础版」旗舰，而不是第一个正则命中。
+ *
+ * 历史问题：
+ *  1) rows.find(re) 会命中 claude-opus-5-5-thinking / -high / -low 等变体；
+ *  2) /deepseek.*flash/ 会先命中 deepseek-flash（75/150），跳过正确的 deepseek-v4-1-flash（2/8）。
+ * 现在：排除变体与日期后缀 → 优先分组 known → 输出/输入比最贴官方 → 价低者。
+ */
+const VARIANT_RE = /(thinking|reasoning|reasoner|nothink|non-?thinking|high|low|medium|xhigh|max|effort|beta|alpha|preview|experimental|exp|latest|search|online|image|vision|audio|omni|realtime|transcribe|tts|codex|instruct)/i;
+const DATED_RE = /-\d{6,8}(?:$|-)/;
+
+function pickFlagship(rows, f, gTable) {
+  const named = rows.filter((r) => {
+    const nm = String(r.model_name || r.modelName || r.id || '');
+    return f.re.test(nm);
+  });
+  if (!named.length) return null;
+
+  const isVariant = (r) => {
+    const nm = String(r.model_name || r.modelName || r.id || '');
+    const base = nm.replace(f.re, '').replace(/^[-_.\s]+|[-_.\s]+$/g, '');
+    // 只对「名字里比正则多出来的部分」判变体，避免把 claude-sonnet-5-5 本身判成变体
+    return VARIANT_RE.test(base) || DATED_RE.test(nm);
+  };
+
+  const scored = [];
+  for (const r of named) {
+    const groups = rowGroups(r, gTable);
+    const g = groups[0];
+    const p = relayPrice(r, g);
+    if (!p) continue;
+    const perCall = p.kind === 'per_call';
+    const variant = isVariant(r);
+    let score = 0;
+    // 基础版压倒一切：宁可显示「按次计价的基础版」，也不要显示变体的单价。
+    if (!variant) score += 100;
+    if (p.kind === 'per_1m') {
+      const wantRatio = f.official[1] / f.official[0];
+      const ratioErr = Math.abs(Math.log((p.comp || 1) / wantRatio));
+      score -= ratioErr * 18;
+      score -= Math.log10(Math.max(p.input, 0.0001)) * 0.6; // 同分时略偏好低价
+    }
+    if (p.groupKnown) score += 20;
+    if (!p.tiered) score += 10;
+    if (perCall) score -= 4; // 计费口径不同，排在同名 per_1m 之后
+    scored.push({ row: r, price: p, score, variant, groups, tiered: Boolean(p.tiered), perCall });
+  }
+  if (!scored.length) return null;
+  scored.sort((a, b) => b.score - a.score || (a.price.input ?? a.price.usd ?? 0) - (b.price.input ?? b.price.usd ?? 0));
+  const best = scored[0];
+
+  /*
+   * 最低可达价：同一行在「最便宜可用分组」下的单价。
+   * 这是用户真正会问的问题（「这家最低能到多少」），但它依赖具体分组
+   * （有的组要买会员、有的组只给 Claude Code 用），所以和代表价分开存，
+   * 页面上必须标出组名，不能拿它冒充无门槛价格。
+   */
+  let floor = null;
+  const g0 = best.groups[0];
+  if (g0 && g0.lo != null && best.price.via === 'ratio' && g0.ratio > 0 && g0.lo !== g0.ratio) {
+    const k = g0.lo / g0.ratio;
+    floor = {
+      input: Number((best.price.input * k).toFixed(4)),
+      output: Number((best.price.output * k).toFixed(4)),
+      group: g0.loName,
+      disc: Number(k.toFixed(3)),
+    };
+  }
+
+  return {
+    row: best.row,
+    price: best.price,
+    candidates: scored.length,
+    groupCount: best.groups.length,
+    tiered: best.tiered,
+    variant: best.variant,
+    floor,
+  };
 }
 
 async function probeAll(entries) {
@@ -1005,6 +1356,36 @@ const CURATED_RESOURCES = [
 const USE_LABEL = { design: '设计', writing: '写作', content: '内容', engineering: '工程', research: '调研', tool: '工具' };
 const KIND_LABEL = { skill: 'Skill', mcp: 'MCP', tool: '工具', list: '清单' };
 
+/* 网络请求重试：偶发的 5xx、429、连接重置不应该让整层数据蒸发。
+ * 指数退避 + 抖动，只对「值得重试」的状态码重试（4xx 里除 408/429 之外都是确定性失败，不重试）。
+ * 这解决过一个真实问题：fetchResources 串行打 21 个 GitHub 仓库，偶尔限流掉几个就跌破健康红线，
+ * 整轮采集白跑。 */
+async function fetchRetry(url, opts = {}, { tries = 3, baseMs = 500, label = '' } = {}) {
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const res = await fetch(url, opts);
+      const retryable = res.status >= 500 || res.status === 429 || res.status === 408;
+      if (res.ok || !retryable) return res;
+      lastErr = new Error(`HTTP ${res.status}`);
+      if (i < tries - 1) {
+        const wait = baseMs * 2 ** i + Math.random() * 250;
+        if (label) console.warn(`[collect] ${label} HTTP ${res.status}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
+        await new Promise((r) => setTimeout(r, wait));
+      }
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) {
+        const wait = baseMs * 2 ** i + Math.random() * 250;
+        if (label) console.warn(`[collect] ${label} ${e.message}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+    }
+  }
+  throw lastErr || new Error('fetch failed');
+}
+
 async function fetchResources() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
   const headers = { 'User-Agent': 'IndexAI/1.0', Accept: 'application/vnd.github+json' };
@@ -1014,8 +1395,9 @@ async function fetchResources() {
   for (const item of CURATED_RESOURCES) {
     const row = { ...item, useLabel: USE_LABEL[item.use] || item.use };
     try {
-      const res = await fetch(`https://api.github.com/repos/${item.repo}`, { headers });
+      const res = await fetchRetry(`https://api.github.com/repos/${item.repo}`, { headers }, { label: `github/${item.repo}` });
       if (!res.ok) {
+        console.error(`[collect] github/${item.repo} → HTTP ${res.status}`);
         out.push({ ...row, status: `http_${res.status}` });
       } else {
         const j = await res.json();
@@ -1033,7 +1415,8 @@ async function fetchResources() {
           status: 'ok',
         });
       }
-    } catch {
+    } catch (e) {
+      console.error(`[collect] github/${item.repo} 失败：${e.message}`);
       out.push({ ...row, status: 'error' });
     }
     await new Promise((r) => setTimeout(r, 90));
@@ -1095,7 +1478,7 @@ function parseOpenRouter(html) {
 
 async function fetchOpenRouter() {
   try {
-    const res = await fetch(OPENROUTER_RANKINGS, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+    const res = await fetchRetry(OPENROUTER_RANKINGS, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'openrouter-rankings' });
     if (!res.ok) {
       console.error(`[collect] openrouter rankings HTTP ${res.status}`);
       return { apps: [], models: [] };
@@ -1154,7 +1537,7 @@ function parseAA(html) {
 
 async function fetchAA() {
   try {
-    const res = await fetch(AA_URL, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+    const res = await fetchRetry(AA_URL, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'artificialanalysis' });
     if (!res.ok) {
       console.error(`[collect] artificialanalysis HTTP ${res.status}`);
       return [];
@@ -1184,7 +1567,7 @@ async function fetchHNSignal(names) {
     try {
       // 只搜标题，避免 API/Raspberry Pi 这类词把无关帖算进来
       const url = `${HN_API}?query=${encodeURIComponent('"' + name + '"')}&tags=story&hitsPerPage=30&restrictSearchableAttributes=title`;
-      const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+      const res = await fetchRetry(url, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { tries: 2, label: `hn/${name}` });
       if (!res.ok) continue;
       const j = await res.json();
       const hits = j.hits || [];
@@ -1297,7 +1680,7 @@ async function main() {
     return { value: b.rows?.length ? b : { ...b, rows: prev?.bench?.rows || [] } };
   }, prev?.bench);
 
-  const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+  const res = await fetchRetry(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'openrouter-models' });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
   const payload = await res.json();
 
@@ -1353,11 +1736,72 @@ async function main() {
 
   const probed = await probeAll(RELAYS);
   const prevRelays = new Map((prev?.relays || []).map((r) => [r.domain, r]));
+
+  // 官方参考价（direct 渠道），用来给每一列算「对官方 %」
+  const officialRef = {};
+  for (const f of FLAGSHIP) {
+    const m = (models || []).find((x) => x.channelKind === 'direct' && f.re.test(String(x.name || '')) && x.input > 0);
+    officialRef[f.key] = { input: m?.input ?? f.official[0], output: m?.output ?? f.official[1] };
+  }
+
   const relays = [...probed.values()].map((r) => {
     const old = prevRelays.get(r.domain);
-    if (r.status === 'ok') return r;
-    return { ...r, stale: true, prices: old?.prices || {}, models: old?.models || 0, checked_at: old?.checked_at || null };
+    const base = r.status === 'ok'
+      ? r
+      : { ...r, stale: true, prices: old?.prices || {}, models: old?.models || 0, groups: old?.groups || null, checked_at: old?.checked_at || null };
+
+    // 给每个旗舰价补上「有效成本」与「对官方比」，缺值留 null 而不是 0
+    const prices = {};
+    for (const [k, p] of Object.entries(base.prices || {})) {
+      if (!p) continue;
+      const ref = officialRef[k];
+      const row = { ...p };
+      if (p.kind === 'per_1m') {
+        row.eff = effectiveCost(p);
+        row.vsOfficial = ref && ref.input > 0 ? Number((p.input / ref.input).toFixed(3)) : null;
+        const officialEff = ref ? effectiveCost({ kind: 'per_1m', input: ref.input, output: ref.output, cacheRead: ref.cache_read }) : null;
+        row.effVsOfficial = officialEff ? Number((row.eff / officialEff).toFixed(3)) : null;
+      }
+      // 按次计价不参与每百万 token 的比较，只留原值
+      prices[k] = row;
+    }
+
+    // 站点级画像：用「有效成本」算，才有可比性
+    const effs = Object.entries(prices)
+      .filter(([, p]) => p.kind === 'per_1m' && p.eff != null && !p.anomaly)
+      .map(([k, p]) => ({ k, eff: p.eff, input: p.input, output: p.output }));
+    const effSpread = effs.length > 1 ? Number((Math.max(...effs.map((x) => x.eff)) / Math.min(...effs.map((x) => x.eff))).toFixed(2)) : null;
+
+    return {
+      ...base,
+      prices,
+      // 有多少个旗舰能给出可比单价（决定这一行在页面上有多大信息量）
+      comparable: effs.length,
+      effSpread,
+      groupSpread: base.groups?.spread ?? null,
+    };
   }).sort((a, b) => (b.models || 0) - (a.models || 0));
+
+  // 「这是同一个价目模板」的分组：completion_ratio 与分组结构一致的站归一类，
+  // 让页面能说出「这 11 家其实是一个模板」，而不是把 11 个 75/75 当 11 个独立异常。
+  const templateKey = (r) => {
+    const p = r.prices?.sonnet55 || r.prices?.opus55;
+    if (!p || p.kind !== 'per_1m') return null;
+    return `${p.input}/${p.output}/${p.comp ?? '?'}`;
+  };
+  const templates = new Map();
+  for (const r of relays.filter((x) => x.status === 'ok')) {
+    const k = templateKey(r);
+    if (!k) continue;
+    if (!templates.has(k)) templates.set(k, []);
+    templates.get(k).push(r.name);
+  }
+  for (const r of relays) {
+    const k = templateKey(r);
+    const same = k ? templates.get(k) : null;
+    r.template = k;
+    r.templateSame = same && same.length > 1 ? same.filter((n) => n !== r.name) : null;
+  }
 
   // 订阅层：官方月费从苹果区价派生；第三方挂单只认 aibijia 的实时挂单，没有就是没有。
   // aibijia 整体挂掉时沿用上一版的派生结果（而不是让订阅页空掉）。
@@ -1457,6 +1901,8 @@ async function main() {
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
         relaySamples: relays.reduce((n, r) => n + (r.samples || []).length, 0),
+        relayComparable: relays.filter((r) => (r.comparable || 0) > 0).length,
+        relayGroups: relays.reduce((n, r) => n + (r.groups?.count || 0), 0),
         events: allEvents.length,
         eventsOpen,
         eventsPast,
