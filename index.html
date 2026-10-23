@@ -463,6 +463,24 @@ footer.foot a:hover{color:var(--accent)}
   .doc h2{font-size:15px}
   .doc p, .doc li{font-size:12px}
 }
+
+.tgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:1px; background:var(--line); border-block:var(--rule); margin-bottom:8px}
+.tcard{background:var(--panel); padding:16px 18px 14px; text-decoration:none; color:inherit; display:flex; flex-direction:column; gap:8px; transition:background .14s}
+.tcard:hover{background:var(--panel2)}
+.tcard.stale{opacity:.55}
+.tcard .th{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.tcard .th h3{margin:0; font-size:14px; font-weight:600; letter-spacing:-.005em}
+.tcard .tstars{font-family:var(--mono); font-size:11px; color:var(--accent); white-space:nowrap; font-variant-numeric:tabular-nums}
+.tcard .tstars em{font-style:normal; font-size:9px; opacity:.6; margin-left:1px}
+.tcard .why{margin:0; font-size:12px; line-height:1.65; color:var(--dim); flex:1}
+.tcard .tm{display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-family:var(--mono); font-size:9.5px; color:var(--faint); margin-top:2px}
+.tcard .repoch{margin-left:auto; opacity:.7}
+@media (max-width:760px){
+  .tgrid{grid-template-columns:1fr}
+  .tcard{padding:14px}
+  .tcard .repoch{display:none}
+  .topnav{-webkit-mask-image:linear-gradient(to right, #000 92%, transparent); mask-image:linear-gradient(to right, #000 92%, transparent)}
+}
 </style>
 </head>
 <body>
@@ -521,6 +539,7 @@ footer.foot a:hover{color:var(--accent)}
     { id: "subs", label: "订阅", hint: "旗舰订阅官方价与路子" },
     { id: "relays", label: "中转站", hint: "第三方 API 报价与状态" },
     { id: "events", label: "AI活动", hint: "黑客松、会议、meetup，按类型细分" },
+    { id: "tools", label: "工具箱", hint: "精选 skill / MCP / CLI" },
     { id: "bench", label: "评测", hint: "同一批题目的公开分数" },
     { id: "signals", label: "情报", hint: "AI 圈要闻与 X 一手信号" },
     { id: "method", label: "方法", hint: "口径、去重与来源" }
@@ -532,6 +551,7 @@ footer.foot a:hover{color:var(--accent)}
     subs: { k: "SUBSCRIPTIONS", t: "订阅价，官网上写多少<br>就是多少。", s: "ChatGPT、Claude、Copilot 各档月费，按当日汇率折人民币；第三方挂单只当行情看，不推荐。" },
     relays: { k: "RELAYS", t: "中转站的公开价目，<br>每天探一遍。", s: "读 OneAPI / NewAPI 的价目接口，按倍率换算成每百万 token。需要登录才能看的价格不采，也不替它猜。" },
     events: { k: "AI EVENTS", t: "能报名、有奖、<br>给额度的 AI 活动。", s: "Devpost 开放中的黑客松 + Luma 的 AI 场次，加上本地 AIOS 收录的活动，按截止日期排；过期的单独归档。" },
+    tools: { k: "TOOLKIT", t: "好用的东西，<br>不堆。", s: "只收真正在用的 skill、MCP 和 CLI。星数、更新时间、许可每天从 GitHub 校准；归档或停更会直接标出来，不留在榜上凑数。" },
     bench: { k: "BENCHMARKS", t: "同一批题目，<br>谁在退步。", s: "Vals Index 的公开分数，每次采集存一份；分数掉了就标出来，不解释成「版本优化」。" },
     signals: { k: "INTELLIGENCE", t: "AI 圈在发生什么，<br>挑过再给你。", s: "每日要闻按价格、模型、融资、政策、安全分类打分精选；下面是 X 与官方的价格一手信号，只收抓到正文的。" },
     method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "五层数据、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
@@ -552,7 +572,7 @@ footer.foot a:hover{color:var(--accent)}
   const state = {
     tab: (location.hash || "#home").slice(1),
     q: "", vendor: "all", band: "all", channel: "all",
-    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", evLimit: 18,
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", evLimit: 18, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
     hit: 0.7, outShare: 0.2,
@@ -595,7 +615,7 @@ footer.foot a:hover{color:var(--accent)}
   /* ── chrome ── */
   function renderNav() {
     const c = state.data.meta.counts;
-    const counts = { free: c.offers, compare: c.models, subs: c.subs, relays: c.relaysLive, events: c.eventsOpen, bench: c.bench, signals: (c.news || 0) + c.signals };
+    const counts = { free: c.offers, compare: c.models, subs: c.subs, relays: c.relaysLive, events: c.eventsOpen, bench: c.bench, signals: (c.news || 0) + c.signals, tools: c.resources };
     const el = $("#nav");
     el.innerHTML = TABS.map(t => `
       <button class="nav" role="tab" data-tab="${t.id}" aria-selected="${state.tab === t.id}" title="${esc(t.hint)}">
@@ -1125,6 +1145,54 @@ footer.foot a:hover{color:var(--accent)}
         <div class="cand">${past.slice(0, 30).map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.title)}">${esc(e.title)}</a>`).join("")}</div>` : ""}`;
   }
 
+  /* ── tools ── */
+  function kfmt(n) {
+    if (n == null) return "—";
+    if (n >= 100000) return Math.round(n / 1000) + "k";
+    if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+    return String(n);
+  }
+
+  function viewTools() {
+    const all = state.data.resources || [];
+    if (!all.length) return `<div class="empty"><b>工具箱还没入库</b>运行 <code>node collect.mjs</code>。</div>`;
+
+    const kinds = [...new Set(all.map(r => r.kind))];
+    const list = all.filter(r => state.toolKind === "all" || r.kind === state.toolKind);
+    const kindCount = {};
+    for (const r of all) kindCount[r.kind] = (kindCount[r.kind] || 0) + 1;
+
+    return `
+      <div class="controls">
+        <div class="chips" role="group" aria-label="类型">
+          <button class="chip" data-toolkind="all" aria-pressed="${state.toolKind === "all"}">全部 ${all.length}</button>
+          ${kinds.map(k => `<button class="chip" data-toolkind="${k}" aria-pressed="${state.toolKind === k}">${esc(all.find(r => r.kind === k)?.kindLabel || k)} <b style="opacity:.55;font-weight:400">${kindCount[k]}</b></button>`).join("")}
+        </div>
+        <span class="spacer"></span><span class="eyebrow">按星数排 · 每天校准</span>
+      </div>
+
+      <div class="tgrid">
+        ${list.map(r => `
+          <a class="tcard${r.archived ? " stale" : ""}" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
+            <div class="th">
+              <h3>${esc(r.title)}</h3>
+              <span class="tstars">${kfmt(r.stars)}<em>★</em></span>
+            </div>
+            <p class="why">${esc(r.why)}</p>
+            <div class="tm">
+              <span class="tag ${r.kind === "skill" ? "free" : ""}">${esc(r.kindLabel)}</span>
+              ${r.license && r.license !== "NOASSERTION" ? `<span>${esc(r.license)}</span>` : ""}
+              ${r.updated ? `<span>${esc(r.updated)} 更新</span>` : ""}
+              ${r.archived ? `<span class="tag warn">已归档</span>` : ""}
+              <span class="repoch">${esc(r.repo)}</span>
+            </div>
+          </a>`).join("")}
+      </div>
+
+      <div class="tfoot"><span>入选标准：在真实工作流里用得上、持续维护、有明确边界；不收「100 个工具合集」式的注水清单。</span>
+        <span class="spacer"></span><a href="https://github.com/mbdtf202-cyber/indexai" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">提一个 ↗</a></div>`;
+  }
+
   /* ── bench ── */
   function viewBench() {
     const b = state.data.bench;
@@ -1289,7 +1357,7 @@ footer.foot a:hover{color:var(--accent)}
     const directVendors = [...new Set(d.models.filter(m => m.channelKind === "direct").map(m => m.vendor))];
     return `<div class="doc">
       <h2>这份数据是什么</h2>
-      <p>七层数据：<strong>免费额度</strong>、<strong>比价</strong>、<strong>订阅</strong>、<strong>中转站</strong>、<strong>AI 活动</strong>、<strong>评测</strong>、<strong>情报</strong>。单位统一 <code>USD / 1M tokens</code>；人民币按 <strong>${d.meta.fx.USDCNY}</strong> 折算（${esc(d.meta.fx.source)}，${esc(d.meta.fx.as_of || "")}，站点每 8 小时自动刷新一次）。</p>
+      <p>八层数据：<strong>免费额度</strong>、<strong>比价</strong>、<strong>订阅</strong>、<strong>中转站</strong>、<strong>AI 活动</strong>、<strong>工具箱</strong>、<strong>评测</strong>、<strong>情报</strong>。单位统一 <code>USD / 1M tokens</code>；人民币按 <strong>${d.meta.fx.USDCNY}</strong> 折算（${esc(d.meta.fx.source)}，${esc(d.meta.fx.as_of || "")}，站点每 8 小时自动刷新一次）。</p>
       <ul>
         <li><strong>聚合层</strong>（${c.aggregator} 条）：OpenRouter 实时目录，含缓存读写价。</li>
         <li><strong>官方直连层</strong>（${c.direct} 条 / ${directVendors.length} 家）：官方定价页人工核实，保留原币数字。</li>
@@ -1297,6 +1365,7 @@ footer.foot a:hover{color:var(--accent)}
         <li><strong>订阅层</strong>（${c.subs} 档）：官方订阅月费，只收官网读得到的数字。</li>
         <li><strong>中转层</strong>（${c.relays} 站在册 / ${c.relaysLive} 站公开价目）：读取 OneAPI/NewAPI 的价目接口，按倍率换算。</li>
         <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.events} 条收录）：Devpost 公开接口（分页 5 页）+ Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。</li>
+        <li><strong>工具箱</strong>（${c.resources || 0} 个）：人工精选的 skill / MCP / CLI，星数、更新时间、许可每天从 GitHub API 校准；归档的会被标出来。</li>
         <li><strong>评测层</strong>（${c.bench} 个模型）：Vals Index 的公开分数，每次采集存一份用于对比。</li>
         <li><strong>情报层</strong>（${c.news || 0} 条要闻 / ${c.signals} 条一手信号）：公开新闻源按价格、模型、融资、政策、安全分类打分，每天留 8 条；X 与官方博客只收抓到正文的。</li>
       </ul>
@@ -1417,6 +1486,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     else if (state.tab === "subs") v.innerHTML = viewSubs();
     else if (state.tab === "relays") v.innerHTML = viewRelays();
     else if (state.tab === "events") v.innerHTML = viewEvents();
+    else if (state.tab === "tools") v.innerHTML = viewTools();
     else if (state.tab === "bench") v.innerHTML = viewBench();
     else if (state.tab === "vendors") v.innerHTML = viewVendors();
     else if (state.tab === "signals") v.innerHTML = viewSignals();
@@ -1427,7 +1497,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
   /* ── events ── */
   function bind() {
     document.addEventListener("click", (ev) => {
-      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
       if (!t) return;
       if (t.dataset.tab) { state.tab = t.dataset.tab; state.limit = 80; render(); scrollTo({ top: 0, behavior: "smooth" }); return; }
       if (t.dataset.band) { state.band = t.dataset.band; render(); return; }
@@ -1443,6 +1513,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
       if (t.dataset.evsrc) { state.evSrc = t.dataset.evsrc; state.evLimit = 18; render(); return; }
       if (t.dataset.evregion) { state.evRegion = t.dataset.evregion; state.evLimit = 18; render(); return; }
       if (t.dataset.newstopic) { state.newsTopic = t.dataset.newstopic; render(); return; }
+      if (t.dataset.toolkind) { state.toolKind = t.dataset.toolkind; render(); return; }
       if (t.dataset.relay) { if (ev.target.closest("a")) return; openRelay(t.dataset.relay); return; }
       if (t.dataset.sortkey) { state.sortKey = t.dataset.sortkey; state.sortDir = 1; render(); return; }
       if (t.dataset.channel) { state.channel = t.dataset.channel; render(); return; }

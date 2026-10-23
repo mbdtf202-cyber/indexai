@@ -1,23 +1,23 @@
 name: daily-collect
 
-# 每天北京时间 09:00 重采一次，把 data.json 提交回仓库；
-# Cloudflare Pages / Vercel 监听 main 分支，提交后自动重建。
+# 云端采集 + 发布：不再依赖本机开机。
+# 每天 UTC 01:00（北京 09:00）跑 collect.mjs，然后直传 Cloudflare Pages。
 on:
   schedule:
-    - cron: "0 1 * * *" # UTC 01:00 = Asia/Shanghai 09:00
-  workflow_dispatch: # 也可以手动点一下立刻跑
+    - cron: "0 1 * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: daily-collect
   cancel-in-progress: false
 
 jobs:
-  collect:
+  collect-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -26,29 +26,37 @@ jobs:
         with:
           node-version: "20"
 
-      # collect.mjs 只依赖内置 fetch，没有 npm install
-      - name: Collect
+      # collect.mjs 只用内置 fetch，没有 npm install
+      - name: 采集
+        env:
+          # 用内置 token 拉 GitHub API，限额从 60/h 提到 5000/h
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node collect.mjs
 
-      - name: Commit data.json
+      - name: 组装发布目录
         run: |
-          if [ -z "$(git status --porcelain data.json)" ]; then
-            echo "data.json 没变化，跳过提交"
-            exit 0
-          fi
-          git config user.name  "indexai-bot"
-          git config user.email "bot@users.noreply.github.com"
-          git add data.json
-          git commit -m "chore(data): $(date -u +%F) 自动采集"
-          git push
+          mkdir -p dist
+          cp index.html data.json dist/
+          [ -f logo-preview.html ] && cp logo-preview.html dist/ || true
+          [ -f _headers ] && cp _headers dist/ || true
+          du -sh dist
 
-      - name: Summary
+      - name: 发布到 Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 7beaa67bbff49099132fb4a13b99fb2b
+        run: |
+          npx --yes wrangler@4 pages deploy dist \
+            --project-name=indexai \
+            --branch=main \
+            --commit-dirty=true \
+            --commit-message="ci: $(date -u +%FT%TZ)"
+
+      - name: 摘要
         run: |
           node -e '
             const d = require("./data.json");
             const c = d.meta.counts;
-            console.log("## 采集完成");
-            console.log("| 指标 | 数量 |");
-            console.log("|---|---|");
-            for (const [k, v] of Object.entries(c)) console.log(`| ${k} | ${v} |`);
+            const rows = Object.entries(c).map(([k,v]) => `| ${k} | ${v} |`).join("\n");
+            console.log("## 采集完成\n\n| 指标 | 数量 |\n|---|---|\n" + rows);
           ' >> "$GITHUB_STEP_SUMMARY"

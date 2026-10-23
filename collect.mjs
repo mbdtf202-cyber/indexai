@@ -770,13 +770,117 @@ async function fetchBench(prev) {
   }
 }
 
+
+/* ────────────────────────── 9. 工具箱（人工精选 + GitHub 自动校准） ────────────────────────── */
+// 只收真正在用的：skill、MCP、CLI。星数与更新时间每天从 GitHub 拉一遍，
+// 归档/停更的会被标出来，不静默留在榜上。
+const CURATED_RESOURCES = [
+  // —— Agent Skill ——
+  { id: 'baoyu-design', repo: 'JimLiu/baoyu-design', kind: 'skill', title: 'baoyu-design',
+    why: '把 Claude 的设计能力搬进本地 Agent：设计方法论 + 工艺标准，产出单文件 HTML，能在 Cursor / Claude Code 里直接跑。' },
+  { id: 'huashu-design', repo: 'alchaincyf/huashu-design', kind: 'skill', title: '花叔 Design 3.0',
+    why: '一句话拿回能交付的设计：网页 / App 原型 / 可编辑稿。中文语境下最完整的 agent 设计 skill。' },
+  { id: 'superpowers', repo: 'obra/superpowers', kind: 'skill', title: 'Superpowers',
+    why: 'Agent 的软件开发方法论框架：把「怎么想、怎么拆、怎么验」写进 skill，而不是靠提示词临场发挥。' },
+  { id: 'anthropics-skills', repo: 'anthropics/skills', kind: 'skill', title: 'Anthropic 官方 Skills',
+    why: '官方 Agent Skills 仓库，格式与最佳实践的源头。写自己的 skill 前先看这里。' },
+  { id: 'agent-skills', repo: 'addyosmani/agent-skills', kind: 'skill', title: 'addyosmani / agent-skills',
+    why: '生产级工程 skill 集合：代码审查、重构、测试，按真实工程流程切分，不是玩具 demo。' },
+  { id: 'taste-skill', repo: 'Leonxlnx/taste-skill', kind: 'skill', title: 'Taste',
+    why: '给编码 Agent 装审美：艺术指导、排版、留白。专治「功能对但难看」。' },
+  { id: 'archify', repo: 'tt-a1i/archify', kind: 'skill', title: 'Archify',
+    why: '把想法、计划或代码库直接变成可交互原型，省掉从需求到可点页面的那一跳。' },
+  { id: 'last30days', repo: 'mvanhorn/last30days-skill', kind: 'skill', title: 'last30days',
+    why: '跨平台近 30 天调研：Reddit / X / YouTube 一起扫。做选题和竞品分析时比搜索引擎准。' },
+  { id: 'prompt-master', repo: 'nidhinjs/prompt-master', kind: 'skill', title: 'Prompt Master',
+    why: '帮你把模糊需求写成精确提示词，减少来回试错。' },
+  { id: 'dev-browser', repo: 'SawyerHood/dev-browser', kind: 'skill', title: 'Dev Browser',
+    why: '给 Agent 一双手：真实浏览器操作，自己点、自己读、自己截图验证。' },
+  { id: 'huashu-art-motion', repo: 'alchaincyf/huashu-art-motion', kind: 'skill', title: '花叔 Art Motion',
+    why: '35 种艺术风格 + 9 种解说语法的动画 skill，用代码让画面动起来。' },
+  { id: 'huashu-skills', repo: 'alchaincyf/huashu-skills', kind: 'skill', title: '花叔 Skills 总目录',
+    why: '52 个中文 skill 的索引：16 旗舰 + 14 人物视角 + 22 内置。找中文 skill 从这里进。' },
+  { id: 'huashu-md-html', repo: 'alchaincyf/huashu-md-html', kind: 'skill', title: '花叔 MD ⇄ HTML',
+    why: '万物转 md、md 转精美 html、html 转 md，三向流水线，管道里最实用的一环。' },
+  { id: 'alirezarezvani-skills', repo: 'alirezarezvani/claude-skills', kind: 'skill', title: '380 Skills 合集',
+    why: '380 个 Claude Code skills 与插件，覆盖面最广的一套；当成字典查，不要整包装。' },
+  { id: 'jeffallan-skills', repo: 'Jeffallan/claude-skills', kind: 'skill', title: '全栈 67 Skills',
+    why: '面向全栈开发的 67 个专用 skill，切分细，适合按项目类型挑。' },
+
+  // —— MCP ——
+  { id: 'playwright-mcp', repo: 'microsoft/playwright-mcp', kind: 'mcp', title: 'Playwright MCP',
+    why: '微软官方 MCP：让模型直接操作浏览器，可访问性树驱动，比截图识别稳。' },
+  { id: 'github-mcp', repo: 'github/github-mcp-server', kind: 'mcp', title: 'GitHub MCP',
+    why: 'GitHub 官方 MCP，仓库、Issue、PR 全都能读能写，接进 Agent 就是原生 git 助手。' },
+  { id: 'fastmcp', repo: 'PrefectHQ/fastmcp', kind: 'mcp', title: 'FastMCP',
+    why: '写 MCP server 最快的 Python 框架，几十行起一个能用的服务。' },
+  { id: 'next-ai-draw-io', repo: 'DayuanJiang/next-ai-draw-io', kind: 'mcp', title: 'next-ai-draw-io',
+    why: '用对话画 draw.io 图，改完还能导出。架构图、流程图不用手拖了。' },
+  { id: 'huashu-chrome', repo: 'alchaincyf/huashu-chrome', kind: 'mcp', title: '花叔 Chrome',
+    why: '让 Agent 操控你自己的 Chrome，带着全部登录态——需要登录才能看的页面也能读。' },
+
+  // —— 工具 ——
+  { id: 'magpie', repo: 'yetone/magpie', kind: 'tool', title: 'Magpie',
+    why: '一个入口调所有模型：Codex 走 DeepSeek、Claude Code 走别的供应商，配置一次到处能用。' },
+  { id: 'headroom', repo: 'headroomlabs-ai/headroom', kind: 'tool', title: 'Headroom',
+    why: '把工具输出、日志、RAG 片段先压一遍再进上下文，长任务省钱最直接的一招。' },
+  { id: 'nanobot', repo: 'HKUDS/nanobot', kind: 'tool', title: 'Nanobot',
+    why: '超轻量自托管个人 Agent，能跑在自己机器上，数据不出门。' },
+  { id: 'activepieces', repo: 'activepieces/activepieces', kind: 'tool', title: 'Activepieces',
+    why: '开源自动化平台，自带 ~400 个 MCP server，把 AI 接进工作流最省事的路子。' },
+
+  // —— 清单 ——
+  { id: 'awesome-mcp', repo: 'punkpeye/awesome-mcp-servers', kind: 'list', title: 'Awesome MCP Servers',
+    why: 'MCP 生态总目录，找现成 server 先扫这里。' },
+  { id: 'awesome-claude-skills', repo: 'ComposioHQ/awesome-claude-skills', kind: 'list', title: 'Awesome Claude Skills',
+    why: 'Claude Skills 精选清单，社区维护，更新勤。' },
+];
+
+const KIND_LABEL = { skill: 'Skill', mcp: 'MCP', tool: '工具', list: '清单' };
+
+async function fetchResources() {
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+  const headers = { 'User-Agent': 'IndexAI/1.0', Accept: 'application/vnd.github+json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const out = [];
+  for (const item of CURATED_RESOURCES) {
+    const row = { ...item, kindLabel: KIND_LABEL[item.kind] || item.kind };
+    try {
+      const res = await fetch(`https://api.github.com/repos/${item.repo}`, { headers });
+      if (!res.ok) {
+        out.push({ ...row, status: `http_${res.status}` });
+      } else {
+        const j = await res.json();
+        out.push({
+          ...row,
+          desc: j.description || '',
+          stars: j.stargazers_count ?? null,
+          forks: j.forks_count ?? null,
+          updated: (j.pushed_at || '').slice(0, 10),
+          license: j.license?.spdx_id || null,
+          archived: !!j.archived,
+          lang: j.language || null,
+          topics: Array.isArray(j.topics) ? j.topics.slice(0, 6) : [],
+          url: j.html_url,
+          status: 'ok',
+        });
+      }
+    } catch {
+      out.push({ ...row, status: 'error' });
+    }
+    await new Promise((r) => setTimeout(r, 90));
+  }
+  return out.sort((a, b) => (b.stars ?? -1) - (a.stars ?? -1));
+}
+
 /* ────────────────────────── 主流程 ────────────────────────── */
 async function main() {
   let prev = null;
   try { prev = JSON.parse(await readFile(OUT, 'utf8')); } catch { /* 首次运行 */ }
 
   const fx = await fetchFx(prev?.meta?.fx);
-  const [devpost, aios, luma, aibijia, news] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews()]);
+  const [devpost, aios, luma, aibijia, news, resources] = await Promise.all([fetchDevpost(), fetchAios(), fetchLuma(), fetchAibijia(), fetchNews(), fetchResources()]);
   const bench = await fetchBench(prev?.bench);
 
   const res = await fetch(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } });
@@ -868,6 +972,7 @@ async function main() {
   for (const r of subsRegions.slice(0, 4)) addSrc('https://data.aibijia.org/apple_subscriptions.json', 'marketplace', r.plan);
   if (luma.length) addSrc('https://api.lu.ma/discover/get-paginated-events', 'events', 'Luma');
   if (news.length) addSrc('https://data.aibijia.org/news-frontline.yaml', 'news', 'AI 要闻');
+  if (resources.length) addSrc('https://api.github.com/repos', 'toolkit', 'GitHub 精选');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
   addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
@@ -899,6 +1004,7 @@ async function main() {
         subsRegions: subsRegions.length,
         subsRegionsRaw: subsRegions.reduce((n, r) => n + r.total, 0),
         news: news.length,
+        resources: resources.filter((r) => r.status === 'ok').length,
         relays: relays.length,
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
@@ -918,6 +1024,7 @@ async function main() {
     subsThird,
     subsRegions,
     news,
+    resources,
     relays,
     events: [...devpost, ...luma, ...aios].map((e) => ({ ...e, kind: eventKind(e), region: eventRegion(e) })),
     bench,
