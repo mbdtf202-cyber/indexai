@@ -98,6 +98,37 @@ button,input,select{font:inherit; color:inherit}
 /* ── table note ── */
 .tnote{margin:0 0 10px; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.02em}
 
+
+/* ── 颗粒质感 ── */
+.grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
+[data-theme="dark"] .grain{opacity:.05; mix-blend-mode:screen}
+@media (prefers-reduced-motion:reduce){.grain{opacity:.02}}
+
+/* ── 价格轴 ── */
+.axsec{margin:0 0 44px; border-top:1px solid var(--line); padding-top:26px}
+.axhead{display:flex; align-items:baseline; gap:22px; flex-wrap:wrap; margin-bottom:4px}
+.axhead h2{margin:0; font-size:clamp(19px,2.1vw,26px); font-weight:600; letter-spacing:-.03em}
+.axhead h2 em{font-style:normal; color:var(--accent)}
+.axsub{margin:0; font-size:13px; color:var(--faint); max-width:52ch; line-height:1.6}
+#priceAxis{display:block; width:100%; height:clamp(220px,26vw,300px); margin-top:14px; overflow:visible}
+.axfoot{display:flex; justify-content:space-between; font-family:var(--mono); font-size:11.5px;
+  color:var(--faint); margin-top:6px; letter-spacing:.02em}
+.axsec .tick-l{stroke:var(--line2); stroke-width:1}
+.axsec .tick-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
+.axsec .grid-l{stroke:var(--line); stroke-width:1; stroke-dasharray:1 4}
+.axsec .dot{fill:#0a0a0a; opacity:.62; transition:r .18s ease, opacity .18s ease}
+.axsec .dot.agg{fill:#8b8b8b}
+.axsec .dot.free{fill:#0f7b4f}
+.axsec .dot.hot{r:5.4; opacity:1}
+.axsec .axlabel{font-family:var(--sans); font-size:12px; fill:var(--dim)}
+.axsec .axlabel b{font-weight:600; fill:var(--ink)}
+.axsec .axline{stroke:var(--ink); stroke-width:1}
+.axsec .den{fill:var(--accent); fill-opacity:.07; stroke:var(--accent); stroke-width:1; stroke-opacity:.32; stroke-linejoin:round}
+[data-theme="dark"] .axsec .dot{fill:#e9e7df}
+[data-theme="dark"] .axsec .dot.agg{fill:#7c7f72}
+@media (max-width:760px){.axhead{gap:10px}.axsub{font-size:12.5px}.axfoot span:last-child{display:none}}
+
 /* ── ticker (A) ── */
 .ticker{background:#0a0b0a;color:#e9e7df;overflow:hidden;border-bottom:1px solid #1c1e1a}
 .ticker-track{display:flex;width:max-content;animation:tickmove 54s linear infinite}
@@ -588,6 +619,7 @@ body.ready{opacity:1}
 
 <div class="overlay" id="overlay"></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="模型详情"></aside>
+<div class="grain" aria-hidden="true"></div>
 <noscript><div class="wrap empty">这个页面需要 JavaScript 渲染数据。</div></noscript>
 
 <script>
@@ -1064,6 +1096,13 @@ const MOTION = (() => {
   /* ── home ── */
   function viewHome() {
     const d = state.data, c = d.meta.counts, fx = state.fx?.rate || d.meta.fx.USDCNY;
+    const pricedArr = (d.models || []).filter(m => m.input > 0).map(m => m.input).sort((a, b) => a - b);
+    const priced = pricedArr.length;
+    const q25 = pricedArr[Math.floor(priced * 0.25)] || 0;
+    const q75 = pricedArr[Math.floor(priced * 0.75)] || 0;
+    const pmin = pricedArr[0] || 0;
+    const pmax = pricedArr[priced - 1] || 1;
+    const spread = pmin > 0 ? Math.round(pmax / pmin) : 1;
     const news = (d.news || []).slice(0, 4);
     const live = (d.relays || []).filter(r => r.status === "ok");
     const best = live
@@ -1101,6 +1140,15 @@ const MOTION = (() => {
       </section>
 
       ${news.length ? `
+      <section class="axsec">
+        <div class="axhead">
+          <h2>${priced} 个有价模型，价格相差 <em>${spread >= 10000 ? (spread / 10000).toFixed(1) + " 万" : spread} 倍</em>。</h2>
+          <p class="axsub">每一点是一个模型的官方输入价，按对数排。四分之三的模型落在 $${money(q25)} 到 $${money(q75)} 之间。</p>
+        </div>
+        <svg id="priceAxis" viewBox="0 0 1200 300" preserveAspectRatio="none" role="img" aria-label="模型价格分布"></svg>
+        <div class="axfoot"><span>每 1M 输入 token · USD</span><span>${priced} 个有价模型 · 悬停看名字</span></div>
+      </section>
+
       <div class="shead"><h2>今日要闻</h2><span class="right"><a href="#signals" style="color:var(--dim);text-decoration:underline">全部 ${c.news || news.length} 条 ↗</a></span></div>
       <div class="newsrow">
         ${news.map(n => `
@@ -1422,6 +1470,121 @@ const MOTION = (() => {
         <span class="spacer"></span><a href="https://github.com/mbdtf202-cyber/indexai" target="_blank" rel="noopener" style="color:var(--dim);text-decoration:underline">提一个 ↗</a></div>`;
   }
 
+
+  /* ── 价格轴：453 个模型在对数刻度上的分布 ── */
+  function renderAxis() {
+    const svg = document.getElementById("priceAxis");
+    if (!svg) return;
+    const rows = (state.data.models || []).filter(m => m.input > 0);
+    if (!rows.length) return;
+
+    const W = 1200, H = 300, padL = 8, padR = 8, axisY = H - 34;
+    const vals = rows.map(m => m.input);
+    const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals))));
+    const hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+    const LX = (v) => padL + (Math.log10(Math.max(v, lo)) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (W - padL - padR);
+
+    // 对数桶密度 → 决定点云高度
+    const BINS = 64;
+    const bins = new Array(BINS).fill(0);
+    const binOf = (v) => Math.min(BINS - 1, Math.floor((Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * BINS));
+    rows.forEach(m => bins[binOf(m.input)]++);
+    const maxBin = Math.max(...bins);
+    const topY = 12, usable = axisY - topY - 10;
+
+    // 伪随机（保证每次渲染一致）
+    const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+    const sorted = [...rows].sort((a, b) => a.input - b.input);
+    const dots = sorted.map((m, i) => {
+      const x = LX(m.input);
+      const dens = bins[binOf(m.input)] / maxBin;
+      const h = usable * Math.sqrt(dens);
+      const y = axisY - 8 - rnd(i) * Math.max(h, 3);
+      const kind = m.free ? "free" : (m.channelKind === "aggregator" ? "agg" : "");
+      return { x, y, name: m.name, vendor: m.vendor, price: m.input, kind, i };
+    });
+
+    // 密度面积：桶中点 + 二次贝塞尔平滑
+    const bp = bins.map((v, b) => ({
+      x: padL + ((b + 0.5) / BINS) * (W - padL - padR),
+      y: axisY - 8 - usable * Math.sqrt(v / maxBin),
+    }));
+    let den = `M${bp[0].x.toFixed(1)},${axisY - 8}`;
+    den += ` L${bp[0].x.toFixed(1)},${bp[0].y.toFixed(1)}`;
+    for (let i = 0; i < bp.length - 1; i++) {
+      const a = bp[i], n = bp[i + 1];
+      const mx = (a.x + n.x) / 2, my = (a.y + n.y) / 2;
+      den += ` Q${a.x.toFixed(1)},${a.y.toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}`;
+    }
+    const last = bp[bp.length - 1];
+    den += ` L${last.x.toFixed(1)},${last.y.toFixed(1)} L${last.x.toFixed(1)},${axisY - 8} Z`;
+
+    // 刻度
+    const ticks = [];
+    for (let p = Math.log10(lo); p <= Math.log10(hi) + 0.001; p++) {
+      const v = Math.pow(10, p);
+      const x = LX(v);
+      ticks.push(`<line class="tick-l" x1="${x.toFixed(1)}" y1="${axisY}" x2="${x.toFixed(1)}" y2="${axisY + 6}"/>`);
+      ticks.push(`<line class="grid-l" x1="${x.toFixed(1)}" y1="${topY}" x2="${x.toFixed(1)}" y2="${axisY}"/>`);
+      const lbl = v >= 1 ? "$" + v : "$" + v.toFixed(v < 0.01 ? 3 : 2);
+      ticks.push(`<text class="tick-t" x="${x.toFixed(1)}" y="${axisY + 20}" text-anchor="middle">${lbl}</text>`);
+    }
+
+    // 关键标注
+    const med = sorted[Math.floor(sorted.length / 2)];
+    const marks = [
+      { m: sorted[0], txt: "最便宜" },
+      { m: med, txt: "中位" },
+      { m: sorted[sorted.length - 1], txt: "最贵" },
+    ].map(({ m, txt }) => {
+      const x = LX(m.input);
+      return `<text class="axlabel" x="${x.toFixed(1)}" y="${topY - 2}" text-anchor="middle">${txt} <tspan font-family="IBM Plex Mono" font-size="11">$${money(m.input)}</tspan></text>`;
+    }).join("");
+
+    svg.innerHTML = `
+      <path class="den" d="${den.trim()}"/>
+      ${ticks.join("")}
+      <line class="axline" x1="${padL}" y1="${axisY}" x2="${W - padR}" y2="${axisY}"/>
+      ${marks}
+      <g id="axDots">${dots.map(d =>
+        `<circle class="dot ${d.kind}" cx="${d.x.toFixed(1)}" cy="${d.y.toFixed(1)}" r="2.6" data-n="${esc(d.name)}" data-v="${esc(d.vendor || "")}" data-p="${d.price}"/>`
+      ).join("")}</g>
+      <g id="axTip" style="display:none"><line class="axline" y1="${topY}" y2="${axisY}" stroke-dasharray="2 3"/>
+        <text class="axlabel" y="${topY - 2}" text-anchor="middle"></text></g>`;
+
+    // 入场：点按 x 依次淡入
+    const dotsG = svg.querySelector("#axDots");
+    dotsG.style.opacity = "0";
+    requestAnimationFrame(() => { dotsG.style.transition = "opacity .9s cubic-bezier(.16,1,.3,1)"; dotsG.style.opacity = "1"; });
+
+    // 悬停
+    const tip = svg.querySelector("#axTip");
+    const tipLine = tip.querySelector("line");
+    const tipText = tip.querySelector("text");
+    svg.addEventListener("mousemove", (e) => {
+      const r = svg.getBoundingClientRect();
+      const px = (e.clientX - r.left) / r.width * W;
+      let best = null, bd = 1e9;
+      for (const d of dots) {
+        const dx = Math.abs(d.x - px);
+        if (dx < bd) { bd = dx; best = d; }
+      }
+      dotsG.querySelectorAll(".dot.hot").forEach(el => el.classList.remove("hot"));
+      if (!best || bd > 26) { tip.style.display = "none"; return; }
+      const el = dotsG.querySelector(`circle[data-p="${best.price}"][cx="${best.x.toFixed(1)}"]`);
+      if (el) el.classList.add("hot");
+      tip.style.display = "";
+      tipLine.setAttribute("x1", best.x); tipLine.setAttribute("x2", best.x);
+      tipText.setAttribute("x", best.x);
+      tipText.textContent = `${best.name}  $${money(best.price)}`;
+    });
+    svg.addEventListener("mouseleave", () => {
+      tip.style.display = "none";
+      dotsG.querySelectorAll(".dot.hot").forEach(el => el.classList.remove("hot"));
+    });
+  }
+
   /* ── bench ── */
   function viewBench() {
     const b = state.data.bench;
@@ -1721,7 +1884,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
     else if (state.tab === "signals") v.innerHTML = viewSignals();
     else v.innerHTML = viewMethod();
     history.replaceState(null, "", "#" + state.tab);
-    queueMicrotask(() => MOTION.arm());
+    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); });
   }
 
   /* ── events ── */
