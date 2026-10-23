@@ -91,55 +91,74 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 
 ## 部署到公网
 
-纯静态（HTML + JSON），没有后端、没有数据库，任何静态托管都能跑。
+**线上地址：https://indexai.pages.dev/**
+仓库：https://github.com/mbdtf202-cyber/indexai
 
-### 阶段一：零成本上线（Cloudflare Pages）
+纯静态（HTML + JSON），没有后端、没有数据库。
 
-**准备**：GitHub 账号 + 仓库
+### 当前架构
 
-```bash
-cd /Users/raki/Desktop/IndexAI
-git add -A && git commit -m "init: IndexAI"
-# 用 gh CLI 建仓库并推送（没装 gh 就去网页手动建）
-gh repo create indexai --public --source=. --push
+```
+本地 launchd  com.raki.indexai.collect（每天 09:00）
+      │
+      ├─ node collect.mjs        → 重采 data.json
+      └─ node deploy.mjs         → wrangler pages deploy
+                                    │
+Cloudflare Pages  indexai      ←────┘  全球 CDN + 免费 SSL
 ```
 
-**接 Cloudflare**（控制台点几下，不用装东西）：
+一条命令手动发版：
 
-1. dash.cloudflare.com → **Workers & Pages** → **Create** → **Pages** → **Connect to Git**
-2. 选刚推的仓库
-3. 构建设置：
-   - Framework preset：**None**
-   - Build command：**留空**
-   - Build output directory：**`/`**
-4. **Save and Deploy** → 拿到 `https://<project>.pages.dev`
+```bash
+node deploy.mjs                # 采集 + 发布
+node deploy.mjs --skip-collect # 只发布，不重采
+```
 
-**每天自动更新**：仓库里已经放好 `.github/workflows/daily-collect.yml`
-- 每天 UTC 01:00（北京 09:00）跑 `node collect.mjs`
-- 有变化就 commit `data.json` 并 push
-- Pages 监听 main 分支，push 后自动重建，1 分钟内生效
-- 也可以手动触发：Actions → daily-collect → Run workflow
+部署日志：`/tmp/indexai-deploy.log`
 
-### 成本对照
+### 部署相关的三个文件
 
-| 方案 | 月成本 | 国内访问 | 上线时间 | 备注 |
-|---|---|---|---|---|
-| **Cloudflare Pages** | **¥0** | 中等 | 5 分钟 | 无限带宽、免费 SSL、免费 `*.pages.dev` |
-| Vercel（Hobby） | ¥0 | 较好 | 5 分钟 | 100 GB/月流量上限 |
-| GitHub Pages | ¥0 | 慢 | 3 分钟 | 国内经常打不开 |
-| 阿里云 OSS + CDN | ¥5~15 | 快 | 1–3 天 | 需域名备案；流量 0.24 元/GB |
+| 文件 | 作用 |
+|---|---|
+| `deploy.mjs` | 采集 + 构建 dist + `wrangler pages deploy`（必须用 node 跑，见下） |
+| `_headers` | Cloudflare 缓存头：`index.html` 不缓存、`data.json` 缓存 5 分钟 |
+| `.github/workflows/daily-collect.yml` | 备选：GitHub Actions 版定时采集（当前未启用） |
 
-先跑 Cloudflare Pages 测：功能和速度都验证过之后，再决定要不要为国内用户备案上阿里云。
+### 为什么必须用 Node 驱动
 
-### 阶段二（可选）：国内加速
+macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取（`Operation not permitted`），但 node 二进制不受此限制。所以部署编排写在 `deploy.mjs` 里，plist 直接执行 node，不经过 shell。
 
-- 个人域名备案（免费，1–2 周）→ 阿里云 OSS 静态托管 + CDN
-- `data.json` 单独设 5 分钟缓存、`index.html` 设 no-cache，避免数据滞后
-- 或继续用 Cloudflare，绑自己的域名（不用备案，国内可访问但走香港/新加坡节点）
+### 定时任务
+
+```bash
+launchctl print gui/$(id -u)/com.raki.indexai.collect   # 看状态
+launchctl kickstart -p gui/$(id -u)/com.raki.indexai.collect  # 立刻跑一次
+```
+
+plist 在 `~/Library/LaunchAgents/com.raki.indexai.collect.plist`，改时间改 `Hour`/`Minute` 后 `bootout` + `bootstrap`。
+
+### 备选：交给 Cloudflare 自己构建
+
+如果想让 Cloudflare 直接从 GitHub 构建（不依赖本机开机）：
+
+1. Cloudflare Dash → Workers & Pages → `indexai` → Settings → Builds & deployments → Connect Git
+2. 构建设置：Build command **留空**，Output directory **`/`**
+3. 再在仓库 Settings → Secrets 里加 `CLOUDFLARE_API_TOKEN` 和 `CLOUDFLARE_ACCOUNT_ID`，把 `.github/workflows/daily-collect.yml` 的最后一步换成 `wrangler pages deploy`
+
+### 成本
+
+| 方案 | 月成本 | 国内访问 | 上线时间 |
+|---|---|---|---|
+| **Cloudflare Pages（当前）** | **¥0** | 中等 | 已完成 |
+| Vercel Hobby | ¥0 | 较好 | 5 分钟 |
+| GitHub Pages | ¥0 | 慢 | 3 分钟 |
+| 阿里云 OSS + CDN | ¥5~15（需备案） | 快 | 1–3 天 |
+
+无限带宽、免费 SSL、免费 `*.pages.dev` 域名。要绑自己的域名不用备案（走香港/新加坡节点）。
 
 ### 上线前要知道的
 
-- **仓库体积**：`data.json` 现在 600 KB，每天提交一次，一年约 +200 MB。介意的话每季度 `git checkout --orphan` 压一次历史。
-- **CI 里少一层数据**：`collect.mjs` 的 AIOS 活动读的是本地文件，GitHub Actions 里读不到 → 云端只有 Devpost + Luma，AIOS 那 23 条历史归档不会更新（本来也是静态历史）。
-- **没有密钥**：全部走公开接口，仓库里不放任何 token；Actions 只需要默认的 `GITHUB_TOKEN`。
-- **不要提交 `.research/`**：已经在 `.gitignore` 里。
+- **仓库体积**：`data.json` 600 KB，如果每天都 commit，一年 +200 MB。当前自动部署**不**提交 data.json（只上传到 Pages），仓库不会膨胀。
+- **本机依赖**：定时采集跑在这台 Mac 上，关机就不跑。要彻底去机器依赖，用上面的「备选」接 Cloudflare Git 构建。
+- **CI 里少一层数据**：`collect.mjs` 的 AIOS 活动读本地文件，非本机环境读不到 → 只有 Devpost + Luma。
+- **没有密钥**：全部走公开接口，仓库里不放 token。
