@@ -405,8 +405,12 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .plan .ph h3{margin:0; font-size:16px; font-weight:600}
 .plan .ph span{font-family:var(--mono); font-size:11.5px; color:var(--faint)}
 .plan .rows{padding:4px 16px 12px}
-.prow{display:grid; grid-template-columns:clamp(50px,6.4vw,74px) minmax(0,1fr) minmax(0,.95fr) auto auto;
-  align-items:baseline; gap:12px; padding:9px 0; border-bottom:1px dashed var(--line)}
+.prow{display:grid; grid-template-columns:minmax(0,1fr) auto auto;
+  align-items:baseline; gap:14px; padding:9px 0; border-bottom:1px dashed var(--line)}
+.prow .tier{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.prow .quota{text-align:right; white-space:nowrap; min-width:52px}
+.prow .p{text-align:right; white-space:nowrap; min-width:72px}
+.plan .tier{white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .quota{font-family:var(--mono); font-size:11.5px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .quota.est{color:var(--faint); border-bottom:1px dashed var(--line2); cursor:help}
 .prow:last-child{border-bottom:0}
@@ -977,7 +981,7 @@ const MOTION = (() => {
   /* ── chrome ── */
   function renderNav() {
     const c = state.data.meta.counts;
-    const counts = { free: c.offers, compare: c.models, subs: c.subs, relays: c.relaysLive, events: c.eventsOpen, bench: c.bench, signals: (c.news || 0) + c.signals, tools: c.resources };
+    const counts = { free: c.offers, compare: c.models, subs: c.subsRegions || c.subs, relays: c.relaysLive, events: c.eventsOpen, bench: c.bench, signals: (c.news || 0) + c.signals, tools: c.resources };
     const el = $("#nav");
     el.innerHTML = TABS.map(t => `
       <button class="nav" role="tab" data-tab="${t.id}" aria-selected="${state.tab === t.id}" title="${esc(t.hint)}">
@@ -1425,6 +1429,10 @@ const MOTION = (() => {
   }
 
   /* ── subs ── */
+  const fmtTokens = (n) => n >= 1e9 ? (n / 1e9).toFixed(1).replace(/\.0$/, "") + "B"
+    : n >= 1e6 ? (n / 1e6).toFixed(0) + "M"
+    : (n / 1e3).toFixed(0) + "K";
+
   function viewSubs() {
     const subs = state.data.subs;
     const byProduct = new Map();
@@ -1447,7 +1455,9 @@ const MOTION = (() => {
       planRows.push({
         product: g.app,
         vendor: "",
-        tier: String(g.plan).startsWith(g.app) ? String(g.plan).slice(g.app.length).trim() || g.plan : g.plan,
+        tier: (String(g.plan).startsWith(g.app) ? String(g.plan).slice(g.app.length).trim() || g.plan : g.plan)
+          .replace(/^(Google AI|SuperGrok|ChatGPT|Claude)\s+/i, "")
+          .replace(/（/g, " ").replace(/）/g, "").replace(/\s+/g, " ").trim(),
         usd,
         duration: g.duration,
         lowestCny: g.cheapest,
@@ -1463,6 +1473,14 @@ const MOTION = (() => {
         note: r.note, quota: r.quota,
       });
     }
+    // 等效 token：月费 ÷ 全站中位输入价，说明「这笔钱按 API 中位价能换多少 token」
+    const allIn = (state.data.models || []).filter(m => m.input > 0).map(m => m.input).sort((a, b) => a - b);
+    const medianIn = allIn.length ? allIn[Math.floor(allIn.length / 2)] : 0;
+    for (const r of planRows) {
+      r.tokens = (r.usd != null && medianIn > 0 && /月|month/i.test(r.duration || "月"))
+        ? (r.usd / medianIn) * 1e6 : null;
+    }
+
     const planByProduct = new Map();
     for (const r of planRows) {
       if (!planByProduct.has(r.product)) planByProduct.set(r.product, []);
@@ -1482,10 +1500,9 @@ const MOTION = (() => {
               ${rows.sort((a, b) => (a.usd ?? 9e9) - (b.usd ?? 9e9)).map(r => `
                 <div class="prow">
                   <span class="tier">${esc(r.tier)}</span>
-                  <span class="note" title="${esc(r.note || "")}">${esc(r.note || "")}</span>
-                  <span class="quota${r.quota?.est ? " est" : ""}" title="${esc(r.quota?.basis || "")}">${r.quota ? esc(r.quota.label) : "—"}</span>
-                  <span class="p">${r.usd == null ? '<span class="dim">—</span>' : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${money(r.usd)}</a>` : "$" + money(r.usd))}<small>${r.duration ? " /" + esc(r.duration) : ""}</small></span>
-                  <span class="cny">${r.lowestCny ? "最低 ¥" + Math.round(r.lowestCny) : "—"}</span>
+                  <span class="quota" title="等效 ${r.tokens ? fmtTokens(r.tokens) : "—"} tokens（按全站中位输入价 $${money(medianIn)} / 1M 折算）">${r.tokens ? fmtTokens(r.tokens) + " tokens" : "—"}</span>
+                  <span class="p" title="${r.lowestCny ? "最低区价 ¥" + Math.round(r.lowestCny) : ""}">${r.usd == null ? '<span class="dim">—</span>' : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${money(r.usd)}</a>` : "$" + money(r.usd))}<small>${r.duration ? " /" + esc(r.duration) : ""}</small></span>
+
                 </div>`).join("")}
             </div>
           </section>`).join("")}
@@ -2145,12 +2162,12 @@ const MOTION = (() => {
     .replace(/\s*\([^)]*\)\s*$/, "")     // 去掉 (Max) 这类配置后缀
     .replace(/[\s.\-_()（）]+/g, "");
 
-  function priceOf(name, models) {
+  function priceHit(name, models) {
     const key = normName(name);
-    const hit = models.find(m => m.input > 0 && normName(m.name) === key)
+    return models.find(m => m.input > 0 && normName(m.name) === key)
       || models.find(m => m.input > 0 && normName(m.name).startsWith(key))
-      || models.find(m => m.input > 0 && key.startsWith(normName(m.name)));
-    return hit ? hit.input : null;
+      || models.find(m => m.input > 0 && key.startsWith(normName(m.name)))
+      || null;
   }
 
   function benchOfficial() {
@@ -2233,19 +2250,21 @@ const MOTION = (() => {
         </div>
         <div class="tablewrap" tabindex="0" role="region" aria-label="综合智能榜" style="max-height:620px">
           <table><caption class="sr">Artificial Analysis Intelligence Index</caption>
-            <thead><tr><th>#</th><th>模型</th><th>智能指数</th><th class="num">价格 /1M</th><th class="num hidesm">每美元智能</th><th class="num hidesm">上下文</th><th class="num hidesm">权重</th></tr></thead>
+            <thead><tr><th>#</th><th>模型</th><th>智能指数</th><th class="num">输入</th><th class="num hidesm">输出</th><th class="num hidesm">缓存读</th><th class="num hidesm">每美元智能</th><th class="num hidesm">上下文</th></tr></thead>
             <tbody>
             ${aa.slice(0, 120).map((m, i) => `<tr>
               <td class="num" style="width:40px">${i + 1}</td>
               <td><b>${esc(m.name)}</b><span class="vend">${esc(m.vendor || "")}</span></td>
               <td><span class="idx" style="justify-content:flex-start"><span class="bar" style="width:130px"><i style="width:${Math.max(4, (m.idx / aa[0].idx) * 100).toFixed(1)}%"></i></span><span class="num">${m.idx.toFixed(1)}</span></span></td>
               ${(() => {
-                const pr = priceOf(m.name, state.data.models || []);
-                return `<td class="num">${pr != null ? "$" + money(pr) : '<span class="dim">—</span>'}</td>
-                  <td class="num hidesm">${pr ? `<span class="val">${(m.idx / pr).toFixed(1)}</span>` : '<span class="dim">—</span>'}</td>`;
+                const hit = priceHit(m.name, state.data.models || []);
+                const p = (v) => v != null && v > 0 ? "$" + money(v) : '<span class="dim">—</span>';
+                return `<td class="num">${p(hit?.input)}</td>
+                  <td class="num hidesm">${p(hit?.output)}</td>
+                  <td class="num hidesm">${p(hit?.cache_read)}</td>
+                  <td class="num hidesm">${hit?.input ? `<span class="val">${(m.idx / hit.input).toFixed(1)}</span>` : '<span class="dim">—</span>'}</td>`;
               })()}
               <td class="num hidesm">${m.ctx ? (m.ctx >= 1000000 ? (m.ctx / 1000000).toFixed(1) + "M" : Math.round(m.ctx / 1000) + "K") : "—"}</td>
-              <td class="num hidesm">${m.openWeights ? '<span class="tag free">开源</span>' : '<span class="dim">闭源</span>'}</td>
             </tr>`).join("")}
             </tbody>
           </table>
