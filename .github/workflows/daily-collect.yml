@@ -39,6 +39,7 @@ jobs:
           cp index.html data.json dist/
           [ -f favicon.svg ] && cp favicon.svg dist/ || true
           [ -f logo-preview.html ] && cp logo-preview.html dist/ || true
+          [ -f directions.html ] && cp directions.html dist/ || true
           [ -f _headers ] && cp _headers dist/ || true
           du -sh dist
 
