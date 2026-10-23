@@ -1439,31 +1439,60 @@ const MOTION = (() => {
       ["合租 / 拼车", "多人共享一个 Team 或 Pro 席位，按人头分摊；通常有设备与并发限制。", "隐私与稳定性风险"],
       ["发卡 / 代充", "第三方平台按次卖账号、兑换码或代充，价格最杂，质量参差。", "跑路、封号、售后风险"]
     ];
+    // 官方标价 = 各套餐在美国区的价格（App Store 明码），再并上只有官网价的 Copilot
+    const planRows = [];
+    for (const g of (state.data.subsRegions || [])) {
+      const us = (g.rows || []).find(r => r.c === "US");
+      const usd = us ? Number(String(us.p).replace(/[^0-9.]/g, "")) : null;
+      planRows.push({
+        product: g.app,
+        vendor: "",
+        tier: String(g.plan).startsWith(g.app) ? String(g.plan).slice(g.app.length).trim() || g.plan : g.plan,
+        usd,
+        duration: g.duration,
+        lowestCny: g.cheapest,
+        buy: us?.url || "",
+      });
+    }
+    const seenProducts = new Set(planRows.map(x => x.product));
+    for (const r of subs) {
+      if (seenProducts.has(r.product)) continue;   // 有区价数据的产品整族以区价为准
+      planRows.push({
+        product: r.product, vendor: r.vendor, tier: r.tier,
+        usd: r.price, duration: r.period, lowestCny: null, buy: r.buy,
+        note: r.note, quota: r.quota,
+      });
+    }
+    const planByProduct = new Map();
+    for (const r of planRows) {
+      if (!planByProduct.has(r.product)) planByProduct.set(r.product, []);
+      planByProduct.get(r.product).push(r);
+    }
+
     return `
       <div class="shead"><h2>同一订阅，换个区多少钱</h2></div>
       <div class="sbars" id="subBars"></div>
 
-      <div class="shead"><h2>官方订阅价</h2><span class="desc">只收官网能直接读到的月费；人民币按 7.1 折算，仅作横向参考。</span><span class="right">${subs.length} 个档位</span></div>
+      <div class="shead"><h2>官方标价</h2><span class="right">${planRows.length} 个档位</span></div>
       <div class="shop">
-        ${[...byProduct.entries()].map(([product, rows]) => `
+        ${[...planByProduct.entries()].map(([product, rows]) => `
           <section class="plan">
-            <div class="ph"><h3>${esc(product)}</h3><span>${esc(rows[0].vendor)}</span></div>
+            <div class="ph"><h3>${esc(product)}</h3><span>${esc(rows[0].vendor || "")}</span></div>
             <div class="rows">
-              ${rows.sort((a,b) => a.price - b.price).map(r => `
+              ${rows.sort((a, b) => (a.usd ?? 9e9) - (b.usd ?? 9e9)).map(r => `
                 <div class="prow">
                   <span class="tier">${esc(r.tier)}</span>
-                  <span class="note" title="${esc(r.note)}">${esc(r.note)}</span>
+                  <span class="note" title="${esc(r.note || "")}">${esc(r.note || "")}</span>
                   <span class="quota${r.quota?.est ? " est" : ""}" title="${esc(r.quota?.basis || "")}">${r.quota ? esc(r.quota.label) : "—"}</span>
-                  <span class="p">${r.price === 0 ? "免费" : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${r.price}</a>` : "$" + r.price)}<small>${r.price === 0 ? "" : " /" + r.period}</small></span>
-                  <span class="cny">${r.price === 0 ? "—" : "≈¥" + Math.round(r.price * (state.fx?.rate || state.data.meta.fx.USDCNY))}</span>
+                  <span class="p">${r.usd == null ? '<span class="dim">—</span>' : (r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${money(r.usd)}</a>` : "$" + money(r.usd))}<small>${r.duration ? " /" + esc(r.duration) : ""}</small></span>
+                  <span class="cny">${r.lowestCny ? "最低 ¥" + Math.round(r.lowestCny) : "—"}</span>
                 </div>`).join("")}
             </div>
           </section>`).join("")}
       </div>
 
-
       ${(state.data.subsRegions||[]).length ? `
-      <div class="shead"><h2>各区官方订阅价</h2><span class="desc">App Store 各国家/地区定价，按当日汇率折人民币；点任意一行直达对应区商店页。低价区需要当地支付方式与账号一致。</span><span class="right">${state.data.meta.counts.subsRegions} 个套餐 · ${state.data.meta.counts.subsRegionsRaw} 条区价</span></div>
+      <div class="shead"><h2>各区官方订阅价</h2><span class="desc">点任意一行直达对应区商店页。</span><span class="right">${state.data.meta.counts.subsRegions} 个套餐 · ${state.data.meta.counts.subsRegionsRaw} 条区价</span></div>
       <div class="regions">
         ${state.data.subsRegions.map(g => `
           <section class="rcard">
@@ -1485,7 +1514,7 @@ const MOTION = (() => {
       <div class="routes">
         ${routes.map(([name, desc, risk]) => `<div class="route"><h4>${esc(name)}</h4><p>${esc(desc)}</p><div class="risk">${esc(risk)}</div></div>`).join("")}
       </div>
-      <div class="shead"><h2>第三方挂单（真实链接）</h2><span class="desc">公开发卡平台的在售挂单，每条都带商品页直链；在售优先、同产品按价升序。质保普遍只有几小时，稳定性自负。</span><span class="right">${state.data.subsThird.length} 条 · 在售 ${state.data.subsThird.filter(x => x.status === "in_stock").length}</span></div>
+      <div class="shead"><h2>第三方挂单（真实链接）</h2><span class="desc">公开挂单，每条带商品页直链。质保通常只有几小时。</span><span class="right">${state.data.subsThird.length} 条 · 在售 ${state.data.subsThird.filter(x => x.status === "in_stock").length}</span></div>
       <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:620px">
         <table style="min-width:0"><caption class="sr">第三方订阅挂单，带商品直链</caption>
           <thead><tr><th style="cursor:default">产品</th><th style="cursor:default">平台</th><th style="cursor:default">挂单</th><th class="num" style="cursor:default">价格</th><th class="num hidesm" style="cursor:default">折合 $</th><th style="cursor:default">状态</th></tr></thead>
@@ -1576,7 +1605,7 @@ const MOTION = (() => {
       <div class="cand">
         ${rs.filter(r => !(r.status === "ok" || r.models)).map(r => `<a href="https://${esc(r.domain)}" target="_blank" rel="noopener">${esc(r.name)} · ${esc(r.domain)}</a>`).join("")}
       </div>
-      <div class="tfoot"><span>口径：OneAPI / NewAPI 的倍率换算（ratio × $2 / 1M），不含各站充值折扣；口径异常已标「口径?」</span></div>`;
+      <div class="tfoot"><span>按 OneAPI / NewAPI 倍率换算，不含充值折扣</span></div>`;
   }
 
 
@@ -1648,11 +1677,11 @@ const MOTION = (() => {
         <span class="spacer"></span><span class="eyebrow">${open.length + upcoming.length} 个在场 · ${past.length} 条归档</span>
       </div>
 
-      <div class="shead" style="padding-top:18px"><h2>开放中</h2><span class="desc">按截止日期排；点活动页直接报名。</span><span class="right">${open.length} 个</span></div>
+      <div class="shead" style="padding-top:18px"><h2>开放中</h2><span class="right">${open.length} 个</span></div>
       ${open.length ? `<div class="grid">${open.slice(0, state.evLimit).map(card).join("")}</div>` : `<div class="empty">这个筛选组合下没有开放中的活动。</div>`}
       ${open.length > state.evLimit ? `<div style="padding:18px 0"><button class="more" data-evmore type="button">再加载 ${Math.min(18, open.length - state.evLimit)} 个活动</button></div>` : ""}
 
-      ${upcoming.length ? `<div class="shead"><h2>即将开始</h2><span class="desc">还没开放报名或刚开始的场次。</span><span class="right">${upcoming.length} 个</span></div><div class="grid">${upcoming.map(card).join("")}</div>` : ""}
+      ${upcoming.length ? `<div class="shead"><h2>即将开始</h2><span class="right">${upcoming.length} 个</span></div><div class="grid">${upcoming.map(card).join("")}</div>` : ""}
 
       ${past.length ? `<div class="shead"><h2>历史归档</h2><span class="desc">已结束的场次，只作来源对照，不混进「开放中」。</span><span class="right">${past.length} 条</span></div>
         <div class="cand">${past.slice(0, 30).map(e => `<a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.title)}">${esc(e.title)}</a>`).join("")}</div>` : ""}`;
