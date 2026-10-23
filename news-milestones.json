@@ -1,0 +1,174 @@
+{
+  "note": "超级大事件时间轴（2022-11-30 ChatGPT 上线 → 今天）。epoch = 分类编号，数字只增不改，视觉顺序靠 order；每条 title 是站内中文标题，note 是「它改变了什么」的一句话；src 是逐条核实过的公开出处（日期都在链接页里能找到）。",
+  "epochs": [
+    { "id": "0", "name": "对话时代", "en": "CHAT", "order": 1 },
+    { "id": "1", "name": "多模态", "en": "MULTIMODAL", "order": 2 },
+    { "id": "2", "name": "开源拼杀", "en": "OPEN WEIGHTS", "order": 3 },
+    { "id": "3", "name": "推理时代", "en": "REASONING", "order": 4 },
+    { "id": "4", "name": "智能体", "en": "AGENTS", "order": 5 }
+  ],
+  "events": [
+    {
+      "d": "2022-11-30", "e": "0", "tier": "era",
+      "title": "ChatGPT 发布",
+      "note": "对话式大模型第一次走进大众。两个月破一亿月活，是史上最快的消费级应用增长；整个行业的叙事从「模型分数」改成「能不能用」。",
+      "src": "https://en.wikipedia.org/wiki/ChatGPT"
+    },
+    {
+      "d": "2023-02-24", "e": "0", "tier": "major",
+      "title": "Meta 开源 LLaMA",
+      "note": "7B–65B 权重在学术许可下放出，两个月内被完整泄露。此后所有人的「低成本基线」都是 LLaMA 派系。",
+      "src": "https://arxiv.org/abs/2302.13971"
+    },
+    {
+      "d": "2023-03-14", "e": "0", "tier": "major",
+      "title": "OpenAI 发布 GPT-4",
+      "note": "多模态输入 + 第一次在高难度人类考试上接近人类水平；也第一次把「能力评估」做成公开报告。",
+      "src": "https://openai.com/index/gpt-4-research/"
+    },
+    {
+      "d": "2023-03-23", "e": "0", "tier": "major",
+      "title": "ChatGPT 接入插件",
+      "note": "模型第一次能调用外部工具。后来的 function calling、MCP、Agent 生态，都从这一步开始长。",
+      "src": "https://openai.com/index/chatgpt-plugins/"
+    },
+    {
+      "d": "2023-07-18", "e": "1", "tier": "major",
+      "title": "Meta 发布 Llama 2",
+      "note": "开源权重第一次允许商用。开源模型从「研究玩具」变成可以装进产品的零件。",
+      "src": "https://ai.meta.com/llama/"
+    },
+    {
+      "d": "2023-09-25", "e": "1", "tier": "major",
+      "title": "GPT-4V：视觉进入主力模型",
+      "note": "图像理解进入生产 API，图像不再只是生成，而是被读取、校验、自动化。",
+      "src": "https://openai.com/index/gpt-4v-system-card/"
+    },
+    {
+      "d": "2024-02-15", "e": "2", "tier": "era",
+      "title": "OpenAI 发布 Sora",
+      "note": "文本直接生成一分钟视频。把「生成」从静态推进到时间维度，视频模型从此是基准项。",
+      "src": "https://openai.com/index/sora/"
+    },
+    {
+      "d": "2024-03-04", "e": "2", "tier": "major",
+      "title": "Anthropic 发布 Claude 3",
+      "note": "Haiku / Sonnet / Opus 三档定价成型，「按任务选档位」取代「一个模型打天下」。",
+      "src": "https://www.anthropic.com/news/claude-3-family"
+    },
+    {
+      "d": "2024-04-18", "e": "2", "tier": "major",
+      "title": "Meta 发布 Llama 3",
+      "note": "8B / 70B 的开放权重在多数任务上追平闭源中档模型，开源第一次真正参与前沿竞争。",
+      "src": "https://ai.meta.com/blog/meta-llama-3/"
+    },
+    {
+      "d": "2024-05-13", "e": "2", "tier": "major",
+      "title": "GPT-4o：语音、视觉、文本同一个模型",
+      "note": "端到端多模态 + 实时语音对话，人均可用成本大幅下探；也把「延迟」变成了可感知的产品指标。",
+      "src": "https://openai.com/index/hello-gpt-4o/"
+    },
+    {
+      "d": "2024-06-20", "e": "3", "tier": "major",
+      "title": "Anthropic 发布 Claude 3.5 Sonnet",
+      "note": "编码与长上下文的分水岭。此后「编程能力」成为模型换代的主战场，Sonnet 系列长期是编码默认选。",
+      "src": "https://www.anthropic.com/news/claude-3-5-sonnet"
+    },
+    {
+      "d": "2024-07-18", "e": "2", "tier": "major",
+      "title": "Llama 3.1 405B：开源追到前沿档",
+      "note": "规模最大的开放权重模型之一，配套工具链一起放出，开源阵营第一次有「前沿同档」的完整选项。",
+      "src": "https://ai.meta.com/blog/meta-llama-3-1/"
+    },
+    {
+      "d": "2024-09-12", "e": "3", "tier": "era",
+      "title": "OpenAI o1：先想再答",
+      "note": "推理时计算成为新的扩展维度——不再只靠堆预训练，而是让模型在回答前思考。整条路线由此分叉。",
+      "src": "https://openai.com/index/introducing-openai-o1-preview/"
+    },
+    {
+      "d": "2024-12-26", "e": "3", "tier": "major",
+      "title": "DeepSeek-V3 发布",
+      "note": "671B 总参数、37B 激活，把 MoE 的训练与推理成本压到同档前沿模型的零头，直接改写了价格曲线的斜率。",
+      "src": "https://api-docs.deepseek.com/news/news250120"
+    },
+    {
+      "d": "2025-01-20", "e": "3", "tier": "era",
+      "title": "DeepSeek-R1：推理能力被开源",
+      "note": "同档推理能力以开放权重 + 论文形式公开，API 价格是同期闭源推理模型的百分之几。推理从「付费特权」变成默认能力。",
+      "src": "https://github.com/deepseek-ai/DeepSeek-R1"
+    },
+    {
+      "d": "2025-01-31", "e": "3", "tier": "major",
+      "title": "OpenAI o3-mini：推理降价",
+      "note": "推理档位第一次以「便宜到能日常用」的定价出现，成本进入可批量部署的区间。",
+      "src": "https://openai.com/index/openai-o3-mini/"
+    },
+    {
+      "d": "2025-02-02", "e": "3", "tier": "major",
+      "title": "DeepSeek 上线官方应用",
+      "note": "登顶多国 App Store 免费榜。这是中国模型第一次在全球消费市场正面获得规模用户。",
+      "src": "https://www.deepseek.com/"
+    },
+    {
+      "d": "2025-02-24", "e": "4", "tier": "major",
+      "title": "Anthropic 发布 Claude 3.7 Sonnet",
+      "note": "混合推理：同一个模型按需在快答与深思之间切换，推理不再是单独的模型产品线。",
+      "src": "https://www.anthropic.com/news/claude-3-7-sonnet"
+    },
+    {
+      "d": "2025-04-14", "e": "3", "tier": "major",
+      "title": "GPT-4.1 系列",
+      "note": "百万 token 上下文进入常规 API，长文档与整仓代码从「切片处理」变成「一次读完」。",
+      "src": "https://openai.com/index/gpt-4-1/"
+    },
+    {
+      "d": "2025-05-16", "e": "3", "tier": "major",
+      "title": "OpenAI 发布 Codex 智能体",
+      "note": "在沙箱里自己写、跑、测的小时级任务。编程从「补全」升级成「交付」。",
+      "src": "https://openai.com/index/introducing-codex/"
+    },
+    {
+      "d": "2025-05-22", "e": "4", "tier": "era",
+      "title": "Anthropic 发布 Claude 4 / Claude Code",
+      "note": "同时放出编码专用模型与命令行代理。智能体从演示走进终端，成为日常开发流程的一部分。",
+      "src": "https://www.anthropic.com/news/claude-4"
+    },
+    {
+      "d": "2025-08-05", "e": "2", "tier": "era",
+      "title": "OpenAI 发布 gpt-oss-120b / 20b",
+      "note": "自 GPT-2 之后首次开放权重，Apache 2.0。闭源阵营开始用开源做分发与防守。",
+      "src": "https://openai.com/index/introducing-gpt-oss/"
+    },
+    {
+      "d": "2025-10-06", "e": "4", "tier": "major",
+      "title": "OpenAI DevDay：应用与智能体平台",
+      "note": "会话、工具、应用的接口被统一抽象，「Agent」从一个概念变成一套可以被卖的接口。",
+      "src": "https://openai.com/devday/"
+    },
+    {
+      "d": "2025-11-18", "e": "3", "tier": "major",
+      "title": "Google 发布 Gemini 3",
+      "note": "推理、多模态与长上下文同时压在一条模型线上，前沿竞争从「单点领先」变成「全线对齐」。",
+      "src": "https://blog.google/products/gemini/"
+    },
+    {
+      "d": "2026-01-12", "e": "3", "tier": "major",
+      "title": "DeepSeek V4 发布",
+      "note": "国内开源模型进入 4 代节奏，价格与能力的组合进一步压低整条市场曲线。",
+      "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing"
+    },
+    {
+      "d": "2026-09-14", "e": "4", "tier": "major",
+      "title": "Claude Sonnet 5.5：速度 + 成本双降",
+      "note": "同价位下每任务成本降约三成，缓存读价减半。编码代理的经济性开始由缓存与吞吐决定，而不是单价。",
+      "src": "https://www.anthropic.com/news/claude-sonnet-5-5"
+    },
+    {
+      "d": "2026-10-23", "e": "4", "tier": "major",
+      "title": "Kimi K3.1 Pro：1M 上下文开放权重",
+      "note": "国产开源权重走到 1M 上下文多模态，定价 $2 / $10 每百万 token，前沿能力不再只存在于闭源 API。",
+      "src": "https://aihot.news/items/g725ujk3cq0gquz6g2nlozeu4"
+    }
+  ]
+}
