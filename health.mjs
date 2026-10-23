@@ -63,9 +63,11 @@ export const LAYERS = {
  *   devpost ≈ 67、luma ≈ 162、aios 维持可选。
  * 先按保守值跑，避免 collector 中途写 data.json 时误报。 */
 export const EVENT_SOURCES = {
-  devpost: { min: 67,  warnBelow: 106, label: '活动源 Devpost' }, // 实测 192；红线 35%，警戒 55%
-  luma:    { min: 168, warnBelow: 264, label: '活动源 Luma' },    // 实测 480；同上
-  aios:    { min: 0,   warnBelow: 0,   label: '活动源 AIOS', optional: true },
+  devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 192；红线 35%，警戒 55%
+  luma:     { min: 168, warnBelow: 264, label: '活动源 Luma' },     // 实测 480；同上
+  // Devfolio 只收 AI 相关的未截止场次，量小但真实（实测 9 条）。红线放到 3，防整源归零。
+  devfolio: { min: 3,   warnBelow: 6,   label: '活动源 Devfolio' },
+  aios:     { min: 0,   warnBelow: 0,   label: '活动源 AIOS', optional: true },
 };
 
 /* 活动的语义护栏：比例是「推断失灵 / 灌水」的报警线，不是数量线 */

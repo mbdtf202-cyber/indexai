@@ -2941,6 +2941,29 @@ const MOTION = (() => {
       ${rows.length > show.length ? `<div class="more"><button class="chip" data-benchmore="1">再看 ${Math.min(60, rows.length - show.length)} 个（共 ${rows.length}）</button></div>` : ""}`;
   }
 
+  /* ── 团队在用：OpenRouter 实际用量 + Hacker News 公开讨论 ── */
+  function benchAdopt() {
+    const apps = state.data.orApps || [];
+    const hn = state.data.hnSignals || [];
+    if (!apps.length) return `<div class="empty"><b>还没有采纳数据</b>等下一轮采集。</div>`;
+    const maxTok = Math.max(...apps.map(a => a.tokens), 1);
+    return `
+      <p class="tnote">左列是按 OpenRouter 实际 token 消耗排的使用量；右列是 Hacker News 标题含该工具名的帖子数与评论数。</p>
+      <div class="apphead"><span>工具</span><span>分类</span><span></span><span>用量</span><span>民间声量</span></div>
+      <div class="applist">
+        ${apps.map(a => {
+          const h = hn.find(x => x.name.toLowerCase() === String(a.title).toLowerCase());
+          return `<a class="approw" href="https://openrouter.ai/apps/${esc(a.slug || "")}" target="_blank" rel="noopener">
+            <span class="ar-n">${esc(a.title)}</span>
+            <span class="ar-c">${(a.categories || []).slice(0, 2).map(c => `<i>${esc(c)}</i>`).join("")}</span>
+            <span class="ar-t"><i style="width:${Math.max(3, (Math.log10(Math.max(a.tokens, 1)) / Math.log10(maxTok * 1.2)) * 100).toFixed(1)}%"></i></span>
+            <span class="ar-v">${(a.tokens / 1e12).toFixed(1)}T</span>
+            <span class="ar-hn" title="${h ? esc(h.topTitle) : ""}">${h ? kfmt(h.mentions) + " 帖 · " + kfmt(h.talk) + " 评" : "—"}</span>
+          </a>`;
+        }).join("")}
+      </div>`;
+  }
+
   /* ── 单榜明细 ── */
   function benchSingle(id) {
     const b = benchBoards()[id];
@@ -3029,13 +3052,16 @@ const MOTION = (() => {
           <button class="chip" data-benchview="table" aria-pressed="${view === "table"}">对照表</button>
           <button class="chip" data-benchview="single" aria-pressed="${view === "single"}">单榜明细</button>
           <button class="chip" data-benchview="value" aria-pressed="${view === "value"}">分数 × 价格</button>
+          <button class="chip" data-benchview="adopt" aria-pressed="${view === "adopt"}">团队在用 ${(state.data.orApps || []).length}</button>
         </div>
         <span class="spacer"></span>
         ${view !== "single" && picks.length > 1 ? `<button class="chip" data-benchclear="1">清空选择</button>` : ""}
       </div>
 
       <div id="benchBody">
-        ${view === "single"
+        ${view === "adopt"
+          ? benchAdopt()
+          : view === "single"
           ? benchSingle(picks[0] || cat.find((c) => !c.sub)?.id || cat[0].id)
           : view === "value"
             ? `<section class="bsc"><div class="bschead"><h3>贵的不一定强</h3>

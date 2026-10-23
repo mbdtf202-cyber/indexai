@@ -15,7 +15,10 @@ AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中
 | `health.mjs` | 分层健康检查：基线阈值 + 语义校验，采集和 CI 共用 |
 | `serve.mjs` | 零依赖静态服务器（本地预览用） |
 | `deploy.mjs` | 本机一键采集 + 发布（CI 的本地等价物，备用） |
-| `data.json` | 站点唯一数据源（每次运行覆盖） |
+| `bench.mjs` | 9 个公开评测源的采集与归一（每次运行覆盖 `bench.json`） |
+| `bench.json` | 评测明细（约 3.5 MB，首屏不加载，打开评测页才拉） |
+| `lib/parquet.mjs` | 零依赖 Parquet + Snappy 读取器（读 LMArena 官方数据集用） |
+| `data.json` | 站点主数据源（每次运行覆盖；评测只留目录与统计） |
 | `news-history.json` | 新闻历史（逐日累积，进仓库，用来撑「近一周／一月」跨度） |
 | `_headers` | Cloudflare 缓存头 |
 | `favicon.svg` | 站点图标 |
@@ -76,7 +79,7 @@ node health.mjs            # 单独体检；不达标 exit 1
 | 中转站（约 50 在册 / 约 20 有公开价目） | 各站 `/api/pricing`（OneAPI/NewAPI） | 每次自动探测 |
 | 活动（111 条 / 约 88 开放中） | Devpost 分页 + Luma 发现流 + 本地 AIOS 活动库 | 每次自动 |
 | 工具箱（21） | 人工精选稀缺 skill / CLI，GitHub API 校准星数 | 每次自动 |
-| 评测（16） | Vals Index 公开分数 + Artificial Analysis 智能指数（266） | 每次自动，存快照比 Δ |
+| 评测（163 榜 / 3.2 万条分数 / 1,200 模型） | LMArena 24 榜、SWE-bench 5 榜、Aider、Terminal-Bench、τ-bench、ARC-AGI 2 榜、SimpleBench、Vals、Artificial Analysis 14 榜 | 每次自动 |
 | 情报（每日约 50 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
 
 另有几个辅助层：OpenRouter 应用榜（25）、模型调用量榜（20）、Hacker News 民间声量（16）、来源登记表（125）。
@@ -109,16 +112,30 @@ Devpost 的 `submission_period_dates` 有三种真实写法，解析器都要认
 
 ```
 有效成本 = (1 − s) · [(1 − h) · input + h · cache_read] + s · output
-中转账单价 = model_ratio × $2 / 1M（input）
-            model_ratio × completion_ratio × $2 / 1M（output）
+
+中转站（两种写法并存，表达式优先）：
+① billing_expr       tier("base", p * 2 + c * 10 + cr * 0.1)
+                     p=输入 c=输出 cr=缓存读 cc=缓存写，单位即 $ / 1M
+② model_ratio 倍率    input  = model_ratio × 分组倍率 × $2 / 1M
+                     output = 上式 × completion_ratio
+                     cache  = 上式 × cache_ratio
 ```
 
 - 排序默认 **主流优先**：大厂在前，同厂商内新模型在前。
 - 汇率来自 `open.er-api.com`，站点每 8 小时刷新一次，失败时沿用上次值。
-- 中转站价目是接口披露价，不含充值折扣；与官方差 3 倍以上标「口径?」。
+- 中转站价目是接口披露价，不含充值折扣。
+- **表达式必须优先于倍率**：同时给出两者的站点里 `model_ratio` 多是废弃占位值（实测某站 `37.5` 算出 $75，而其 `billing_expr` 写的是 `p*2+c*10`，真实价 $2/$10）。只认倍率会把一批正常站点误标成「异常」。
+- **分组倍率（`group_ratio`）才是定价核心**，跨站差 20–220 倍。页面取「代表分组」（default，或组名声明倍率最接近 1 的公开组）做横向比较；「最低可达价」单列并标组名，因为通常要求特定分组权限。
+- 免费额度行（`:free`、`-free`、`-0x`、公益/福利组）不计入比价，否则「最低价」永远指向免费额度。
+- 与同口径官方价差 2.5 倍以上标「口径?」；便宜模型（官方 < $0.5）放宽到 8 倍，避免小模型被绝对差价误判。
+- 页面价差计算会剔除偏离同模型中位价 10 倍以上的离群报价，并在页面上列出被剔除者及原因。
 - 第三方挂单来自 `data.aibijia.org` 公开 JSON，**每条带商品页直链**；质保通常几小时，不推荐、不保证可用。
 - 各区订阅价同源（App Store 公开页），每个国家都能点进对应区商店。
 - 评测分数下跌标黄，提示可能的版本回退或渠道掺水，需人工复核。
+- 评测各榜量纲不同（Elo / 百分数 / 指数），对照表按**榜内名次换算成相对位置**再并排，不直接相加。
+- 同一模型的多个推理档位（High / Max / xHigh）合并成一条，保留最强档，避免一个模型刷屏。
+- 榜单超过 6 个月没更新会标出「N 个月前」。SWE-bench 全系与 Aider 目前属于这一类：分数能看，但不代表当前能力。
+- LMArena 的 `latest` 文件里可能混着几代快照（text_to_image 混了 2025 年的旧批次），采集时只保留最新 `leaderboard_publish_date` 那一批。
 
 ---
 

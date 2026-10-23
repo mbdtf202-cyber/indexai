@@ -4,6 +4,8 @@
   Cache-Control: public, max-age=0, must-revalidate
 /data.json
   Cache-Control: public, max-age=300
+/bench.json
+  Cache-Control: public, max-age=300
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

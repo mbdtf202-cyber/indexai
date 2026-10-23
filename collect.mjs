@@ -1098,21 +1098,155 @@ const EV_LUMA_QUERIES = [
 ];
 const EV_LUMA_CONCURRENCY = 8;
 
-async function lumaQuery(q, attempt = 0) {
-  const url = `https://api.lu.ma/discover/get-paginated-events?limit=50&query=${encodeURIComponent(q)}`;
-  try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const j = await res.json();
-    return j.entries || [];
-  } catch (e) {
-    if (attempt < 2) {
-      await new Promise((r) => setTimeout(r, 350 * (attempt + 1)));
-      return lumaQuery(q, attempt + 1);
+/* ── 地理维度：带经纬度返回「该城市周边的 AI 活动」，与不带 geo 的结果**完全不重叠** ──
+ * 实测 2026-10-24：同一个 query=AI，无 geo 与 SF geo 的返回集合交集为 0。
+ * 也就是说 geo 不是「同一批数据加个坐标」，而是另一条索引 —— 这是最大的一处漏采。
+ *
+ * region 字段是**兜底**：事件自带 country_code 时以 country_code 为准（见 lumaCountryRegion），
+ * 只有 geo 缺失时才用城市坐标所属的 region。城市坐标只是「这次查询问的是哪儿」，
+ * 不代表活动真的在那个国家（海外场次也会被周边查询带出来），所以顺序不能反。 */
+const EV_LUMA_CITIES = [
+  // 北美
+  { slug: 'sf',          lat: 37.7749,  lng: -122.4194, region: 'us' },
+  { slug: 'nyc',         lat: 40.7128,  lng: -74.0060,  region: 'us' },
+  { slug: 'boston',      lat: 42.3601,  lng: -71.0589,  region: 'us' },
+  { slug: 'seattle',     lat: 47.6062,  lng: -122.3321, region: 'us' },
+  { slug: 'austin',      lat: 30.2672,  lng: -97.7431,  region: 'us' },
+  { slug: 'toronto',     lat: 43.6532,  lng: -79.3832,  region: 'ca' },
+  { slug: 'vancouver',   lat: 49.2827,  lng: -123.1207, region: 'ca' },
+  // 欧洲
+  { slug: 'london',      lat: 51.5074,  lng: -0.1278,   region: 'uk' },
+  { slug: 'berlin',      lat: 52.5200,  lng: 13.4050,   region: 'eu' },
+  { slug: 'paris',       lat: 48.8566,  lng: 2.3522,    region: 'eu' },
+  { slug: 'amsterdam',   lat: 52.3676,  lng: 4.9041,    region: 'eu' },
+  { slug: 'zurich',      lat: 47.3769,  lng: 8.5417,    region: 'eu' },
+  // 亚洲
+  { slug: 'tokyo',       lat: 35.6762,  lng: 139.6503,  region: 'jp' },
+  { slug: 'seoul',       lat: 37.5665,  lng: 126.9780,  region: 'kr' },
+  { slug: 'singapore',   lat: 1.3521,   lng: 103.8198,  region: 'sg' },
+  { slug: 'bangalore',   lat: 12.9716,  lng: 77.5946,   region: 'in' },
+  { slug: 'beijing',     lat: 39.9042,  lng: 116.4074,  region: 'cn' },
+  { slug: 'shanghai',    lat: 31.2304,  lng: 121.4737,  region: 'cn' },
+  { slug: 'shenzhen',    lat: 22.5431,  lng: 114.0579,  region: 'cn' },
+  { slug: 'hangzhou',    lat: 30.2741,  lng: 120.1551,  region: 'cn' },
+  { slug: 'taipei',      lat: 25.0330,  lng: 121.5654,  region: 'cn' },
+  { slug: 'hongkong',    lat: 22.3193,  lng: 114.1694,  region: 'cn' },
+  // 其他
+  { slug: 'dubai',       lat: 25.2048,  lng: 55.2708,   region: 'ae' },
+  { slug: 'sydney',      lat: -33.8688, lng: 151.2093,  region: 'au' },
+  { slug: 'telaviv',     lat: 32.0853,  lng: 34.7818,   region: 'middle-east' },
+  { slug: 'saopaulo',    lat: -23.5505, lng: -46.6333,  region: 'latam' },
+  { slug: 'mexicocity',  lat: 19.4326,  lng: -99.1332,  region: 'latam' },
+];
+
+/* geo 循环只配这 8 个词：全量 30 个词 × 27 城市 = 810 次请求会被源端封。
+ * 8 × 27 = 216 次，加上无 geo 的 30 次 = 246 次，落在 250 的预算内。
+ * 选词依据：AI / LLM / Agent 是发现流里覆盖面最广的三个（实测单城各 50 条），
+ * OpenAI / hackathon / GenAI 补厂商与活动形态，中文三个词是亚洲城市的主要命中词。 */
+const EV_LUMA_GEO_QUERIES = ['AI', 'LLM', 'Agent', 'OpenAI', 'hackathon', '大模型', '人工智能', 'GenAI'];
+
+const EV_LUMA_CITY_BY_SLUG = new Map(EV_LUMA_CITIES.map((c) => [c.slug, c]));
+
+/* country_code → region：**第一优先级**的地区判定依据。
+ * 实测 2026-10-24：Luma 的 geo_address_info.country_code 确实有值（'US' / 'JP' / 'IN' / 'HK' …），
+ * 比拿 location 字符串跑国家正则准得多 —— 后者在「校园名 / 缩写 / 非拉丁文」上大量漏判，
+ * 这正是 region=other 常年 12% 的根因。
+ * 值只映射到 region 用的大区码；没列到的国家落 'other'，交给字符串正则兜底。 */
+const EV_COUNTRY_REGION = {
+  // 大中华区（港澳台按项目既有口径并入 cn，与 EV_REGION_RULES 的中文区一致）
+  CN: 'cn', HK: 'cn', TW: 'cn', MO: 'cn',
+  JP: 'jp', KR: 'kr', SG: 'sg', IN: 'in',
+  // 欧洲
+  GB: 'uk',
+  DE: 'eu', FR: 'eu', NL: 'eu', CH: 'eu', ES: 'eu', IT: 'eu', PT: 'eu', SE: 'eu',
+  FI: 'eu', DK: 'eu', NO: 'eu', PL: 'eu', CZ: 'eu', AT: 'eu', BE: 'eu', IE: 'eu',
+  HU: 'eu', RO: 'eu', BG: 'eu', LU: 'eu', EE: 'eu', LV: 'eu', LT: 'eu', GR: 'eu',
+  HR: 'eu', SI: 'eu', SK: 'eu', RS: 'eu', UA: 'eu', TR: 'eu',
+  // 北美
+  US: 'us', CA: 'ca',
+  // 中东
+  AE: 'ae', IL: 'middle-east', SA: 'middle-east', QA: 'middle-east',
+  JO: 'middle-east', LB: 'middle-east', KW: 'middle-east', BH: 'middle-east', OM: 'middle-east',
+  // 拉美
+  BR: 'latam', MX: 'latam', AR: 'latam', CL: 'latam', CO: 'latam', PE: 'latam',
+  UY: 'latam', PY: 'latam', EC: 'latam', CR: 'latam', PA: 'latam',
+  // 大洋洲
+  AU: 'au', NZ: 'au',
+  // 非洲
+  NG: 'africa', KE: 'africa', ZA: 'africa', EG: 'africa', GH: 'africa', MA: 'africa',
+  TN: 'africa', UG: 'africa', TZ: 'africa', RW: 'africa', ET: 'africa',
+  // 东南亚 / 南亚其余
+  PH: 'asia', ID: 'asia', VN: 'asia', TH: 'asia', MY: 'asia', LK: 'asia',
+  NP: 'asia', BD: 'asia', KH: 'asia', MM: 'asia', PK: 'asia',
+};
+
+/** 国家码 → region，未知国家返回 null（交给正则兜底，不瞎猜） */
+function regionFromCountryCode(cc) {
+  if (!cc) return null;
+  return EV_COUNTRY_REGION[String(cc).trim().toUpperCase()] || null;
+}
+
+/* 限速：这里是**实测**出来的硬约束，不是拍脑袋。
+ * 2026-10-24 实测：
+ *   - 并发 8 + 80ms 节流 → 216 个 geo job 里 167 个失败（403/429）
+ *   - 封禁是**有状态**的：封后单请求间隔 400ms / 1500ms 仍 429
+ *   - 解封曲线：+30s 429 · +60s 429 · +120s 429 · **+180s 才 200**
+ *   - 顺序 + 间隔 900ms → 连发 12 个全 200；1500ms 同样 12/12
+ * 所以：geo 走**单线程顺序队列**，每请求间隔 EV_LUMA_GAP_MS，命中 429 就指数退避到
+ * EV_LUMA_COOLDOWN_MS 再继续。并发在这里不是优化，是自杀 —— 跟 Eventbrite 是同一形态。 */
+const EV_LUMA_GAP_MS = 900;
+const EV_LUMA_COOLDOWN_MS = 180000;   // 实测封禁约 3 分钟才解
+const EV_LUMA_MAX_RETRY = 3;
+
+/* geo 循环的总预算：宁可少采几个城市，也不能让整次 collect 挂在网络里。
+ * 正常跑满 216 次 × 900ms ≈ 195s；预留一倍余量。一旦撞到多次 429 把冷却叠起来，
+ * 超预算就中断剩余城市、用已有结果继续，并把「未采完」如实记进 meta.collect 的 note。
+ * 这里不抛错 —— 抛错会让 T.run 走 stale 丢掉本次已采到的新城市数据，那是更糟的结果。 */
+const EV_LUMA_GEO_BUDGET_MS = 480000;   // 8 分钟
+
+/* 请求计数器与限速观测点。
+ * 验收要报「总请求数」，逐次累加而不是事后估算。
+ * blocked/最长冷却单独记账：这个源是**有状态封禁**，哪天它把阈值调紧，
+ * 我们要能从 meta.collect 里立刻看出来，而不是等条数掉了再回头排查。 */
+const netStat = { requests: 0, blocked: 0, maxCooldownMs: 0 };
+
+const lumaSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** 统一出口：计数 + 429 冷却。返回 entries 数组。
+ *  @param {object} opt { gap } 请求前是否等一个间隔（geo 队列用，无 geo 的并发池不用） */
+async function lumaGet(q, geo, opt = {}) {
+  const gap = opt.gap ?? 0;
+  let params = `limit=50&query=${encodeURIComponent(q)}`;
+  if (geo) params += `&latitude=${geo.lat}&longitude=${geo.lng}`;
+  const url = `https://api.lu.ma/discover/get-paginated-events?${params}`;
+
+  for (let attempt = 0; attempt <= EV_LUMA_MAX_RETRY; attempt += 1) {
+    if (gap) await lumaSleep(gap);           // 请求前睡，保证任意两次之间都有间隔
+    try {
+      netStat.requests += 1;
+      const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
+      if (res.status === 429 || res.status === 403) {
+        // 429/403 是封禁信号，不是「这个查询没结果」。冷却后重试，不能当空数组吃下去。
+        netStat.blocked += 1;
+        const wait = EV_LUMA_COOLDOWN_MS * (attempt + 1);
+        if (wait > netStat.maxCooldownMs) netStat.maxCooldownMs = wait;
+        console.warn(`[collect] luma ${res.status}（${geo ? geo.slug : '无geo'} / ${q}），冷却 ${Math.round(wait / 1000)}s 后第 ${attempt + 1} 次重试`);
+        await lumaSleep(wait);
+        continue;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const j = await res.json();
+      return j.entries || [];
+    } catch (e) {
+      if (attempt >= EV_LUMA_MAX_RETRY) {
+        console.warn(`[collect] luma query "${q}"${geo ? `@${geo.slug}` : ''} 放弃：${e.message}`);
+        return [];
+      }
+      // 5xx / 网络抖动：短退避，别升级成长冷却（501 是源端抖动，不是封禁）
+      await lumaSleep(350 * (attempt + 1));
     }
-    console.warn(`[collect] luma query "${q}" 放弃：${e.message}`);
-    return [];
   }
+  return [];
 }
 
 async function fetchLuma() {
@@ -1125,7 +1259,7 @@ async function fetchLuma() {
     const worker = async () => {
       while (cursor < EV_LUMA_QUERIES.length) {
         const q = EV_LUMA_QUERIES[cursor++];
-        const entries = await lumaQuery(q);
+        const entries = await lumaGet(q);
         if (!entries.length) failedQueries += 1;
         for (const entry of entries) {
           const ev = entry?.event || entry;
@@ -1136,6 +1270,42 @@ async function fetchLuma() {
       }
     };
     await Promise.all(Array.from({ length: Math.min(EV_LUMA_CONCURRENCY, EV_LUMA_QUERIES.length) }, worker));
+    const noGeoCount = byId.size;
+
+    /* ── 地理维度：顺序队列 + 间隔 + 总预算 ──
+     * 为什么不是并发 8：实测并发会把源端打成有状态封禁（见 EV_LUMA_GAP_MS 上方注释）。
+     * 顺序 + 900ms 间隔实测稳定 200，代价是 216 × 0.9 ≈ 195s。
+     * 这个站每天只跑一次，3 分钟可以接受；封禁后再解要 3 分钟且期间全部城市失败，更亏。 */
+    const geoStart = Date.now();
+    const citiesDone = [];
+    const citiesSkipped = [];
+    let geoHits = 0;
+    let aborted = false;
+
+    for (const city of EV_LUMA_CITIES) {
+      if (aborted) { citiesSkipped.push(city.slug); continue; }
+      let cityNew = 0;
+      for (const q of EV_LUMA_GEO_QUERIES) {
+        if (Date.now() - geoStart > EV_LUMA_GEO_BUDGET_MS) { aborted = true; break; }
+        const entries = await lumaGet(q, city, { gap: EV_LUMA_GAP_MS });
+        for (const entry of entries) {
+          const ev = entry?.event || entry;
+          const id = ev?.api_id;
+          if (!id || !ev?.url || byId.has(id)) continue;
+          // 记住这条是从哪个城市问出来的：geo 缺失时用它兜底 region。
+          // 挂一个非持久字段，下游建 row 时用掉后就不再带走。
+          ev.__geoCity = city.slug;
+          byId.set(id, ev);
+          cityNew += 1;
+        }
+      }
+      if (aborted) { citiesSkipped.push(city.slug); break; }
+      citiesDone.push(city.slug);
+      geoHits += cityNew;
+      if (cityNew) console.log(`[collect] luma geo ${city.slug} +${cityNew}（累计 ${byId.size}）`);
+    }
+    const geoMs = Date.now() - geoStart;
+    console.log(`[collect] luma geo ${citiesDone.length}/${EV_LUMA_CITIES.length} 城完成 · 新增 ${geoHits} 条 · 耗时 ${(geoMs / 1000).toFixed(0)}s${citiesSkipped.length ? ` · 未采完 ${citiesSkipped.length} 城（${citiesSkipped.join(',')}）` : ''}`);
 
     // 关键词本身已经是 AI 相关，这里只做一次轻过滤把明显无关的挡掉：命中任一 AI 词即收。
     //
@@ -1186,6 +1356,7 @@ async function fetchLuma() {
       if (!re.test(hay)) continue;
       const start = String(ev.start_at || '').slice(0, 10);
       const geo = ev.geo_address_info || {};
+      const cityFallback = ev.__geoCity ? EV_LUMA_CITY_BY_SLUG.get(ev.__geoCity) : null;
       const row = {
         id: `luma-${ev.api_id}`, title: name, url: `https://lu.ma/${ev.url}`,
         dates: start, start, end: String(ev.end_at || '').slice(0, 10),
@@ -1195,6 +1366,10 @@ async function fetchLuma() {
           : [geo.city || geo.region, geo.country].filter(Boolean).join(', ') || '线下',
         org: ev.calendar?.name || 'Luma', prize: null, regs: ev.guest_count || 0,
         themes: [], source: 'Luma',
+        // region 的两个权威来源，按可信度排：country_code 直接来自源，最准；
+        // 城市兜底只在「源没给国家」时用，且必须明确标出来，方便事后核查。
+        countryCode: geo.country_code || null,
+        geoCityFallback: (!geo.country_code && cityFallback) ? cityFallback.region : null,
       };
       // 发现流条目**不含 description/summary 字段**（2026-10-24 实测：event 对象里
       // 没有 description、description_mirror，/event/get 详情接口对发现流的 api_id 返回 400）。
@@ -1203,7 +1378,7 @@ async function fetchLuma() {
       row.status = eventStatus(row);   // 按日期判
       out.push(row);
     }
-    console.log(`[collect] luma ${EV_LUMA_QUERIES.length} 个关键词 → 去重 ${byId.size} 条 → AI 过滤后 ${out.length} 条${failedQueries ? `（${failedQueries} 个查询无结果）` : ''}`);
+    console.log(`[collect] luma 无geo ${EV_LUMA_QUERIES.length} 词 → ${noGeoCount} 条 · 加 geo ${EV_LUMA_CITIES.length} 城 → 去重 ${byId.size} 条 → AI 过滤后 ${out.length} 条${failedQueries ? `（${failedQueries} 个查询无结果）` : ''}`);
     return out;
   } catch (e) {
     console.error(`[collect] luma 失败：${e.message}`);
@@ -1299,6 +1474,18 @@ function eventRegion(e) {
   // 线上优先：但是「线上 + 线下」混合场次（Luma 常见）按线下判，因为地点更有信息量
   const onlineOnly = /^(线上|online|remote|virtual|anywhere)$/i.test(loc.trim());
   if (onlineOnly) return 'online';
+
+  /* 判定顺序（越靠前越权威）：
+   *   1. 源的 country_code —— 直接来自数据源的国家码，不靠猜
+   *   2. 城市 geo 兜底 —— 只有源没给国家时才用（本次是从该城市坐标问出来的）
+   *   3. location / org / 标题字符串正则 —— 老办法，作为兜底
+   *   4. other
+   * 线上场次已经在上面早返回，不会被国家码覆盖成线下地区。
+   * 注意「线上」+ 有国家码的混合场次：先判线上只认纯线上，混合场次继续往下走国家码，这是对的。 */
+  const byCountry = regionFromCountryCode(e.countryCode);
+  if (byCountry) return byCountry;
+
+  if (e.geoCityFallback) return e.geoCityFallback;
 
   const hay = `${loc} ${e.org || ''} ${e.title || ''}`;
   for (const [code, re] of EV_REGION_RULES) {

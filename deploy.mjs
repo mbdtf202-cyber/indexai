@@ -44,7 +44,7 @@ try {
   await rm(DIST, { recursive: true, force: true });
   await mkdir(DIST, { recursive: true });
 
-  const files = ["index.html", "data.json", "favicon.svg", "logo-preview.html", "directions.html", "_headers"];
+  const files = ["index.html", "data.json", "bench.json", "favicon.svg", "logo-preview.html", "directions.html", "_headers"];
   for (const f of files) {
     try {
       await cp(join(ROOT, f), join(DIST, f));
