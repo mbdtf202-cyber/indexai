@@ -938,7 +938,7 @@ const MOTION = (() => {
   const state = {
     tab: (location.hash || "#home").slice(1),
     q: "", vendor: "all", band: "all", channel: "all",
-    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", benchTab: "aa", evLimit: 18, toolKind: "all",
+    evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", benchTab: "aa", vendorSet: "", evLimit: 18, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
     hit: 0.7, outShare: 0.2,
@@ -1130,6 +1130,7 @@ const MOTION = (() => {
     const q = state.q.trim().toLowerCase();
     let rows = state.data.models.filter(m => {
       if (state.vendor !== "all" && m.vendor !== state.vendor) return false;
+      if (state.vendorSet && m.vendor !== state.vendorSet) return false;
       if (state.band !== "all" && m.band !== state.band) return false;
       if (state.channel !== "all" && m.channelKind !== state.channel) return false;
       if (state.freeOnly && !m.free) return false;
@@ -1254,6 +1255,17 @@ const MOTION = (() => {
           <button class="chip" data-toggle="freeOnly" aria-pressed="${state.freeOnly}">仅免费</button>
           <button class="chip" data-toggle="paidOnly" aria-pressed="${state.paidOnly}">仅付费</button>
           <button class="chip" data-toggle="cacheOnly" aria-pressed="${state.cacheOnly}">有缓存价</button>
+        </div>
+        <div class="chips">
+          ${(() => {
+            const CN = ["Zhipu", "DeepSeek", "Alibaba Qwen", "MiniMax", "Moonshot", "Tencent", "StepFun", "InclusionAI"];
+            const by = {};
+            for (const m of state.data.models) by[m.vendor] = (by[m.vendor] || 0) + 1;
+            return CN.filter(v => by[v]).map(v =>
+              `<button class="chip" data-vendorset="${v}" aria-pressed="${state.vendorSet === v}">${esc(v.replace("Alibaba ", ""))} <b style="opacity:.55;font-weight:400">${by[v]}</b></button>`
+            ).join("");
+          })()}
+          <button class="chip" data-vendorset="" aria-pressed="${!state.vendorSet}">全部厂商</button>
         </div>
       </div>
       <div class="sliders">
@@ -2649,7 +2661,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
   /* ── events ── */
   function bind() {
     document.addEventListener("click", (ev) => {
-      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-benchtab],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      const t = ev.target.closest("[data-tab],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-benchtab],[data-vendorset],[data-toolkind],[data-evmore],[data-close],#moreBtn,#overlay,.iconbtn");
       if (!t) return;
       if (t.dataset.tab) {
         if (t.dataset.tab === state.tab) return;
@@ -2679,6 +2691,7 @@ model_price > 0 时按「每次调用」计价，不做换算</div>
       if (t.dataset.newsrange) { state.newsRange = t.dataset.newsrange; render(); return; }
       if (t.dataset.newsimp) { state.newsImp = t.dataset.newsimp; render(); return; }
       if (t.dataset.benchtab) { state.benchTab = t.dataset.benchtab; render(); return; }
+      if (t.hasAttribute("data-vendorset")) { state.vendorSet = t.dataset.vendorset; state.limit = 80; render(); return; }
       if (t.dataset.toolkind) { state.toolKind = t.dataset.toolkind; render(); return; }
       if (t.dataset.relay) { if (ev.target.closest("a")) return; openRelay(t.dataset.relay); return; }
       if (t.dataset.sortkey) { state.sortKey = t.dataset.sortkey; state.sortDir = 1; render(); return; }
