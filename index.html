@@ -99,6 +99,13 @@ button,input,select{font:inherit; color:inherit}
 .tnote{margin:0 0 10px; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.02em}
 
 
+
+.distbar{position:relative; height:46px; margin:0 0 18px; border-bottom:1px solid var(--line)}
+.distbar svg{display:block; width:100%; height:46px; overflow:visible}
+.distbar .db-pt{fill:#8b8b8b; opacity:.5}
+.distbar .db-pt.on{fill:var(--accent); opacity:.95}
+.distbar .db-lbl{font-family:var(--mono); font-size:10.5px; fill:var(--faint)}
+
 /* ── 颗粒质感 ── */
 .grain{position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.032; mix-blend-mode:multiply;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='140' height='140' filter='url(%23n)'/></svg>")}
@@ -1142,7 +1149,7 @@ const MOTION = (() => {
       ${news.length ? `
       <section class="axsec">
         <div class="axhead">
-          <h2>${priced} 个有价模型，价格相差 <em>${spread >= 10000 ? (spread / 10000).toFixed(1) + " 万" : spread} 倍</em>。</h2>
+          <h2>${priced} 个有价模型，价格相差 <em>${spread >= 10000 ? (spread / 10000).toFixed(1) + " 万倍" : spread + " 倍"}</em>。</h2>
           <p class="axsub">每一点是一个模型的官方输入价，按对数排。四分之三的模型落在 $${money(q25)} 到 $${money(q75)} 之间。</p>
         </div>
         <svg id="priceAxis" viewBox="0 0 1200 300" preserveAspectRatio="none" role="img" aria-label="模型价格分布"></svg>
@@ -1583,6 +1590,33 @@ const MOTION = (() => {
       tip.style.display = "none";
       dotsG.querySelectorAll(".dot.hot").forEach(el => el.classList.remove("hot"));
     });
+  }
+
+
+  /* ── 比价页：当前结果的价格分布条 ── */
+  function renderDist() {
+    const host = document.getElementById("distBar");
+    if (!host) return;
+    const rows = (state.data.models || []).filter(m => !m.free && m.input > 0);
+    const base = rows.length ? Math.min(...rows.map(m => m.input)) : 1;
+    const top = rows.length ? Math.max(...rows.map(m => m.input)) : 10;
+    if (!(top > base)) { host.innerHTML = ""; return; }
+    const W = 1000, H = 46, padL = 6, padR = 6;
+    const LX = (v) => padL + (Math.log10(Math.max(v, base)) - Math.log10(base)) / (Math.log10(top) - Math.log10(base)) * (W - padL - padR);
+    const BINS = 72;
+    const bins = new Array(BINS).fill(0);
+    const bi = (v) => Math.min(BINS - 1, Math.floor((Math.log10(v) - Math.log10(base)) / (Math.log10(top) - Math.log10(base)) * BINS));
+    rows.forEach(m => bins[bi(m.input)]++);
+    const mx = Math.max(...bins);
+    const rnd = (i) => { const x = Math.sin(i * 91.7 + 47.3) * 43758.5453; return x - Math.floor(x); };
+    const sorted = [...rows].sort((a, b) => a.input - b.input);
+    const dots = sorted.map((m, i) => {
+      const x = LX(m.input);
+      const h = (H - 14) * Math.sqrt(bins[bi(m.input)] / mx);
+      return `<circle class="db-pt" cx="${x.toFixed(1)}" cy="${(H - 8 - rnd(i) * Math.max(h, 3)).toFixed(1)}" r="1.7"/>`;
+    }).join("");
+    const ticks = [base, Math.pow(10, Math.log10(base) * 0.5 + Math.log10(top) * 0.5), top];
+    host.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${dots}</svg>`;
   }
 
   /* ── bench ── */
