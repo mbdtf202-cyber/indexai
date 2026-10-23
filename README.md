@@ -47,7 +47,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 > 注意：node 必须走绝对路径 `/Users/raki/.local/node/current/bin/node`（launchd 不读 shell 的 PATH）；
 > 别用 `/usr/bin/python3 -m http.server`，Xcode 自带 python 在 launchd 下被 macOS TCC 挡住读不到桌面。
 
-## 七层数据
+## 八层数据
 
 | 层 | 来源 | 更新 |
 |---|---|---|
@@ -58,6 +58,7 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 | 活动（111 条 / 88 开放中） | Devpost 分页 + Luma 发现流 + 本地 AIOS 活动库，按类型/地区打标 | 每次自动 |
 | 评测（16） | Vals Index 公开分数 | 每次自动，存快照比 Δ |
 | 情报（24 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
+| 工具箱（26 个） | 人工精选 skill / MCP / CLI + GitHub API 校准星数 | 每次自动 |
 
 ## 口径
 
@@ -96,16 +97,45 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.raki.indexai.collect
 
 纯静态（HTML + JSON），没有后端、没有数据库。
 
-### 当前架构
+### 两种运行模式
+
+**A. 云端（推荐，不依赖本机）** — `.github/workflows/daily-collect.yml`
 
 ```
-本地 launchd  com.raki.indexai.collect（每天 09:00）
-      │
-      ├─ node collect.mjs        → 重采 data.json
-      └─ node deploy.mjs         → wrangler pages deploy
-                                    │
-Cloudflare Pages  indexai      ←────┘  全球 CDN + 免费 SSL
+GitHub Actions  每天 09:00
+      ├─ node collect.mjs
+      ├─ 组装 dist/
+      └─ wrangler pages deploy → Cloudflare Pages
 ```
+
+启用只需要仓库里有一个 secret：
+
+```bash
+# 1. 建 token（30 秒）：Cloudflare Dash → My Profile → API Tokens → Create Token
+#    https://dash.cloudflare.com/profile/api-tokens
+#    模板选 "Edit Cloudflare Workers"，或自定义权限：
+#    Account → Cloudflare Pages → Edit
+# 2. 写进仓库（会提示粘贴，不回显）
+gh secret set CLOUDFLARE_API_TOKEN -R mbdtf202-cyber/indexai
+# 3. 手动触发一次验证
+gh workflow run daily-collect -R mbdtf202-cyber/indexai
+```
+
+**B. 本地（当前在跑）** — `com.raki.indexai.collect`
+
+```
+launchd 每天 09:00 → node deploy.mjs → wrangler pages deploy
+```
+
+云端跑通后可以关掉本机定时，避免两边重复部署：
+
+```bash
+launchctl bootout gui/$(id -u)/com.raki.indexai.collect
+```
+
+### 为什么本地用 Node 驱动
+
+macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取（`Operation not permitted`），但 node 二进制不受此限制。所以本地编排写在 `deploy.mjs` 里，plist 直接执行 node，不经过 shell。云端无此限制。
 
 一条命令手动发版：
 
