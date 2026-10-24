@@ -1,73 +1,124 @@
 /**
- * 模型目录也要走分层记账（T1.5 · F06 · INV-1）。
+ * models 层（T3.1c8）。
  *
- * F06：OpenRouter 的 `/api/v1/models` 是唯一没有纳入 T.run 的源——
- * 它失败就直接 `throw`，整次采集中止，所有层当天都不更新。
- * 而它恰好是模型层（比价页的主干）的唯一来源，一旦挂掉应该「沿用上一版 + 标 stale」，
- * 而不是把白嫖额度、活动、评测这些跟它无关的层一起拖死。
- *
- * 这里盯三件事：
- * 1. 该源 503 时采集不中止；
- * 2. 模型层用上一版的 aggregator 行补齐，并标 stale；
- * 3. 官方直连（人工核实的那部分）照常合并进来，不受影响。
+ * 两个源性质完全不同：聚合目录每天实时抓（可能整体失败），人工官方价是人核过的。
+ * 这个区别贯穿全层——**沿用只针对聚合部分**。整层沿用会让「我核实于某天」
+ * 变成「源站今天没响应」，把两件不同的事混成一件。
  */
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { band, familyKey, dedupeModels } from '../../collect.mjs';
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..', '..');
+const ctx = {
+  band,
+  familyKey,
+  dedupeModels,
+  slugify: (s) =>
+    String(s || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-'),
+  today: () => '2026-10-24',
+};
 
-/** 从真实快照里取一份「上一版」，只用 aggregator 行做测试输入。 */
-function previousAggregatorRows() {
-  const data = JSON.parse(readFileSync(join(ROOT, 'fixtures', 'data', 'data.json'), 'utf8'));
-  return (data.models || []).filter((m) => m.channelKind === 'aggregator');
-}
+const agg = (n) => ({
+  rows: Array.from({ length: n }, (_, i) => ({
+    id: `m${i}`,
+    name: `Model ${i}`,
+    vendor: 'OpenAI',
+    vendorId: 'openai',
+    channel: 'OpenRouter',
+    channelKind: 'aggregator',
+    input: 1 + i,
+    output: 2 + i,
+    family: `openai::model-${i}`,
+    created: 1700000000,
+    conf: 'med',
+  })),
+  dropped: 2,
+  unpriced: 1,
+  stale: false,
+});
 
-describe('模型目录纳入记账（F06）', () => {
-  let collect;
+const official = [
+  {
+    model: 'sonnet',
+    name: 'Claude Sonnet',
+    vendor: 'Anthropic',
+    in: 2,
+    out: 10,
+    cr: 0.2,
+    src: 'https://x',
+    conf: 'high',
+  },
+];
 
-  // 只用纯函数：真正的采集由 golden 覆盖，这里不跑整条管线
-  test('aggregator 行可以被识别出来并原样沿用', async () => {
-    collect = await import('../../collect.mjs');
-    const prev = previousAggregatorRows();
-    assert.ok(prev.length > 0, 'fixture 里应当有 aggregator 行');
+describe('models 层（T3.1c8）', () => {
+  let layer;
 
-    // 沿用 = 原样使用，只加一个 stale 标记；价格与渠道字段一点都不能变
-    const carried = prev.map((m) => ({ ...m, stale: true }));
-    assert.equal(carried.length, prev.length);
-    assert.deepEqual(
-      carried.map(({ stale: _s, ...rest }) => rest),
-      prev,
-      '沿用不能改动任何原始字段',
+  test('加载并按契约导出', async () => {
+    layer = (await import('../../pipeline/layers/models/index.js')).default;
+    assert.equal(layer.id, 'models');
+    assert.equal(layer.sources.length, 2);
+  });
+
+  test('人工官方价被归一成直连行', () => {
+    const out = layer.normalize({ catalog: agg(1), curated: official }, ctx);
+    const direct = out.records.rows.find((r) => r.channelKind === 'direct');
+    assert.ok(direct);
+    assert.equal(direct.channel, '官方直连');
+    assert.equal(direct.srcType, 'official');
+    assert.equal(direct.seen, '2026-10-24');
+  });
+
+  test('ctx 字段从秒放大到毫秒', () => {
+    const out = layer.normalize(
+      { catalog: agg(1), curated: [{ ...official[0], ctx: 200000 }] },
+      ctx,
     );
+    const direct = out.records.rows.find((r) => r.channelKind === 'direct');
+    assert.equal(direct.ctx, 200000 * 1000);
   });
 
-  test('去重后不会出现同一 OpenRouter id 的两行', async () => {
-    collect = await import('../../collect.mjs');
-    const prev = previousAggregatorRows();
-    // 模拟「上一版 80 条 + 本次拿到 3 条新的」：新 id 应当留下，旧的照旧
-    const fresh = prev.slice(0, 3).map((m) => ({ ...m, seen: '2026-10-24' }));
-    const merged = collect.dedupeModels([...fresh, ...prev]);
-    const agg = merged.rows.filter((m) => m.channelKind === 'aggregator');
-    const ids = new Set(agg.map((m) => m.id));
-    assert.equal(ids.size, agg.length, '聚合层以 OpenRouter model id 为唯一键，不能重复');
+  test('聚合目录为空时被隔离，但仍交出人工价', () => {
+    const out = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx);
+    assert.equal(out.quarantined.length, 1);
+    assert.ok(out.records.rows.some((r) => r.channelKind === 'direct'));
   });
 
-  test('官方直连行与 aggregator 行互不覆盖（两层不合并）', async () => {
-    collect = await import('../../collect.mjs');
-    const data = JSON.parse(readFileSync(join(ROOT, 'fixtures', 'data', 'data.json'), 'utf8'));
-    const direct = (data.models || []).filter((m) => m.channelKind === 'direct');
-    const agg = (data.models || []).filter((m) => m.channelKind === 'aggregator');
-    assert.ok(direct.length > 0 && agg.length > 0, 'fixture 里两层都要有');
+  test('聚合有值时直接用本次结果，不标 stale', () => {
+    const next = layer.normalize({ catalog: agg(3), curated: official }, ctx).records;
+    const out = layer.merge([{ channelKind: 'aggregator', id: 'old' }], next);
+    assert.equal(out.stale, undefined);
+    assert.ok(out.rows.some((r) => r.id === 'm0'));
+  });
 
-    const merged = collect.dedupeModels([...agg, ...direct]);
-    const outDirect = merged.rows.filter((m) => m.channelKind === 'direct');
-    const outAgg = merged.rows.filter((m) => m.channelKind === 'aggregator');
-    assert.equal(outDirect.length, direct.length, '官方直连不该被聚合层吃掉');
-    assert.equal(outAgg.length, agg.length, '聚合层不该被官方直连吃掉');
+  test('聚合为空时沿用旧聚合，但人工价仍用本次的', () => {
+    const prev = [
+      { id: 'oldAgg', channelKind: 'aggregator', input: 9 },
+      { id: 'oldDirect', channelKind: 'direct', input: 99 },
+    ];
+    const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
+    const out = layer.merge(prev, next);
+
+    const aggRow = out.rows.find((r) => r.channelKind === 'aggregator');
+    assert.equal(aggRow.id, 'oldAgg', '聚合沿用旧值');
+    assert.equal(aggRow.stale, true);
+
+    const directRow = out.rows.find((r) => r.id === 'sonnet');
+    assert.ok(directRow, '人工价必须来自本次，不是上一版的 oldDirect');
+    assert.equal(directRow.input, 2);
+  });
+
+  test('没有上一版聚合时也不编造', () => {
+    const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
+    const out = layer.merge(null, next);
+    assert.equal(out.rows.filter((r) => r.channelKind === 'aggregator').length, 0);
+  });
+
+  test('门禁：一个模型都没有判红', () => {
+    const rule = layer.health.rules[0];
+    assert.equal(rule.check({ rows: [] }).level, 'red');
+    assert.equal(rule.check({ rows: [{ id: 'x' }] }).level, 'ok');
   });
 });

@@ -1019,6 +1019,30 @@ golden 差异：**无**。
 `sources`/`source` 三组异名同义），再去重。去重函数留在 `collect.mjs` 经 ctx 注入——
 它被多处引用且有独立测试，搬进层会造成重复实现。
 
+### [x] T3.1c8 采集层拆分（models）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c7
+
+结果：`pipeline/layers/models/index.js` + `test/unit/models-layer.test.js`（8 项）。golden 零差异，`collect.mjs` 净减 40 行。
+
+**这一层的核心判断：两个源性质不同，沿用必须分开。**
+
+- **聚合目录**（OpenRouter）：每天实时抓，可能整体失败 → 走分层记账、可沿用
+- **人工官方价**（`curated/official-prices.json`）：人核过的直连价，不参与抓取失败
+
+如果整层沿用，会把「我核实于某天」变成「源站今天没响应」——两件完全不同的事被合并成一件，
+而 `stale` 这个标记从此不再有信息量。
+
+所以 `merge` 只对 `channelKind === 'aggregator'` 的行做沿用，直连行永远取本次的值。
+用例专门钉了这一条：聚合为空时旧聚合行被标 stale 且保留，但人工价必须是本次的。
+
+纯函数（`band` / `familyKey` / `dedupeModels` / `slugify`）经 ctx 注入——
+它们有独立测试且被多处引用，搬进层会造成重复实现。
+
+**一个小错误**：我按 `dedupeOffers` 的形状想当然，在层里读了 `deduped.merged`，
+而 `dedupeModels` 只返回 `{rows, dropped}`。golden 没报错（多余字段不进输出），
+是自查返回形状时发现的——**这类「读到 undefined 但不影响结果」的错误最容易被忽略**。
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c

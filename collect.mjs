@@ -25,6 +25,7 @@ import newsLayer from './pipeline/layers/news/index.js';
 import benchLayer from './pipeline/layers/bench/index.js';
 import subsLayer from './pipeline/layers/subs/index.js';
 import offersLayer from './pipeline/layers/offers/index.js';
+import modelsLayer from './pipeline/layers/models/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -2153,52 +2154,32 @@ async function main() {
    * 官方直连是人工核实的，不该在「目录拉不到」时被一起沿用成 stale。
    */
   const prevAggregator = (prev?.models || []).filter((m) => m.channelKind === 'aggregator');
+  /* 只把「聚合目录」交给 T.run 记账：人工官方价不参与抓取失败判定（见层的注释）。
+   * 层在下面用同一个 ctx 把两者合并。 */
   const or = await T.run(
     'models',
     async () => ({ value: await fetchModelCatalog(), valid: undefined }),
     prevAggregator.length ? { rows: prevAggregator } : null,
   );
 
-  const curated = CURATED_OFFICIAL.map((r) => ({
-    id: r.model,
-    name: r.name || r.model,
-    vendor: r.vendor,
-    vendorId: slugify(r.vendor),
-    channel: r.channel || '官方直连',
-    channelKind: 'direct',
-    ctx: r.ctx ? r.ctx * 1000 : null,
-    input: r.in ?? null,
-    output: r.out ?? null,
-    cache_read: r.cr ?? null,
-    cache_write: r.cw ?? null,
-    free: (r.in === 0 && r.out === 0) || false,
-    band: band(r.in, r.in === 0),
-    family: familyKey(slugify(r.vendor), `${r.model}`, r.model),
-    modality: 'text->text',
-    peak: null,
-    cny: r.cny || null,
-    url: r.src,
-    src: r.src,
-    srcType: 'official',
-    conf: r.conf || 'high',
-    cm: r.cm || '官方页未说明',
-    note: r.note || '',
-    seen: todayISO(),
-  }));
-
-  // T.run 在「本次为空且无上一版」时会返回 null；下游一律按空目录处理
-  const catalog = or && Array.isArray(or.rows) ? or : { rows: [], dropped: 0, unpriced: 0, stale: false };
-
-  const createdByFamily = new Map();
-  for (const m of catalog.rows) {
-    if (!m.created) continue;
-    createdByFamily.set(m.family, Math.max(createdByFamily.get(m.family) || 0, m.created));
-  }
-  for (const m of curated) {
-    if (!m.created && createdByFamily.has(m.family)) m.created = createdByFamily.get(m.family);
-  }
-
-  const modelsDedup = dedupeModels([...catalog.rows, ...curated]);
+  /* 模型目录走契约（T3.1c8）。层负责「两个源怎么合」，
+   * 纯函数（band / familyKey / dedupeModels / slugify）经 ctx 注入——
+   * 它们有独立测试且被多处引用，搬进层会造成重复实现。 */
+  const modelsCtx = {
+    fetchCatalog: () => or && Array.isArray(or.rows) ? or : { rows: [] },
+    curated: { official: CURATED_OFFICIAL },
+    band,
+    familyKey,
+    dedupeModels,
+    slugify,
+    today: todayISO,
+  };
+  const modelsRaw = await modelsLayer.fetch(modelsCtx);
+  const modelsNorm = modelsLayer.normalize(modelsRaw, modelsCtx);
+  const modelsDedup = modelsLayer.merge(prev?.models, modelsNorm.records);
+  const catalog = modelsRaw.catalog && Array.isArray(modelsRaw.catalog.rows)
+    ? modelsRaw.catalog
+    : { rows: [], dropped: 0, unpriced: 0, stale: false };
   /* 免费额度走契约（T3.1c7）。这一层没有网络请求，数据来自人工名单；
    * 去重函数留在 collect.mjs 经 ctx 注入——它被多处引用且有独立测试。 */
   const offersCtx = { curated: { offers: CURATED_OFFERS }, dedupeOffers };
