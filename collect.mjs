@@ -20,6 +20,7 @@ import { effectiveCost as costOf, profileOf } from './lib/cost.js';
 import { subsThirdStats, subsThirdTotal } from './lib/subs-stats.js';
 import fxLayer from './pipeline/layers/fx/index.js';
 import adoptionLayer from './pipeline/layers/adoption/index.js';
+import resourcesLayer from './pipeline/layers/resources/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -1982,45 +1983,6 @@ const USE_LABEL = { design: '设计', writing: '写作', content: '内容', engi
  * 这解决过一个真实问题：fetchResources 串行打 21 个 GitHub 仓库，偶尔限流掉几个就跌破健康红线，
  * 整轮采集白跑。 */
 
-async function fetchResources() {
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
-  // UA 由 lib/http.js 统一注入，这里只补 GitHub 需要的 Accept 与可选鉴权
-  const headers = { Accept: 'application/vnd.github+json' };
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const out = [];
-  for (const item of (TEST_PROFILE ? CURATED_RESOURCES.slice(0, 3) : CURATED_RESOURCES)) {
-    const row = { ...item, useLabel: USE_LABEL[item.use] || item.use };
-    try {
-      const res = await httpGet(`https://api.github.com/repos/${item.repo}`, { headers, label: `github/${item.repo}` });
-      if (!res.ok) {
-        console.error(`[collect] github/${item.repo} → HTTP ${res.status}`);
-        out.push({ ...row, status: `http_${res.status}` });
-      } else {
-        const j = await res.json();
-        out.push({
-          ...row,
-          desc: j.description || '',
-          stars: j.stargazers_count ?? null,
-          forks: j.forks_count ?? null,
-          updated: (j.pushed_at || '').slice(0, 10),
-          license: j.license?.spdx_id || null,
-          archived: !!j.archived,
-          lang: j.language || null,
-          topics: Array.isArray(j.topics) ? j.topics.slice(0, 6) : [],
-          url: j.html_url,
-          status: 'ok',
-        });
-      }
-    } catch (e) {
-      console.error(`[collect] github/${item.repo} 失败：${e.message}`);
-      out.push({ ...row, status: 'error' });
-    }
-    await sleep(90);
-  }
-  // 按人工排序（谁更值得先看），不按星数
-  return out;
-}
 
 
 /* ────────────────────────── OpenRouter 真实使用量（民间口碑 + 工具采纳） ────────────────────────── */
@@ -2247,7 +2209,29 @@ async function main() {
       const v = await fetchAibijia();
       return { value: v, valid: v.valid };
     }, null),
-    T.run('resources', async () => ({ value: await fetchResources() }), prev?.resources),
+    T.run(
+      'resources',
+      async () => {
+        const ctx = {
+          http: { get: httpGet },
+          sleep,
+          now,
+          curated: { toolkit: CURATED_RESOURCES },
+          useLabel: USE_LABEL,
+          testProfile: TEST_PROFILE,
+          githubHeaders: (() => {
+            const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
+            const h = { Accept: 'application/vnd.github+json' };
+            if (token) h.Authorization = `Bearer ${token}`;
+            return h;
+          })(),
+        };
+        const raw = await resourcesLayer.fetch(ctx);
+        const norm = resourcesLayer.normalize(raw, ctx);
+        return { value: resourcesLayer.merge(prev?.resources, norm.records) };
+      },
+      prev?.resources,
+    ),
     T.run(
       'openrouter',
       async () => {
