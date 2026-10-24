@@ -27,6 +27,7 @@ import subsLayer from './pipeline/layers/subs/index.js';
 import offersLayer from './pipeline/layers/offers/index.js';
 import modelsLayer from './pipeline/layers/models/index.js';
 import relaysLayer from './pipeline/layers/relays/index.js';
+import eventsLayer from './pipeline/layers/events/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -2010,18 +2011,40 @@ async function main() {
   }
   const T = makeTracker();
 
+  /* 活动层的 ctx（T3.1c10）。四源记账仍由编排器负责——meta.collect 里的四行
+   * 是排障第一现场。层负责的是并发调度、单源失败收敛，以及 ctx.state 的显式传递
+   * （Luma 有有状态封禁，需要记住本次已冷却多久）。 */
+  const eventsCtx = {
+    fetchDevpost,
+    fetchLuma,
+    fetchDevfolio,
+    fetchAios,
+    testProfile: TEST_PROFILE,
+    state: lumaState,
+    log: (m, opt) => {
+      if (opt?.level === 'warn') console.warn(`[collect] ${m}`);
+      else console.log(`[collect] ${m}`);
+    },
+  };
+
   // 并行拉取，每层独立记账；失败不互相拖累
   // 顺序必须与下面的 Promise.all 一一对应：aibijia 已交给 subs 层自己抓（T3.1c6）
-  const [devpost, aios, luma, devfolio, resources, openrouter] = await Promise.all([
-    T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
-    // AIOS 读仓库外的本机文件，内容不在版本控制里：测试档位跳过，保证回放输出确定
-    TEST_PROFILE
-      ? Promise.resolve([])
-      : T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
-    T.run('luma', async () => ({ value: await fetchLuma() }), prev?.events?.filter((e) => e.source === 'Luma')),
-    // Devfolio 是补充源，只有 9 条：失败不能拖累整体，同样走 T.run 记账。
-    // 注意它没有上一版可比（首次上线），所以首跑 failed 也是合法的 —— health 里设成可选源即可。
-    T.run('devfolio', async () => ({ value: await fetchDevfolio() }), prev?.events?.filter((e) => e.source === 'Devfolio')),
+  /* 四源由层统一调度；每个源仍各自 T.run 记账（meta.collect 要有四行）。
+   * 层这边只多做一件事：把「并发」与「单源失败收敛」收进一处。 */
+  const eventsRaw = eventsLayer.fetch({
+    ...eventsCtx,
+    fetchDevpost: () =>
+      T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
+    fetchAios: () =>
+      T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
+    fetchLuma: () =>
+      T.run('luma', async () => ({ value: await fetchLuma() }), prev?.events?.filter((e) => e.source === 'Luma')),
+    fetchDevfolio: () =>
+      T.run('devfolio', async () => ({ value: await fetchDevfolio() }), prev?.events?.filter((e) => e.source === 'Devfolio')),
+  });
+
+  const [eventsData, resources, openrouter] = await Promise.all([
+    eventsRaw,
     T.run(
       'resources',
       async () => {
@@ -2336,6 +2359,11 @@ async function main() {
   }
 
   // 来源登记表：所有 URL 去重，标注类型与命中次数
+  /* 四源由 events 层调度后装在 eventsData 里。下游沿用原来的四个名字，
+   * 这样这次改动的 diff 只反映「谁来调度」，不夹杂重命名噪声。 */
+  const { devpost = [], luma = [], devfolio: devfolioRows = [], aios = [] } = eventsData || {};
+  const devfolio = devfolioRows;
+
   const srcMap = new Map();
   const addSrc = (url, type, label) => {
     if (!url) return;
