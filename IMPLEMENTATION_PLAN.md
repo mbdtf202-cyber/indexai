@@ -40,6 +40,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 - [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
 - [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N08（来自 T1.7）：`T.run` 的「上一版」参数对**非快照类层**语义不清。情报层的上一版是磁盘归档而不是上一版 data.json，传 `null` 会把「沿用」误判成 `failed`，传代理对象又会被 `size()` 数错并在沿用分支把代理交回下游。M3 拆层时应把「上一版从哪来」变成每层显式声明（S3.3 的四种合并策略正是这个）。去向：T3.3。
 - [ ] N07（来自 T1.4）：`httpText` 返回的是 `{status, ok, url, text}` 而不是 `Response`，迁移时两处调用点还写着 `await res.text()`，`openrouter` 与 `aa` 两层当场变成 `failed`。这类形状差异在纯 JS 里没有编译期保护，靠 golden 与 R2a 之外还需要 contract 测试（S1.4 已有该档）。去向：T1.6 之后补 contract 用例，或在 T3.1 拆层时让每层只通过 `ctx.http` 取值。
 - [ ] N06（来自 T1.3）：`npm test` 之前在非回放环境下会真的睡眠（Luma 冷却 180s 实测），现在由脚本自己钉死回放信号。任何新增用例都不要再依赖「外面传了环境变量」。去向：已修，AGENTS.md 记一条。
 - [ ] N04（来自 T1.2）：HF 上 LMArena 的 `latest-00000-of-00001.parquet` 在两个回放 fixture 里都解析失败（一层 Thrift 里没读出任何列，一层报 `unsupported value type 15`）。`text` 配置报 `numRows 1`，是覆盖 `model_name` 列的那层。这不是本轮引入的：T0.4 的 golden 里 arena 一直是 0 榜、`ok:false`。导致「LMArena 贡献 137/163 个榜」这件事在离线环境里完全无法验证（F03 的实例数据也因此只能来自线上）。去向：需要重新录制一份能解析的 parquet（`npm run record`）并补 golden，建议并入 T6.8（τ-bench 一并处理）或单开任务。
@@ -310,7 +311,7 @@ https://aihot.news/items/qovcune9w40laikj226y5u1cy
 
 golden 差异：**无**。回放数据里最长标题 79 字，没有任何一条触及旧的 96 上限，所以这次修复对回放输出逐字节无影响（已核：`news-archive.json` 352 条、0 行变化）。
 
-### [ ] T1.7 新鲜度门禁
+### [x] T1.7 新鲜度门禁
 
 依据：F09、F23 · 依赖：T0.4
 
@@ -320,6 +321,34 @@ golden 差异：**无**。回放数据里最长标题 79 字，没有任何一�
 3. health：`meta.fx.source === 'fallback'` 或 `meta.fx.stale` 时 warn；页面健康横幅说明汇率在沿用。
 
 验收：故障注入三路情报源失败，配合固定时钟分别得到 warn 与 red；汇率回退时出现 warn 且页面可见。
+
+结果：新增 `test/unit/health-freshness.test.js`（9 项，全绿）。
+
+`collect.mjs`：
+
+- `fetchNews` 现在算出 `freshCount`（`merged.length - before`），用不可枚举的 `__freshCount` 挂回归档——**不改 JSON 形态**，golden 逐字节不受影响。
+- 情报层改走带 `valid` 的 `T.run`：`valid: fresh > 0`。三路源全挂时 `freshCount === 0` → 走「沿用上一版」分支。
+- 基线传的是**磁盘上现有的归档数组**（不是 `null`，也不是条数代理）。踩了一次坑：先给了 `{ items: n }` 这种代理，`size()` 把它算成 1，T.run 就把代理原样返回，下游 `list.map` 直接炸（`failed: list.map is not a function`）。用真数组后语义也对了——沿用的是哪一份就交回哪一份。
+
+`health.mjs`：
+
+- 新增 `todayInShanghai()`（`Intl.DateTimeFormat` + `Asia/Shanghai`）与 `daysBetween()`（UTC 相减，避开夏令时），运行时零依赖。
+- 情报新鲜度：最新一条按 `Asia/Shanghai` 归日算年龄，**2 天前 warn、3 天前 red**。只看跨度会被「归档只增不删」骗过去——十几天没新条目也一路绿灯，这就是 F09。
+- 汇率：数值区间之外再查来源。`source === 'fallback'`（回退到写死的 7.1）warn 并说明「人民币价按它折算」；`stale === true`（沿用上次）也 warn。这是 F23。
+
+故障注入实测（`aihot.news` 与 `data.aibijia.org` 全 503，预置一份 352 条的归档）：
+
+```
+[collect] news 归档 352 → 352 条（新增 0）…
+[collect] news 三路源本次都没拿到新条目，沿用现有归档
+→ {"layer":"news","status":"stale","n":0,"prev":352}
+```
+
+采集退出码 0，归档原样保留，状态如实记 stale。
+
+**测试自身的一个坑**：`health-freshness.test.js` 一开始在 `npm test` 下失败、单跑却通过——因为用例把「今天」写死在 2026-10-24，而 `lib/clock.js` 只在模块加载时读一次 `INDEXAI_NOW`，`npm test` 并不设它。改成在 import `health.mjs` **之前**自己设 `INDEXAI_NOW`，用例才真正与日期无关。
+
+golden 差异：无（回放数据下 `news:fresh`、`models:fresh`，与改前一致）。
 
 ### [ ] T1.8 地区与类型硬伤
 

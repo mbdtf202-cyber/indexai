@@ -140,9 +140,20 @@ function semanticChecks(d) {
     else if (ageH > 30) issues.push({ level: 'warn', key: 'meta', msg: `数据已 ${ageH.toFixed(1)} 小时未更新，接近日更上限` });
   }
 
-  // 6. 汇率：必须是正数且接近合理区间
+  // 6. 汇率：数值合理 + 来源可信（F23）
+  // 只查区间是不够的：回退到写死的 7.1 时区间照样通过，读者看到的每个人民币价
+  // 都可能来自一个过期固定值，而页面说一切正常。[warn] 级在页面横幅可见。
   const fx = Number(d.meta?.fx?.USDCNY);
   if (!(fx > 4 && fx < 12)) red('meta', `汇率异常：USDCNY=${d.meta?.fx?.USDCNY}`);
+  else if (d.meta?.fx?.source === 'fallback') {
+    issues.push({
+      level: 'warn',
+      key: 'meta',
+      msg: `汇率回退到固定值 ${fx}（实时源不可用），人民币价按它折算`,
+    });
+  } else if (d.meta?.fx?.stale) {
+    issues.push({ level: 'warn', key: 'meta', msg: '汇率沿用了上次的值，今天的实时源没拿到' });
+  }
 
   // 7. 中转站：在册站点里至少要有一批真的探测成功
   const rl = d.relays || [];
@@ -158,6 +169,20 @@ function semanticChecks(d) {
     else if (span < 30) red('news', `情报跨度只有 ${span} 天（归档应当只增不删，跨度塌缩说明被覆盖了）`);
     else if (days < 10) issues.push({ level: 'warn', key: 'news', msg: `情报只有 ${days} 天有内容，跨度 ${span} 天，中间大量空窗` });
     if (Number(ni.bytes || 0) > 4 * 1024 * 1024) issues.push({ level: 'warn', key: 'news', msg: `情报归档 ${(ni.bytes / 1048576).toFixed(1)}MB，超过 4MB 该收紧保留了` });
+
+    /*
+     * 最新一条的年龄（F09）。
+     *
+     * 只看跨度与天数会被「三路源全挂」骗过去：归档只增不删，跨度永远够大，
+     * 于是十几天没新条目也一路绿灯。这里按 Asia/Shanghai 归日算年龄：
+     * 2 天前 warn、3 天前 red —— 日更的站点不该连续两天没有新东西。
+     */
+    const last = ni.last ? String(ni.last).slice(0, 10) : null;
+    if (last && /^\d{4}-\d{2}-\d{2}$/.test(last)) {
+      const ageDays = daysBetween(last, todayInShanghai());
+      if (ageDays >= 3) red('news', `情报最新条目停在 ${last}（${ageDays} 天前），源可能全挂了`);
+      else if (ageDays >= 2) issues.push({ level: 'warn', key: 'news', msg: `情报最新条目停在 ${last}（${ageDays} 天前）` });
+    }
   }
 
   // 9. 采集明细：能定位是哪一层空掉的
@@ -165,6 +190,24 @@ function semanticChecks(d) {
   if (stale.length) issues.push({ level: 'warn', key: 'collect', msg: `${stale.length} 层沿用了上一版数据：${stale.map((s) => s.layer).join(', ')}` });
 
   return issues;
+}
+
+/** 今天（Asia/Shanghai）的 YYYY-MM-DD。归日口径与情报层保持一致（S2.2）。 */
+function todayInShanghai() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now());
+}
+
+/** 两个 YYYY-MM-DD 相差几天（后 - 前）。用 UTC 相减，避开夏令时。 */
+function daysBetween(from, to) {
+  const a = Date.parse(`${from}T00:00:00Z`);
+  const b = Date.parse(`${to}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+  return Math.round((b - a) / 86400000);
 }
 
 /* ────────────────── 按来源分层的活动门禁 ──────────────────

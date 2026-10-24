@@ -2044,13 +2044,19 @@ async function fetchNews(log) {
     archive = Array.isArray(raw) ? raw : raw.items || [];
   } catch { /* 首次 */ }
 
+  // 本次真正新抓到的条数（不含归档里原有的）：上层据此判断情报层是否新鲜。
+  // 三路源全挂时 fresh 可能是空的，但归档照样很大——F09 就是这里被掩盖的。
   const before = archive.length;
   const merged = mergeArchive(archive, fresh, { today: todayISO() });
   const stats = archiveStats(merged);
+  const freshCount = merged.length - before;
 
   try { await writeFile(ARCHIVE, JSON.stringify(merged), 'utf8'); } catch { /* 只读环境 */ }
-  console.log(`[collect] news 归档 ${before} → ${merged.length} 条，跨度 ${stats.spanDays} 天 / ${stats.days} 个有新闻的日子，${(stats.bytes / 1024).toFixed(0)}KB`);
+  console.log(`[collect] news 归档 ${before} → ${merged.length} 条（新增 ${freshCount}），跨度 ${stats.spanDays} 天 / ${stats.days} 个有新闻的日子，${(stats.bytes / 1024).toFixed(0)}KB`);
 
+  // 给归档挂一个不可枚举的元信息：既不改 JSON 形态（golden 逐字节不受影响），
+  // 又让 T.run 能看见「本次到底抓到了没有」。
+  Object.defineProperty(merged, '__freshCount', { value: freshCount, enumerable: false });
   return merged;
 }
 
@@ -2517,7 +2523,29 @@ async function main() {
   ]);
 
   // 情报层：归档文件是唯一存储，data.json 里只留极简索引（计数 / 跨度 / 逐日条数）
-  const newsArchive = await T.run('news', async () => ({ value: await fetchNews((m) => console.log(`[collect] ${m}`)) }), null);
+  // 情报层用于判断「有没有可沿用的东西」：直接读现有归档。
+  // 必须是真数组：T.run 在「本次为空」时会把这个基线原样返回，代理对象会让下游炸。
+  let newsArchiveBefore = [];
+  try {
+    const raw = JSON.parse(await readFile(ARCHIVE, 'utf8'));
+    newsArchiveBefore = Array.isArray(raw) ? raw : raw.items || [];
+  } catch { /* 首次运行 */ }
+
+  const newsArchive = await T.run(
+    'news',
+    async () => {
+      const archive = await fetchNews((m) => console.log(`[collect] ${m}`));
+      // 归档只增不删，所以「有内容」不等于「今天拿到了新东西」。
+      // 三路源全挂时 freshCount 为 0：这一层必须记 stale 并写明原因（F09）。
+      const fresh = archive?.__freshCount ?? 0;
+      if (!fresh) console.warn('[collect] news 三路源本次都没拿到新条目，沿用现有归档');
+      // valid: false → T.run 走「沿用上一版」分支：有归档记 stale，连归档都没有才记 failed
+      return { value: archive, valid: fresh > 0 };
+    },
+    // 情报层的「上一版」就是磁盘上现有的归档：它不是快照，但确实是这次沿用下来的东西。
+    // 归档本身就是上一版：条数即 size()，语义也对（沿用哪一份就交回哪一份）。
+    newsArchiveBefore.length ? newsArchiveBefore : null,
+  );
   const newsIndex = buildIndex(newsArchive || []);
 
   // 民间讨论：拿使用量前 18 的工具名去 HN 查公开帖
