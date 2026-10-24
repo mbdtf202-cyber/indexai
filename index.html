@@ -1166,7 +1166,9 @@ html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
 <div class="grain" aria-hidden="true"></div>
 <noscript><div class="wrap empty">这个页面需要 JavaScript 渲染数据。</div></noscript>
 
-<script>
+<script type="module">
+
+import { safeUrl } from "./lib/url.js";
 
 /* ══════ motion（独立于主 IIFE，主流程可以随时调 MOTION.arm()） ══════ */
 const MOTION = (() => {
@@ -1268,7 +1270,6 @@ const MOTION = (() => {
 })();
 
 (() => {
-  "use strict";
 
   const TABS = [
     { id: "home", label: "总览", hint: "一站看全" },
@@ -1445,6 +1446,20 @@ const MOTION = (() => {
   const pct = (x) => Math.round(x * 100) + "%";
   const confTitle = { high: "高置信：实时 API 或官方定价页", med: "中置信：需换算或页面不完整", low: "低置信：未取到原始页面" };
   const hostOf = (u) => String(u || "").replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+  /**
+   * 外部链接（F46 · INV-14）。
+   *
+   * 所有第三方 URL 都必须从这里出去：安全地址渲染成带 rel="noopener" 的链接，
+   * 不安全地址（javascript: / data: / 相对路径……）**渲染成纯文本**。
+   * 只做 HTML 转义是不够的——转义管的是引号逃逸，而 javascript: 根本不需要引号就能执行。
+   * 判定集中在 lib/url.js，采集端与页面共用同一份规则。
+   */
+  function extLink(url, inner, attrs = "") {
+    const safe = safeUrl(url);
+    if (!safe) return '<span class="unsafe-url" title="链接地址不可用，已按纯文本显示">' + inner + "</span>";
+    return '<a href="' + esc(safe) + '" target="_blank" rel="noopener"' + attrs + ">" + inner + "</a>";
+  }
+
   const isNew = (m) => m.created && (Date.now() / 1000 - m.created) < 14 * 86400;
 
   /* 有效成本：每 1M 总 token，输入占 (1-s)，输出占 s，输入中命中率 h 走缓存价 */
@@ -1701,7 +1716,7 @@ const MOTION = (() => {
             <td class="num">${m.free ? '<span class="best">0</span>' : money(m.output)}</td>
             <td class="num hidesm">${disc == null ? '<span class="dim">—</span>' : `<span class="${disc > .5 ? "best" : ""}">${pct(disc)}</span>`}</td>
             <td class="num">${e == null ? "—" : money(e)}</td>
-            <td class="src hidesm"><a href="${esc(m.url)}" target="_blank" rel="noopener"><span class="conf ${m.conf}" title="${esc(confTitle[m.conf] || "")}"></span>${m.channelKind === "direct" ? "官方" : "聚合"} ↗</a></td>
+            <td class="src hidesm">${extLink(m.url, '<span class="conf ' + esc(m.conf) + '" title="' + esc(confTitle[m.conf] || "") + '"></span>' + (m.channelKind === "direct" ? "官方" : "聚合") + " ↗")}</td>
           </tr>`;
         }).join("");
     const tfoot = `<span>显示 ${shown.length} / ${rows.length} 条 · ${state.sortKey === "focus" ? "主流优先（大厂在前、新模型在前）" : "按所选列" + (state.sortDir === 1 ? "升序" : "降序")}</span>
@@ -1871,7 +1886,7 @@ const MOTION = (() => {
         ${news.map(n => `
           <article class="ncard">
             <div class="nmeta"><span class="ntopic">${esc(n.topicLabel || "其他")}</span><span class="ndate">${esc((n.date || "").slice(5))}${n.time ? " " + esc(n.time) : ""}</span></div>
-            <h3><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></h3>
+            <h3>${extLink(n.url, esc(n.title))}</h3>
             ${n.summary ? `<p class="nclamp">${esc(n.summary)}</p>` : ""}
           </article>`).join("")}
       </div>` : `<div class="newsrow newsrow-skel" aria-hidden="true">
@@ -2036,7 +2051,7 @@ const MOTION = (() => {
             <div class="rh"><h3>${esc(g.plan.startsWith(g.app) ? g.plan : g.app)}${g.plan.startsWith(g.app) ? "" : ` <em>${esc(g.plan)}</em>`}</h3><span>${esc(g.duration)} · ${g.total} 区</span></div>
             <div class="rrows">
               ${g.rows.slice(0, 6).map((r, i) => `
-                <a class="rrow${i === 0 ? " low" : ""}" href="${esc(r.url)}" target="_blank" rel="noopener">
+                <a class="rrow${i === 0 ? " low" : ""}" href="${esc(safeUrl(r.url) || "#")}"${safeUrl(r.url) ? ' target="_blank" rel="noopener"' : ""}>
                   <span class="idx">${i + 1}</span>
                   <span class="cty">${esc(r.n)}</span>
                   <span class="raw">${esc(r.p)}</span>
@@ -2382,7 +2397,7 @@ const MOTION = (() => {
           ${themes.length ? `<dt>主题</dt><dd><div class="mchips">${themes.map(t => `<span class="mchip">${esc(t)}</span>`).join("")}</div></dd>` : ""}
         </dl>
         <div class="foot">
-          <a href="${esc(e.url)}" target="_blank" rel="noopener">活动页 ↗</a>
+          ${extLink(e.url, "活动页 ↗")}
           <span class="evline"><span>${esc(EV_LABEL(EV_KIND, e.kind))}</span><span class="tag">${esc(EV_LABEL(EV_REGION, e.region))}</span></span>
         </div>
       </article>`;
@@ -2479,7 +2494,7 @@ const MOTION = (() => {
 
       <div class="tgrid">
         ${list.map(r => `
-          <a class="tcard${r.archived ? " stale" : ""}" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
+          <a class="tcard${r.archived ? " stale" : ""}" href="${esc(safeUrl(r.url) || "#")}"${safeUrl(r.url) ? ' target="_blank" rel="noopener"' : ""}>
             <div class="th">
               <h3>${esc(r.title)}</h3>
               <span class="tstars"><i class="starmini" style="--w:${Math.min(100, (Math.log10(Math.max(r.stars,1)) / 5.5) * 100).toFixed(0)}%"></i>${kfmt(r.stars)}<em>★</em></span>
@@ -3155,7 +3170,7 @@ const MOTION = (() => {
           </table>
         </div>
         ${b.rows.length > 80 ? `<p class="tnote">显示前 80 个，共 ${b.rows.length} 个。</p>` : ""}
-        <p class="tnote">数据：<a href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.name)} 原始榜</a>${b.updated ? ` · 更新于 ${esc(b.updated)}` : ""}</p>
+        <p class="tnote">数据：${extLink(b.url, esc(b.name) + " 原始榜")}${b.updated ? ` · 更新于 ${esc(b.updated)}` : ""}</p>
       </section>`;
   }
 
@@ -3183,7 +3198,7 @@ const MOTION = (() => {
         <div><b>${kfmt(stats.rows || 0)}</b><span>条分数</span></div>
         <div><b>${kfmt(stats.models || 0)}</b><span>个模型</span></div>
         <div><b>${src.filter((s) => s.ok).length}/${src.length}</b><span>源正常</span></div>
-        <div class="bstat-src">${src.map((s) => `<a href="${esc(s.home || "#")}" target="_blank" rel="noopener" class="${s.ok ? "" : "bad"}" title="${esc(s.note || "")}${s.error ? " · " + esc(s.error) : ""}">${esc(s.name)}</a>`).join("")}</div>
+        <div class="bstat-src">${src.map((s) => `${extLink(s.home, esc(s.name), ' class="' + (s.ok ? "" : "bad") + '" title="' + esc(s.note || "") + (s.error ? " · " + esc(s.error) : "") + '"')}`).join("")}</div>
       </div>
 
       ${benchPicker(groups, cat)}

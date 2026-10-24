@@ -23,6 +23,9 @@ const DIST = join(ROOT, 'dist');
 /** 站点需要复制的静态文件：源在仓库根，落到 dist 同名位置。 */
 const STATIC_FILES = ['index.html', 'favicon.svg', '_headers'];
 
+/** 页面用 import 共享的模块（S9.1：构建期与浏览器共用同一份视图代码的基础）。 */
+const SHARED_MODULES = ['lib/url.js'];
+
 /** 数据文件名：从 --data 指定的目录复制。 */
 const DATA_FILES = ['data.json', 'bench.json', 'news-archive.json', 'news-milestones.json'];
 
@@ -55,6 +58,17 @@ for (const name of STATIC_FILES) {
   }
   cpSync(src, join(DIST, name));
   copied.push(name);
+}
+
+for (const rel of SHARED_MODULES) {
+  const src = join(ROOT, rel);
+  if (!existsSync(src)) {
+    console.error(`[build] 缺少共享模块：${rel}`);
+    process.exit(1);
+  }
+  mkdirSync(dirname(join(DIST, rel)), { recursive: true });
+  cpSync(src, join(DIST, rel));
+  copied.push(rel);
 }
 
 const copiedData = [];

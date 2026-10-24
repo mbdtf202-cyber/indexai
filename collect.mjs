@@ -14,6 +14,7 @@
 
 import { writeFile, readFile } from 'node:fs/promises';
 import { httpGet, httpJson, httpText, httpTotals } from './lib/http.js';
+import { safeUrl } from './lib/url.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
@@ -1101,6 +1102,7 @@ async function fetchDevpost() {
       // 摘要：源里没有正文字段，用「主题 + 奖池 + 报名数」拼一条可读的一句话，前端只展示一行
       row.summary = devpostSummary(row);
       row.status = eventStatus(row);   // 按日期判，不再一律 open
+      row.url = keepSafeUrl(row.url, 'event:devpost');
       return row;
     });
 }
@@ -1273,6 +1275,20 @@ const EV_LUMA_GEO_BUDGET_MS = 480000;   // 8 分钟
 const EV_LUMA_COOLDOWN_CAP_MS = 6 * 60 * 1000;   // 6 分钟
 
 const netStat = { requests: 0, blocked: 0, maxCooldownMs: 0 };
+
+/* 被丢弃的不安全外链计数（F46 / INV-14）。
+ * normalize 阶段就把非 http(s) 的地址丢掉，而不是留到页面再挡——
+ * 下游去重键、情报归档都拿 url 当主键，脏 url 会污染这些不变量。 */
+const unsafeUrl = { dropped: 0, samples: [] };
+
+/** 过一遍外链白名单。不安全时记一次并返回 null，调用方据此丢掉整行。 */
+function keepSafeUrl(u, where) {
+  const ok = safeUrl(u);
+  if (ok) return ok;
+  unsafeUrl.dropped += 1;
+  if (unsafeUrl.samples.length < 5) unsafeUrl.samples.push({ where, url: String(u ?? '').slice(0, 120) });
+  return null;
+}
 
 /* 本次运行的 Luma 受阻状态。受阻后不再发起新请求：这个源是有状态封禁，
  * 继续试探只会把解封时间往后推（实测 +180s 才 200）。 */
@@ -1660,6 +1676,7 @@ async function fetchDevfolio() {
     const tag = String(h.tagline || '').replace(/\s+/g, ' ').trim();
     row.summary = tag ? tag.slice(0, 280) : null;
     row.status = eventStatus(row);
+    row.url = keepSafeUrl(row.url, 'event:devfolio');
     return row;
   });
 
@@ -2029,7 +2046,7 @@ async function fetchAihotBulk(log) {
           time: pub.slice(11, 16),
           title: it.title,
           summary: it.summary || '',
-          url: it.link || `https://aihot.news/items/${it.id}`,
+          url: keepSafeUrl(it.link || `https://aihot.news/items/${it.id}`, 'news:aihot') ?? '',
           cat: it.category || null,
         });
       }
@@ -2134,6 +2151,7 @@ async function fetchAios() {
         kindHint: o.type || null,
       };
       row.status = eventStatus(row);   // AIOS 是本地历史库，绝大多数会正确翻成 past
+      row.url = keepSafeUrl(row.url, 'event:aios');
       return row;
     }).sort((a, b) => String(a.start).localeCompare(String(b.start)));
   } catch (e) {
@@ -2928,6 +2946,8 @@ async function main() {
         sources: srcMap.size,
       },
       dedupe: { aggregator_dropped: catalog.dropped || 0, unpriced_dropped: catalog.unpriced || 0, models_dropped: modelsDedup.dropped, offers_merged: offersDedup.merged },
+      // 被外链白名单挡下的地址（F46）：数量要可观测，样例只留前 5 条
+      dropped: { unsafeUrl: unsafeUrl.dropped, unsafeUrlSamples: unsafeUrl.samples },
       bestCacheDiscount: cacheDiscount[0] ? { ...cacheDiscount[0], pct: Math.round(cacheDiscount[0].off * 100) } : null,
       // 旗舰清单（F19）：页面画参考线只读这份，不再用正则猜官方价
       flagships,

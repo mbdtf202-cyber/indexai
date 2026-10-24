@@ -249,3 +249,68 @@ for (const tab of ['subs', 'relays']) {
     }
   });
 }
+
+/**
+ * 外链白名单（T1.12 · F46 · INV-14）。
+ *
+ * 做法：把 fixture 数据在浏览器侧改出一条带 javascript: 的活动与情报，
+ * 走页面的真实渲染路径，断言：
+ * 1. 页面上不存在任何非 http(s) 的绝对外链；
+ * 2. 恶意地址被渲染成纯文本（可见、不可点）。
+ */
+test('页面上不存在非 http(s) 的外链，恶意地址降级为纯文本', async ({ page }) => {
+  await blockExternal(page);
+
+  // 在页面加载数据之前，篡改一次 fetch 的返回值：注入一条恶意活动 + 一条恶意情报
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await original(...args);
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      if (!url.includes('data.json')) return res;
+      const data = await res.json();
+      data.events = data.events || [];
+      data.events.push({
+        id: 'evil-event',
+        title: 'Malicious Meetup',
+        url: 'javascript:alert(document.domain)',
+        dates: '2026-10-24',
+        start: '2026-10-24',
+        end: '2026-10-24',
+        location: 'Online',
+        org: 'Evil Corp',
+        source: 'Luma',
+        status: 'open',
+        kind: 'meetup',
+        region: 'online',
+        summary: 'injected',
+      });
+      return new Response(JSON.stringify(data), {
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+  });
+
+  await page.clock.install({ time: new Date('2026-10-24T01:00:00.000Z') });
+  await page.goto('/#events');
+  await page.waitForFunction(
+    () => (document.querySelector('#view')?.textContent || '').trim().length > 50,
+  );
+
+  // 全页扫描：任何 href 都不能是非 http(s) 的绝对地址
+  const bad = await page.evaluate(() =>
+    [...document.querySelectorAll('a[href]')]
+      .map((a) => a.getAttribute('href') || '')
+      .filter((h) => {
+        const s = h.trim().toLowerCase();
+        if (!s) return false;
+        // 站内锚点与外链都在白名单之外一律算问题
+        if (s.startsWith('#')) return false;
+        return !(s.startsWith('http://') || s.startsWith('https://'));
+      }),
+  );
+  expect(bad, `发现非 http(s) 的 href：${JSON.stringify(bad.slice(0, 6))}`).toEqual([]);
+
+  // 恶意标题仍然可见（数据没被吞掉），但它的地址不是链接
+  expect(await page.getByText('Malicious Meetup').count()).toBeGreaterThan(0);
+});

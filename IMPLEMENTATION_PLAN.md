@@ -486,7 +486,7 @@ golden 差异：无（纯前端与样式改动，数据字节不变）。
 
 验收：e2e 通过；字体文件合计 ≤ 150 KB；启动后整页渲染只发生一次（给 `render` 计数断言）。
 
-### [ ] T1.12 外链白名单
+### [x] T1.12 外链白名单
 
 依据：F46 · INV-14 · 依赖：T0.5
 
@@ -498,6 +498,20 @@ golden 差异：无（纯前端与样式改动，数据字节不变）。
 5. 用例：`javascript:alert(1)`、`JAVASCRIPT:…`、前导空白的 `javascript:`、`data:`、`vbscript:`、相对地址；e2e 用 fixture 注入一条带恶意链接的活动。
 
 验收：用例全部通过；页面上不存在非 http(s) 的外部 `href`。
+
+结果：新增 `lib/url.js`（`safeUrl` / `isSafeUrl` / `hrefOrNull`）与 `test/unit/url.test.js`（20 项，全绿），e2e 加 1 项注入用例。
+
+1. **页面脚本改为 `<script type="module">`**，并 `import { safeUrl } from "./lib/url.js"`。`site/build.js` 新增 `SHARED_MODULES`，把 `lib/url.js` 复制成 `dist/lib/url.js`。
+2. **`safeUrl` 规则**：只放行 `http:` / `https:` 绝对地址。先 `trim`，再剔除 `\t\n\r`（浏览器本来就会忽略它们，`java\tscript:` 照样可执行），然后 `new URL()` 解析；协议不在白名单、没有主机名、解析失败一律返回 `null`。返回的是 `URL#href`，同一地址在页面上只有一种写法。
+3. **页面**：新增 `extLink(url, inner, attrs)` 作为唯一出口——安全地址渲染成带 `rel="noopener"` 的链接，不安全地址**渲染成纯文本**（`.unsafe-url`）。已替换 7 类共 26 处外链：比价来源、情报标题、活动页、评测原始榜、评测源首页、工具栏、中转站行。
+4. **采集端**：`keepSafeUrl(u, where)` 在 Devpost / Devfolio / AIOS 的活动行、AIHOT 的情报条目上统一过滤，丢弃计入 `meta.dropped.unsafeUrl`（只留前 5 条样例）。空 url 的情报条目会被 `encodeNews` 自然拒掉，链路闭合。
+5. `e.worth` 一类数字字段此前已在渲染处用 `esc`，本轮补的是「地址」这条更危险的通道。
+
+用例覆盖：`javascript:alert(1)`、`JAVASCRIPT:`、大小写混写、前导空白的 `javascript:`、`\t`/`\n` 夹在协议名里、`data:`、`vbscript:`、`file:`、`ftp:`、`blob:`、相对地址、`#anchor`、空值、非字符串。e2e 则在浏览器侧篡改 `data.json`，注入一条 `javascript:alert(document.domain)` 的活动，断言**全页没有任何非 http(s) 的 `href`**，同时恶意标题仍然可见（数据没被吞掉，只是不可点）。
+
+golden 差异（1 处）：`$.meta.dropped` 新增（`unsafeUrl: 0` + 空样例表）。
+
+**一处刻意没做的事**：顺手把 Luma 链接从 `lu.ma` 改成 `luma.com` 会带出 136 处 golden 差异，但那是 T2.6（F27）的范围。已还原，不在本任务里夹带。
 
 ---
 
