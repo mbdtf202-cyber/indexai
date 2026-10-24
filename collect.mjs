@@ -24,6 +24,7 @@ import resourcesLayer from './pipeline/layers/resources/index.js';
 import newsLayer from './pipeline/layers/news/index.js';
 import benchLayer from './pipeline/layers/bench/index.js';
 import subsLayer from './pipeline/layers/subs/index.js';
+import offersLayer from './pipeline/layers/offers/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -2198,12 +2199,12 @@ async function main() {
   }
 
   const modelsDedup = dedupeModels([...catalog.rows, ...curated]);
-  const offersDedup = dedupeOffers(CURATED_OFFERS.map((o) => ({
-    ...o,
-    conf: o.conf || o.confidence || 'med',
-    srcType: o.srcType || o.source_type || 'official',
-    sources: o.sources && o.sources.length ? o.sources : [o.source],
-  })));
+  /* 免费额度走契约（T3.1c7）。这一层没有网络请求，数据来自人工名单；
+   * 去重函数留在 collect.mjs 经 ctx 注入——它被多处引用且有独立测试。 */
+  const offersCtx = { curated: { offers: CURATED_OFFERS }, dedupeOffers };
+  const offersRaw = await offersLayer.fetch(offersCtx);
+  const offersNorm = offersLayer.normalize(offersRaw, offersCtx);
+  const offersDedup = offersLayer.merge(prev?.offers ? { rows: prev.offers } : null, offersNorm.records);
   const signals = [...new Map(SIGNALS.map((s) => [s.url, s])).values()]
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 

@@ -1003,6 +1003,22 @@ golden 差异：**无**。
 - 删掉 `T.run('aibijia')` 后忘了同步 `Promise.all` 的解构，7 个名字对 6 个 promise——会把 `resources` / `openrouter` 全部左移一位。golden 报 `Cannot read properties of undefined (reading 'apps')` 才发现。
 - 删 `fetchAibijia` 后 HTTP 请求数从 39 涨到 41：层自己抓一次、旧的 `T.run` 又抓一次。**「搬走」和「删掉」是两步，只做第一步就会重复发请求。**
 
+### [x] T3.1c7 采集层拆分（offers）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c6
+
+结果：`pipeline/layers/offers/index.js` + `test/unit/offers-layer.test.js`（8 项）。golden 零差异。
+
+最简单的一层：没有网络请求，数据全部来自人工核校的 `curated/offers.json`。
+
+但它承担着一条硬约束——**每条都必须能回溯**（INV-2）。所以 `normalize` 把
+「缺 source」当作隔离理由而不是「少一个字段」：没有出处的条目是一句无法核实的断言，
+不该混进对外数据。用例专门钉了这一条。
+
+其余是把人工数据写法拉平（`conf`/`confidence`、`srcType`/`source_type`、
+`sources`/`source` 三组异名同义），再去重。去重函数留在 `collect.mjs` 经 ctx 注入——
+它被多处引用且有独立测试，搬进层会造成重复实现。
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c
