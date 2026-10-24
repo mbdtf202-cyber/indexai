@@ -60,7 +60,7 @@ node scripts/serve.js --port 4311   # 本地预览 http://127.0.0.1:4311/（先 
 4. **失败可见**。任何降级、沿用、隔离都进 manifest 并在页面可见；
    连续两次 `red` 开 issue，恢复后自动关闭。
 
-紧急情况下强行发布残缺数据：`ALLOW_DEGRADED=1 node collect.mjs`（会有明显警告）。
+紧急情况下强行发布残缺数据：`ALLOW_DEGRADED=1 node pipeline/run.js`（会有明显警告）。
 
 详细的来源清单、每层的门禁数值与当前覆盖率由**方法页**从代码常量生成，
 不写在这份 README 里——手抄的数字一定会过期。

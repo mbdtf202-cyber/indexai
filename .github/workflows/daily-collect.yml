@@ -1,7 +1,7 @@
 name: daily-collect
 
 # 云端采集 + 发布：不依赖本机开机。
-# 每天 UTC 01:00（北京 09:00）跑 collect.mjs，门禁通过后才发布到 Cloudflare Pages。
+# 每天 UTC 01:00（北京 09:00）跑 pipeline/run.js，门禁通过后才发布到 Cloudflare Pages。
 #
 # 三道防线（以前一道都没有）：
 #   1. 发布前健康门禁 —— 任一层为空/异常缩水，job 直接红，线上保持上一版
@@ -69,17 +69,17 @@ jobs:
             echo "::warning::拿不到线上 bench.json，评测层本轮没有可沿用的旧榜"
           fi
 
-      # collect.mjs 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
+      # pipeline/run.js 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
       - name: 安装锁定依赖
         run: npm ci
 
       - name: 采集（内含健康门禁）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node collect.mjs
+        run: node pipeline/run.js
 
       # 二次独立校验：把 data.json 当独立产物再验一遍，
-      # 防止将来有人改 collect.mjs 绕过内嵌门禁
+      # 防止将来有人改 pipeline/run.js 绕过内嵌门禁
       - name: 健康检查门禁
         run: node health.mjs
 
@@ -207,7 +207,7 @@ jobs:
         run: |
           set -euo pipefail
           TITLE="采集失败：$(date -u +%F)"
-          BODY=$(printf '每日采集任务失败。\n\n**运行记录**：%s\n\n**排查顺序**\n1. 看这一步的日志，health.mjs 会指出是哪一层不达标\n2. 若是 Cloudflare token：重新建 token，模板选 Edit Cloudflare Workers\n3. 若是某个数据源改版：在 collect.mjs 里看对应 fetch 的错误日志，修解析器\n4. 确认线上仍是上一版（旧数据比残缺数据好），修复后手动 workflow_dispatch 重跑\n\n> 线上站点在此期间保持上一次成功发布的数据。\n' "$RUN_URL")
+          BODY=$(printf '每日采集任务失败。\n\n**运行记录**：%s\n\n**排查顺序**\n1. 看这一步的日志，health.mjs 会指出是哪一层不达标\n2. 若是 Cloudflare token：重新建 token，模板选 Edit Cloudflare Workers\n3. 若是某个数据源改版：在 pipeline/run.js 里看对应 fetch 的错误日志，修解析器\n4. 确认线上仍是上一版（旧数据比残缺数据好），修复后手动 workflow_dispatch 重跑\n\n> 线上站点在此期间保持上一次成功发布的数据。\n' "$RUN_URL")
           existing=$(gh issue list --label collect-failure --state open --json number --jq 'length')
           if [ "$existing" != "0" ]; then
             echo "已有未关闭的失败 issue，追加评论"

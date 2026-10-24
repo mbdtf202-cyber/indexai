@@ -37,7 +37,7 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 
 ## 目录
 
-- `collect.mjs`、`bench.mjs`、`health.mjs`：采集、评测、门禁（T3.1 起拆进 `pipeline/`）
+- `pipeline/run.js` (collect)、`bench.mjs`、`health.mjs`：采集、评测、门禁（T3.1 起拆进 `pipeline/`）
 - `index.html`：整个站点（M5 起拆进 `site/`）；`lib/`：共享的纯函数模块
 - `fixtures/`：回放数据、golden、页面测试数据；`test/`：unit、golden、contract、e2e
 - 生成物，不手改、不提交：`data.json`、`bench.json`、`dist/`、`.ralph/`、`coverage/`、`test-results/`
@@ -52,7 +52,7 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 - 网络只走 `lib/http.js`，时间与睡眠只走 `lib/clock.js`（两者都由 R2a/R2b 把关）
 - `lib/http.js` 返回的是响应对象：`httpText` 给 `{status, ok, url, text}`，`httpJson` 直接给对象，`httpBuffer` 给 Buffer；
   要读正文就别再写 `await res.text()`
-- UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:collect.mjs`
+- UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:pipeline/run.js`
 
 ## 已知坑
 
