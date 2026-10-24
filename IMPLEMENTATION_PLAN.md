@@ -107,21 +107,15 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 结果：新增 `lib/clock.js`（`now` / `nowISO` / `todayISO` / `mark` / `since` / `sleep`，`INDEXAI_NOW` 固定时钟，回放时 `sleep` 立即返回并累计 `takeRequestedSleepMs()` 供 T1.3 断言上界）；`collect.mjs`、`bench.mjs`、`lib/news.mjs`、`health.mjs` 里所有取当前时间、睡眠与耗时统计全部改走它。新增 `INDEXAI_PROFILE=test`（用派生切片而非改常量，生产默认不变）与 `INDEXAI_OUT_DIR`（三份输出统一重定向）。`scripts/update-golden.js` + `npm run golden:update`。`test/golden/collect.test.js` 三个用例：30 秒内跑通、与 golden 逐字节一致、两次运行互相一致；失败时打印第一个不同的 JSON 路径。生产默认值逐项核对：Luma 30 词 / 27 城 / 8 geo 词、Devpost 40 页、Devfolio 45 页、`TEST_PROFILE` 默认 false、`OUT_DIR` 默认 null（写仓库根）—— 与改动前完全一致。体积：`fixtures/http` 3.2 MB、`fixtures/golden` 1.1 MB，均在 R9 上限内，R9 已扩到 golden。golden 实测 1.1 秒，`npm test` 195 项全过。过程中发现并修掉五处不确定性：`collect` 日志顺序随并行完成顺序漂移（按层 id 排序）、`models` 同价行顺序不稳（加 `channelKind::id::channel` 次级键）、`events` 未排序（按 id 排序）、中转站 `samples` 同价顺序不稳（加模型名次级键）、AIOS 读仓库外本机文件（测试档位跳过）。另修掉 `collect.mjs` 里残留的旧 UA `FreeAI-Radar/2.0`（F32 的一部分）与回放自动安装判据——`node --import` 下 `argv[1]` 是被执行脚本而非本文件，故改为认 `INDEXAI_HTTP=replay`。
 
-### [ ] T0.5 页面冒烟与 DOM 快照
+### [x] T0.5 页面冒烟与 DOM 快照
 
 依据：S9.8（子集）· 依赖：T0.1
-
-步骤：
-1. `scripts/make-fixture-data.js`：从本机现有的 `data.json`、`bench.json`、`news-archive.json`、`news-milestones.json` 裁出 `fixtures/data/`（≤ 1 MB）。meta 原样保留；模型约 80 条（官方直连全部保留）；活动约 60 条（覆盖各来源与各状态）；中转站全保留；评测约 12 个榜；情报约 200 条（跨多个月）；其余层全保留。裁剪规则写在脚本里，可重复运行。
-2. `site/build.js` 第 0 版：把 `index.html`、`favicon.svg`、`_headers` 与 `--data <目录>`（默认 `fixtures/data/`）里的数据文件复制到 `dist/`。脚本 `npm run build`。
-3. `npm install -D -E @playwright/test`，`npx playwright install chromium`。`playwright.config.js`：用 `serve.mjs` 在 `dist/` 起服务；视口 1280×800；`reducedMotion: 'reduce'`；用 `page.clock` 把时间固定在 2026-10-24 09:00（+08:00）；拦截所有非同源请求（Google Fonts、汇率接口）。
-4. `test/e2e/smoke.spec.js`：10 个标签逐个打开，断言没有 `console.error` 与 `pageerror`、`#view` 文本长度 > 50、`body` 计算后的 `opacity` 为 1。
-5. DOM 快照：每个标签取 `#view` 的 HTML，去掉计时与随机属性后，与 `test/e2e/__dom__/<tab>.html` 比较。快照文件不带平台后缀，本地与 CI 一致。截图只作为 artifact 输出，不比较。
-6. `verify` 末尾加上 `build` 与 `test:e2e`。启用 R9 的 `fixtures/data` 部分。
 
 验收：
 - 10 个标签全部通过；连续两次运行 DOM 快照一致。
 - 断网时 e2e 仍通过。
+
+结果：`scripts/make-fixture-data.js` 从本机真实数据裁出 `fixtures/data/`（0.52 MB，上限 1 MB），裁剪按结构覆盖而非随机抽样：模型保留全部官方直连 + 每厂商一条 + band 四个分支各两条 + 有/无缓存价各两条（共 80 条）；活动按 source × status 全覆盖 + 每个 kind 与每个 region 各一条 + 按报名数补足（60 条）；评测按六个分组各取 2 个榜、每榜前 20 名（12 榜 240 行）；情报按月均匀抽样（200 条，跨多个月）。`site/build.js` 第 0 版把 `index.html` / `favicon.svg` / `_headers` 与 `--data`（默认 `fixtures/data/`）的数据复制到 `dist/`，每次全量重建。`scripts/serve.js` 只服务 `dist/`、校验 Host 只接受回环、拒绝点开头路径段（S10.5 的一部分，早于 T2.6 落地）。`playwright.config.js` 只跑 Chromium、视口 1280×800、`reducedMotion: reduce`、`page.clock` 固定在 2026-10-24T01:00Z（+08:00 09:00）。`test/e2e/smoke.spec.js` 覆盖 10 个标签：无真正前端错误、`#view` 文本 > 50、`body` 计算 opacity 为 1（对 F01 的锁）；非同源请求全部 abort 并记为 annotation（页面仍直连 Google Fonts 与汇率接口，属 F45/F52 未修，故与被拦截产生的 resource error 分开断言），另有 `__dom__/<tab>.html` 快照，跨平台无后缀。`verify` 末尾加 `build` 与 `test:e2e`，R9 扩到 `fixtures/data`。两次运行快照一致；`HTTP_PROXY=http://127.0.0.1:9` 断网下 10 个标签仍全过（需给 webServer 探测加 `NO_PROXY=127.0.0.1,localhost`，否则代理拦回环）。完整 `npm run verify` 10 秒。
 
 ### [ ] T0.6 CI
 
