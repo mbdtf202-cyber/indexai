@@ -1,7 +1,50 @@
 # AGENTS.md
 
-Working notes for anyone (human or agent) touching this project.
+每轮必读的操作手册：只写「怎么做」。进度在 IMPLEMENTATION_PLAN.md，规格在 UPGRADE_PLAN.md。
 
-## Frontend
+## 命令
 
-Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+| 命令 | 作用 | 可用于 |
+|---|---|---|
+| `node collect.mjs` | 真实采集，约 9 分钟，覆盖 data.json、bench.json、news-archive.json。只在 CI 运行，Ralph 不运行 | 现在（T0.1 起为 `npm run collect`） |
+| `node health.mjs` | 体检 data.json，不达标退出码 1 | 现在 |
+| `npm ci` | 安装锁定的开发依赖 | T0.1 起 |
+| `npm run verify` | lint、类型、规则、测试（T0.5 起含构建与 e2e），提交前必须全过 | T0.1 起 |
+| `npm test` | 离线回放的 unit、golden、contract 测试 | T0.1 起 |
+| `npm run record` | 测试档位真实请求一遍，写 `fixtures/http/` | T0.4 起 |
+| `npm run golden:update` | 重写 golden，提交信息写明差异来源 | T0.4 起 |
+| `npm run build` | 用 `fixtures/data/` 生成 `dist/`；`-- --data .` 用本机真实数据 | T0.5 起 |
+| `npm run test:e2e` | Playwright（只有 Chromium：`npx playwright install chromium`） | T0.5 起 |
+
+某个命令落地后，把它的「可用于」改成「可用」；M0 结束时删掉这一列。
+
+## 目录
+
+- `collect.mjs`、`bench.mjs`、`health.mjs`：采集、评测、门禁（T3.1 起拆进 `pipeline/`）
+- `index.html`：整个站点（M5 起拆进 `site/`）；`lib/`：共享的纯函数模块
+- `fixtures/`：回放数据、golden、页面测试数据；`test/`：unit、golden、contract、e2e
+- 生成物，不手改、不提交：`data.json`、`bench.json`、`dist/`、`.ralph/`、`coverage/`
+
+## 规则
+
+- 只在 `ralph/work` 分支工作；一轮一个任务；提交信息以任务编号开头
+- 不部署，不运行 wrangler 的发布与登录命令，不读密钥，不写 data 分支
+- 测试一律离线回放；需要真实响应就用录制工具，每个上游每天最多录一次，不跑真实采集
+- 网络只走 `lib/http.js`（T1.4 起），时间与睡眠只走 `lib/clock.js`（T0.4 起）
+- UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:collect.mjs`
+
+## 已知坑
+
+- Luma：有状态封禁，并发就会被封，封后约 3 分钟才解；只能顺序请求，间隔 ≥ 900 ms
+- Luma：带 geo 与不带 geo 的结果互不重叠；单个 query 最多 50 条，`has_more` 恒为 false
+- Devpost：必须按 status（open、upcoming）分别翻页，每页实际只给 9 条
+- Devfolio：`themes` 是对象数组，取 `t.name`
+- 中转站：`billing_expr` 优先于 `model_ratio`；分组倍率才是价差核心；部分站 `/api/pricing` 会 301 到别的域
+- LMArena：`latest` 文件里混着几批快照，只取最新的 `leaderboard_publish_date`
+- AIHOT：分类之间不重叠，要逐个分类翻页
+- macOS launchd 下 `/bin/bash` 读不到 `~/Desktop`，本机常驻任务直接执行 node
+- Playwright 的 `toBeVisible` 把 `opacity:0` 当作可见，判断真可见要看计算样式
+
+## 前端原则
+
+- 少用次级标签和说明文字，让布局说话
