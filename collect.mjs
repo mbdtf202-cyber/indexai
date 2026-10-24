@@ -1719,7 +1719,9 @@ export function eventKind(e) {
   // 注意 "-thon" 要写成带连字符或词尾，否则会误吃 marathon/marathon-like 的词
   if (/hackathon|hack ?day|hackweek|hack ?week|hacks?\b|hacksprint|hack ?sprint|黑客松|challenge|datathon|data ?bowl|\bjam\b|competition|contest|竞赛|大赛|挑战赛|kaggle|sprint|\bthon\b|-thon\b|\bchip\b hack/i.test(b)) return 'hackathon';
   // 大展会 / 峰会 / 大会
-  if (/summit|conference|convention|symposium|大会|峰会|论坛|forum|expo|展会|博览|world congress|tech week|conference week|con\b/i.test(b)) return 'conference';
+  // F11：con\b 曾经吃掉 "Silicon Valley Con..."；英文 forum 把 OpenAI Forum 系列判成会议。
+  // 会议只认真正的会议词，中文「论坛」保留（它确实是会议）。
+  if (/summit|conference|convention|symposium|大会|峰会|论坛|expo|展会|博览|world congress|tech week|conference week/i.test(b)) return 'conference';
   // 奖项 / 评选
   if (/award|prize|评选|颁奖|film festival/i.test(b)) return 'award';
   // 工作坊 / 课程 / 训练营
@@ -1757,20 +1759,24 @@ const EV_REGION_RULES = [
   ['jp', /日本|东京|東京|大阪|京都|名古屋|福冈|札幌|横滨|\bJapan\b|Tokyo|Shibuya|Chiyoda|Minato|Meguro|Osaka|Kyoto|Nagoya|Fukuoka|Sapporo|Yokohama/i],
   ['kr', /韩国|韓國|首尔|首爾|서울|부산|Seoul|Korea|Busan/i],
   ['sg', /新加坡|Singapore|Singapur/i],
-  ['in', /印度|班加罗尔|孟买|新德里|海得拉巴|浦那|金奈|科钦|\bIndia\b|Bangalore|Bengaluru|Mumbai|New Delhi|Delhi|Hyderabad|Pune|Chennai|Kochi|Coimbatore|Tamil ?Nadu|ISLAMABAD|Pakistan/i],
+  // F10：Islamabad/Pakistan 搬到 asia 那一档（国家码表里 PK→asia，正则不能再跟它打架）
+  ['in', /印度|班加罗尔|孟买|新德里|海得拉巴|浦那|金奈|科钦|\bIndia\b|\bBangalore\b|\bBengaluru\b|\bMumbai\b|New Delhi|\bDelhi\b|\bHyderabad\b|\bPune\b|\bChennai\b|\bKochi\b|Coimbatore|Tamil ?Nadu/i],
   ['ae', /迪拜|杜拜|阿布扎比|阿聯酋|阿联酋|\bDubai\b|Abu Dhabi|\bUAE\b|United Arab Emirates/i],
   ['uk', /英国|英國|伦敦|倫敦|曼彻斯特|爱丁堡|牛津|剑桥|\bUK\b|\bU\.K\.|United Kingdom|England|London|Manchester|Edinburgh|Cambridge|Oxford|Bristol|Glasgow/i],
   // 欧洲（含实测出现的小国：匈牙利/罗马尼亚/保加利亚/卢森堡/土耳其）
-  ['eu', /欧洲|歐盟|德国|法国|荷兰|西班牙|意大利|葡萄牙|瑞典|芬兰|丹麦|挪威|瑞士|波兰|捷克|奥地利|比利时|爱尔兰|匈牙利|罗马尼亚|保加利亚|卢森堡|土耳其|柏林|巴黎|阿姆斯特丹|慕尼黑|巴塞罗那|米兰|斯德哥尔摩|赫尔辛基|苏黎世|维也纳|布达佩斯|布加勒斯特|索菲亚|Europe|Germany|Berlin|Munich|France|Paris|Netherlands|Amsterdam|Spain|Barcelona|Madrid|Italy|Milan|Portugal|Lisbon|Sweden|Stockholm|Finland|Helsinki|Turku|Denmark|Copenhagen|Norway|Oslo|Switzerland|Zurich|Poland|Warsaw|Czech|Prague|Austria|Vienna|Belgium|Brussels|Ireland|Dublin|Hungary|Budapest|Romania|Bucure[sș]ti|Bulgaria|Sofia|Luxembourg|T[uü]rkiye|Turkey|Istanbul|Volkshochschule/i],
-  ['ca', /加拿大|多伦多|溫哥華|温哥华|蒙特利尔|渥太华|滑铁卢|卡尔加里|温莎|\bCanada\b|Toronto|Vancouver|Montreal|Ottawa|Waterloo|Calgary|Windsor|Manitoba|McMaster|Sheridan|Hazel McCallion|Bayview Yards/i],
+  ['eu', /欧洲|歐盟|德国|法国|荷兰|西班牙|意大利|葡萄牙|瑞典|芬兰|丹麦|挪威|瑞士|波兰|捷克|奥地利|比利时|爱尔兰|匈牙利|罗马尼亚|保加利亚|卢森堡|土耳其|柏林|巴黎|阿姆斯特丹|慕尼黑|巴塞罗那|米兰|斯德哥尔摩|赫尔辛基|苏黎世|维也纳|布达佩斯|布加勒斯特|索菲亚|Europe|Germany|Berlin|Munich|France|Paris|Netherlands|Amsterdam|Spain|Barcelona|Madrid|Italy|Milan|Portugal|Lisbon|Sweden|Stockholm|Finland|Helsinki|Turku|Denmark|Copenhagen|Norway|Oslo|Switzerland|Zurich|Poland|Warsaw|Czech|Prague|Austria|Vienna|Belgium|Brussels|Ireland|Dublin|Hungary|Budapest|Romania|Bucure[sș]ti|Bulgaria|\bSofia\b,|Sofia, Bulgaria|Luxembourg|T[uü]rkiye|Turkey|Istanbul|Volkshochschule/i],
+  // F10：补上省名。Ontario 里有 "Rio"，以前会被 latam 的 Rio 先吃掉，判成巴西。
+  ['ca', /加拿大|多伦多|溫哥華|温哥华|蒙特利尔|渥太华|滑铁卢|卡尔加里|温莎|\bCanada\b|\bToronto\b|\bVancouver\b|\bMontreal\b|\bOttawa\b|\bWaterloo\b|\bCalgary\b|\bWindsor\b|Manitoba|McMaster|Sheridan|Hazel McCallion|Bayview Yards|\bOntario\b|\bQuebec\b|Qu[eé]bec|British Columbia|\bAlberta\b|\bKitchener\b|\bMississauga\b|\bHamilton\b|\bVictoria\b, BC/i],
   ['au', /澳大利亚|澳洲|悉尼|墨爾本|墨尔本|布里斯班|珀斯|\bAustralia\b|Sydney|Melbourne|Brisbane|Perth|Wellington|New Zealand|Auckland/i],
   // 美国：城市 + 州名/缩写 + 实测出现的高校与园区
-  ['us', /美国|美國|纽约|紐約|旧金山|舊金山|西雅图|西雅圖|硅谷|洛杉矶|芝加哥|奥斯汀|波士顿|圣地亚哥|华盛顿|迈阿密|丹佛|亚特兰大|匹兹堡|费城|休斯顿|达拉斯|凤凰城|波特兰|纳什维尔|夏洛特|底特律|辛辛那提|坦帕|奥兰多|拉斯维加斯|罗利|安娜堡|盖恩斯维尔|沃斯堡|明尼阿波利斯|圣路易斯|堪萨斯城|盐湖城|圣安东尼奥|哥伦布|印第安纳波利斯|密尔沃基|布法罗|罗切斯特|纽黑文|纽瓦克|泽西城|长滩|奥克兰|萨克拉门托|弗雷斯诺|图森|阿尔伯克基|俄克拉荷马城|塔尔萨|孟菲斯|新奥尔良|伯明翰|杰克逊维尔|塔拉哈西|诺克斯维尔|路易斯维尔|列克星敦|代顿|托莱多|阿克伦|兰辛|麦迪逊|林肯|奥马哈|得梅因|普罗维登斯|哈特福德|波特兰缅因|\bUS\b|\bUSA\b|United States|New York|San Francisco|San Jose|Seattle|Silicon Valley|Los Angeles|Chicago|Austin|Boston|San Diego|Washington|Miami|Denver|Atlanta|Pittsburgh|Philadelphia|Houston|Dallas|Phoenix|Portland|Nashville|Charlotte|Detroit|Cincinnati|Tampa|Orlando|Las Vegas|Raleigh|Ann Arbor|Gainesville|Fort Worth|Arlington|Plano|Irving|Frisco|Minneapolis|St\.? Louis|Kansas City|Salt Lake|San Antonio|Columbus|Indianapolis|Milwaukee|Buffalo|Rochester|New Haven|Newark|Jersey City|Long Beach|Oakland|Sacramento|Fresno|Tucson|Albuquerque|Oklahoma City|Tulsa|Memphis|New Orleans|Birmingham|Jacksonville|Tallahassee|Knoxville|Louisville|Lexington|Dayton|Toledo|Akron|Lansing|Madison|Lincoln|Omaha|Des Moines|Providence|Hartford|Stanford|Berkeley|Cal Hacks|MIT|Harvard|CMU|Cornell|Princeton|Yale|Columbia University|NYU|UCLA|UC Berkeley|UC Riverside|UC San Diego|University of California|UCF|UGA|UNC|NC State|Penn State|Pennovation|Purdue|Georgia Tech|Michigan State|Central Michigan|MSU|Ohio State|Rutgers|Columbia|Northwestern|Illinois|Texas A&M|Texas A＆M|A&M|UT Dallas|UT Austin|University of Florida|Florida State|Virginia Tech|West Virginia|WPI|RPI|SJSU|San Jose State|Cal Poly|Arizona State|ASU|Embry-Riddle|Kent State|Binghamton|Towson|Lehman|GSU|Georgia State|Baylor|Rice University|Duke|Vanderbilt|Clemson|Auburn|Alabama|Oklahoma|Kansas|Nebraska|Iowa|Minnesota|Wisconsin|Indiana|Missouri|Tennessee|Kentucky|Arkansas|Mississippi|Louisiana|Colorado|Utah|Nevada|Oregon|Idaho|Montana|Wyoming|Alaska|Hawaii|\bNYC\b|New York City/i],
-  ['latam', /巴西|墨西哥|阿根廷|智利|哥伦比亚|秘鲁|巴拉圭|乌拉圭|Brazil|Brasil|S[aã]o Paulo|Rio|Mexico|M[eé]xico|\bCDMX\b|Guadalajara|Argentina|Buenos Aires|Chile|Santiago|Colombia|Bogot[aá]|Peru|Lima|Paraguay|Asunci[oó]n|Uruguay|Montevideo/i],
+  ['us', /美国|美國|纽约|紐約|旧金山|舊金山|西雅图|西雅圖|硅谷|洛杉矶|芝加哥|奥斯汀|波士顿|圣地亚哥|华盛顿|迈阿密|丹佛|亚特兰大|匹兹堡|费城|休斯顿|达拉斯|凤凰城|波特兰|纳什维尔|夏洛特|底特律|辛辛那提|坦帕|奥兰多|拉斯维加斯|罗利|安娜堡|盖恩斯维尔|沃斯堡|明尼阿波利斯|圣路易斯|堪萨斯城|盐湖城|圣安东尼奥|哥伦布|印第安纳波利斯|密尔沃基|布法罗|罗切斯特|纽黑文|纽瓦克|泽西城|长滩|奥克兰|萨克拉门托|弗雷斯诺|图森|阿尔伯克基|俄克拉荷马城|塔尔萨|孟菲斯|新奥尔良|伯明翰|杰克逊维尔|塔拉哈西|诺克斯维尔|路易斯维尔|列克星敦|代顿|托莱多|阿克伦|兰辛|麦迪逊|林肯|奥马哈|得梅因|普罗维登斯|哈特福德|波特兰缅因|\bUS\b|\bUSA\b|United States|New York|San Francisco|San Jose|Seattle|Silicon Valley|Los Angeles|Chicago|Austin|Boston|San Diego|Washington|Miami|Denver|Atlanta|Pittsburgh|Philadelphia|Houston|Dallas|Phoenix|Portland|Nashville|Charlotte|Detroit|Cincinnati|Tampa|Orlando|Las Vegas|Raleigh|Ann Arbor|Gainesville|Fort Worth|Arlington|Plano|Irving|Frisco|Minneapolis|St\.? Louis|Kansas City|Salt Lake|San Antonio|Columbus|Indianapolis|Milwaukee|Buffalo|Rochester|New Haven|Newark|Jersey City|Long Beach|Oakland|Sacramento|Fresno|Tucson|Albuquerque|Oklahoma City|Tulsa|Memphis|New Orleans|Birmingham|Jacksonville|Tallahassee|Knoxville|Louisville|Lexington|Dayton|Toledo|Akron|Lansing|Madison|Lincoln|Omaha|Des Moines|Providence|Hartford|Stanford|Berkeley|Cal Hacks|MIT|Harvard|CMU|Cornell|Princeton|Yale|Columbia University|NYU|UCLA|UC Berkeley|UC Riverside|UC San Diego|University of California|UCF|UGA|UNC|NC State|Penn State|Pennovation|Purdue|Georgia Tech|Michigan State|Central Michigan|MSU|Ohio State|Rutgers|Columbia|Northwestern|\bIllinois\b|Texas A&M|Texas A＆M|A&M|UT Dallas|UT Austin|University of Florida|Florida State|Virginia Tech|West Virginia|WPI|RPI|SJSU|San Jose State|Cal Poly|Arizona State|ASU|Embry-Riddle|Kent State|Binghamton|Towson|Lehman|GSU|Georgia State|Baylor|Rice University|Duke|Vanderbilt|Clemson|Auburn|Alabama|Oklahoma|Kansas|Nebraska|Iowa|Minnesota|Wisconsin|Indiana|Missouri|Tennessee|Kentucky|Arkansas|Mississippi|Louisiana|Colorado|Utah|Nevada|Oregon|Idaho|Montana|Wyoming|Alaska|Hawaii|\bNYC\b|New York City|Community Branch Library|\bHack Club\b|Pololu/i],
+  // F10：Rio / Lima 这类三四个字母的地名必须带词边界，否则 Ontario 里的 "Rio" 会命中。
+  ['latam', /巴西|墨西哥|阿根廷|智利|哥伦比亚|秘鲁|巴拉圭|乌拉圭|\bBrazil\b|\bBrasil\b|S[aã]o Paulo|\bRio\b|\bMexico\b|M[eé]xico|\bCDMX\b|Guadalajara|\bArgentina\b|Buenos Aires|\bChile\b|\bSantiago\b|\bColombia\b|Bogot[aá]|\bPeru\b|\bLima\b|\bParaguay\b|Asunci[oó]n|\bUruguay\b|Montevideo|CETYS|\bM[eé]xico\b|Ense[ñn]anza T[eé]cnica/i],
   ['africa', /非洲|尼日利亚|肯尼亚|南非|埃及|乌干达|加纳|摩洛哥|突尼斯|坦桑尼亚|Africa|Nigeria|Lagos|Kenya|Nairobi|South Africa|Cape Town|Johannesburg|Egypt|Cairo|Uganda|Kampala|Ghana|Accra|Morocco|Tunisia|Tunis|Tanzania/i],
   ['middle-east', /中东|中東|沙特|卡塔尔|以色列|约旦|黎巴嫩|\bIsrael\b|Tel Aviv|Jerusalem|Saudi|Riyadh|Qatar|Doha|Jordan|Amman|Lebanon|Beirut/i],
   // 东南亚/南亚剩余国家
-  ['asia', /菲律宾|印度尼西亚|印尼|越南|泰国|马来西亚|斯里兰卡|尼泊尔|孟加拉|柬埔寨|缅甸|亚美尼亚|Philippines|Manila|Indonesia|Jakarta|Vietnam|Hanoi|Ho Chi Minh|Thailand|Bangkok|Malaysia|Kuala Lumpur|Sri Lanka|Colombo|Nepal|Kathmandu|Bangladesh|Dhaka|Cambodia|Myanmar|Armenia|Yerevan/i],
+  // F10：巴基斯坦从「印度」那条搬到这里——国家码表里 PK→asia，正则必须一致。
+  ['asia', /菲律宾|印度尼西亚|印尼|越南|泰国|马来西亚|斯里兰卡|尼泊尔|孟加拉|柬埔寨|缅甸|亚美尼亚|巴基斯坦|伊斯兰堡|拉合尔|Ph ?ilippines|\bManila\b|\bIndonesia\b|\bJakarta\b|\bVietnam\b|\bHanoi\b|Ho Chi Minh|\bThailand\b|\bBangkok\b|\bMalaysia\b|Kuala Lumpur|Sri Lanka|\bColombo\b|\bNepal\b|\bKathmandu\b|\bBangladesh\b|\bDhaka\b|\bCambodia\b|\bMyanmar\b|\bArmenia\b|\bYerevan\b|\bPakistan\b|\bIslamabad\b|\bLahore\b|\bKarachi\b/i],
 ];
 
 export function eventRegion(e) {
@@ -1798,12 +1804,28 @@ export function eventRegion(e) {
     if (byName) return byName[0];
   }
 
-  const hay = `${loc} ${e.org || ''} ${e.title || ''}`;
+  // 只看地点与主办方，**绝不拼标题**（F10）。
+  // 活动标题里塞满地名人名（"Fireside with Jordan"、"Austin Powers Night"），
+  // 拼进来就等于让标题决定地区——实测这条贡献了大部分错判。
+  const hay = `${loc} ${e.org || ''}`;
   for (const [code, re] of EV_REGION_RULES) {
+    // 中文地名与「Sofia, Bulgaria」这类完整写法不带词边界；纯英文短词已在正则里加了 \b
     if (re.test(hay)) return code;
   }
   // 没有可识别地区，但源明确说是线上 → online；否则 other
   if (/线上|online|remote|virtual|anywhere/i.test(loc)) return 'online';
+
+  /*
+   * other 会因为这些情况「升高」，而且这是对的（T1.8 实测复盘）：
+   *
+   * 61 条线下场次的 location 只有「线下」两个字，既没有国家码也没有 geo 城市
+   * （Luma 59 条、Devfolio 2 条）。旧实现靠标题里碰巧出现的「Toronto」「CDMX」
+   * 「Bangalore」蒙对 10 条——那正是 F10 要治的病：标题里的地名可能是人名、
+   * 可能是线上活动的口号、也可能是别的城市。现在一律落 other，等源补 geo。
+   *
+   * 因此 other 从 5.1% 升到 5.7% 是「去掉猜地名」的代价，不是退化。
+   * S8.5 的质量线（region=other ≤ 10%）仍然满足。
+   */
   return 'other';
 }
 
@@ -1816,9 +1838,14 @@ export function eventRegion(e) {
 const EV_REGION_MIN = 5;
 // 小国家值并到哪个大区（先查这张表，查不到就按 fallback 再查，最后落 other）
 const EV_REGION_FOLD = { ae: 'middle-east', kr: 'asia' };
+/*
+ * 小国家的归并目标必须同洲。
+ * F10：旧表把 ca → latam、au → asia，于是「拉美」筛选里会出现多伦多。
+ * 没有同洲大区可归的（加拿大、澳洲）就落 other —— 宁可不归并，也不要错归。
+ */
 const EV_REGION_FOLD_FALLBACK = {
   ae: 'middle-east', kr: 'asia', sg: 'asia', jp: 'asia', cn: 'asia', in: 'asia',
-  uk: 'eu', ca: 'latam', au: 'asia', africa: 'africa',
+  uk: 'eu',
 };
 const EV_REGION_REGIONS = new Set(['online', 'other', 'asia', 'eu', 'latam', 'middle-east', 'africa']);
 

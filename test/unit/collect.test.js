@@ -135,13 +135,17 @@ describe('eventKind', () => {
     assert.equal(eventKind({ title: 'zzz' }), 'other');
   });
 
-  test(
-    'F11："Silicon Valley AI Meetup" 不应被判为会议（con\\b 误命中）',
-    { todo: 'F11："Silicon Valley AI Meetup" 不应被判为会议（con\\b 误命中）' },
-    () => {
-      assert.notEqual(eventKind({ title: 'Silicon Valley Builders Meetup' }), 'conference');
-    },
-  );
+  test('F11：con\\b 不再误命中 Silicon Valley', () => {
+    // 旧规则里 con\b 让任何 "Silicon Valley ..." 都成了会议
+    assert.notEqual(eventKind({ title: 'Silicon Valley Builders Meetup' }), 'conference');
+    assert.equal(eventKind({ title: 'Silicon Valley GenAI Meetup' }), 'meetup');
+  });
+
+  test('F11：英文 forum 不再当会议（保留「论坛」）', () => {
+    assert.notEqual(eventKind({ title: 'OpenAI Forum Series' }), 'conference');
+    // 中文「论坛」仍然算会议
+    assert.equal(eventKind({ title: 'AI 安全论坛' }), 'conference');
+  });
 });
 
 describe('eventRegion / regionFromCountryCode', () => {
@@ -176,13 +180,39 @@ describe('eventRegion / regionFromCountryCode', () => {
     assert.equal(regionFromCountryCode(null), null);
   });
 
-  test(
-    'F10：PK / ISLAMABAD 不应归为印度/南亚',
-    { todo: 'F10：PK / ISLAMABAD 不应归为印度/南亚' },
-    () => {
-      assert.notEqual(regionFromCountryCode('PK'), 'india');
-    },
-  );
+  test('F10：PK 归 asia，不是印度', () => {
+    assert.equal(regionFromCountryCode('PK'), 'asia');
+  });
+
+  test('F10：Pakistan / Islamabad / Lahore 不再被判成印度', () => {
+    for (const location of ['Islamabad, Pakistan', 'Lahore, Pakistan', 'ISLAMABAD']) {
+      assert.notEqual(eventRegion({ location }), 'in', `${location} 不该判成印度`);
+      assert.equal(eventRegion({ location }), 'asia', `${location} 应归 asia`);
+    }
+  });
+
+  test('F10：Ontario / Quebec 归加拿大（Rio 不再命中 Ontario）', () => {
+    for (const location of [
+      'Kitchener, Ontario',
+      'Waterloo, Ontario',
+      'Montreal, Quebec',
+      'Mississauga, Ontario',
+    ]) {
+      assert.equal(eventRegion({ location }), 'ca', `${location} 应归 ca`);
+    }
+  });
+
+  test('F10：短地名一律带词边界，不当人名误命中', () => {
+    // 标题里出现人名 Jordan，地点是伦敦：应当看地点，不是看标题
+    assert.equal(eventRegion({ title: 'Fireside with Jordan Lee', location: 'London' }), 'uk');
+    // 地点里没有地名时，不该因为正文有 Austin/Sofia 这类词就判成某国
+    assert.notEqual(eventRegion({ location: 'Room 3', org: 'Sofia Collective' }), 'eu');
+  });
+
+  test('F10：eventRegion 不再读标题', () => {
+    // 同样的地点，标题里塞满地名也不该影响判定
+    assert.equal(eventRegion({ location: 'Berlin', title: 'Tokyo Seoul Austin Lima Rio' }), 'eu');
+  });
 });
 
 describe('foldRegions', () => {
@@ -205,14 +235,13 @@ describe('foldRegions', () => {
     assert.equal(out[0].region, 'other');
   });
 
-  test(
-    'F10：加拿大的归并目标不应是拉美（当前落在 other）',
-    { todo: 'F10：加拿大的归并目标不应是拉美（当前落在 other）' },
-    () => {
-      const out = foldRegions([{ region: 'canada' }]);
-      assert.notEqual(out[0].region, 'latam');
-    },
-  );
+  test('F10：小国家归并不再做跨洲映射', () => {
+    // ca / au 过去被并进 latam / asia —— 加拿大与澳洲都不属于任何跨洲大区，
+    // 归并只能在同洲内做，否则筛选出来的「拉美」里会出现多伦多。
+    const out = foldRegions([{ region: 'ca' }, { region: 'au' }]);
+    assert.notEqual(out[0].region, 'latam', '加拿大不该被并进拉美');
+    assert.notEqual(out[1].region, 'asia', '澳洲不该被并进亚洲');
+  });
 });
 
 describe('devfolioIsAI / devfolioPrize', () => {
