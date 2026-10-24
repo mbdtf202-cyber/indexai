@@ -38,6 +38,10 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 （Ralph 在这里记录新问题，格式：`- [ ] N01（来自 T0.3）：问题。去向：T1.8 / 新任务 T2.10 / 已当场修复`）
 
+- [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
+- [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N03（来自 T1.1）：`smoke.spec.js` 的「整页可见」断言一直是假绿（见结果 1），Playwright 默认 `reducedMotion: reduce` 会掩盖 `opacity:0` 的缺陷。之后所有可见性断言都必须读计算样式而不是 `toBeVisible`。去向：已写进 AGENTS.md。
+
 ## 适应度规则启用表
 
 规则定义见 UPGRADE_PLAN S1.5，实现在 `scripts/check-invariants.js`。到了「启用于」的任务就打开对应规则，之后永远开着。
@@ -133,7 +137,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 退出条件：去向为 T1.x 的发现全部关闭；T0.3 里对应的 `todo` 用例转为正式用例并通过。改到 golden 或 DOM 快照的任务，在提交信息里列出差异。
 
-### [ ] T1.1 首屏可见与首页解耦
+### [x] T1.1 首屏可见与首页解耦
 
 依据：F01、F21 · INV-12 · 依赖：T0.5
 
@@ -145,6 +149,16 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 验收：
 - 前三个场景下 `body` 的计算 `opacity` 都是 1，且分别能看到错误文案、`<noscript>` 文案、`#priceAxis circle`。注意 Playwright 的 `toBeVisible` 把 `opacity:0` 当作可见，必须断言计算样式。
 - 首页 CLS ≤ 0.05。
+
+结果：新增 `test/e2e/firstpaint.spec.js`（4 个场景：data.json 500、禁用 JS、阻断归档、CLS），先全部失败后转绿。主要改动：
+
+1. **F01 的根因不是「失败分支没加 .ready」。** `body{opacity:0}` 在 `prefers-reduced-motion: reduce` 下被一条 `body{opacity:1}` 的媒体查询覆盖，而 Playwright 默认就开减少动效——旧断言因此一直是假绿，真实浏览器里仍然是「先透明、启动成功才淡入」。改为 `html.js body{opacity:0}`＋`<head>` 内联脚本加 `.js`＋`<noscript><style>html.js body{opacity:1}`：有无 JS 都不会停在透明。启动失败分支、全局 `error` / `unhandledrejection` 也补了 `.ready`，错误文案带上 HTTP 状态。
+2. **F21** 把价格叙事移出 `news.length ? … : ""`；要闻的标题与条数首屏就有（`nHead` 取 data.json 索引，归档到了再换成归档头），归档未到时用同高骨架占位；归档到达只做原地重绘（`rerenderInPlace()` 保住滚动位置，不再把人弹回顶部）。
+3. **CLS 的真正来源是 hero 塌陷**：总览页 `renderHero` 给 `#hero` 加 `is-hidden`，首屏那块 384px 的 hero 在数据到达后整块消失，`#view` 从 444 上移到 60——0.93 的 CLS 全在这里。改为首屏就让 hero `hidden`，并在 `#view` 里用照 `viewHome` 版式排好的静态壳子（home-h / home-sub / home-facts / entries / shead / newsrow）占位，数据到了原地换字。CLS 0.93 → **0.002**。
+4. 顺手修掉两处会让快照随帧抖动的老问题：`history.replaceState` 在首屏把地址补成 `#home`，触发浏览器按锚点恢复滚动（首屏跳过 replaceState，并设 `scrollRestoration = "manual"`）；`MOTION.tag()` 给已在视口的元素打 `data-reveal` 后要等两帧 rAF 才加 `.in`（改为立即 `.in`）。
+5. 主题在 `</body>` 前同步恢复，深色用户不再看到一帧浅色。
+
+DOM 快照：10 个标签全部重生成，差异只有两类——首屏元素从 `card`（两帧后才 `in`）变成 `card in`，以及 home 多了首屏就存在的 `.home-top` 壳子与要闻骨架（正是本任务的目标）。快照连跑三轮一致。
 
 ### [ ] T1.2 评测回退
 

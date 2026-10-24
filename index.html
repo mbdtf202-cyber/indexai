@@ -2,6 +2,12 @@
 <html lang="zh-CN" data-theme="light" data-density="cozy">
 <head>
 <meta charset="utf-8">
+<script>
+/* 首帧就要定下「有没有 JS」：淡入动画只在 html.js 下生效（F01）。
+   这段必须内联、且必须在 <style> 之前执行，否则 body 会先透明再被 .nojs 救回来。 */
+document.documentElement.classList.add("js");
+</script>
+<noscript><style>html.js body{opacity:1!important}</style></noscript>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IndexAI · 免费额度、模型价格、中转站与评测索引</title>
 <meta name="description" content="每天跟踪：能免费用的 AI 额度、各家 token 挂牌价（含缓存命中）、官方订阅价与第三方中转站报价。">
@@ -114,6 +120,22 @@ button,input,select{font:inherit; color:inherit}
 .kpi .k{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
 .kpi .s{font-size:12px; color:var(--dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .hero .jump{display:flex; gap:8px; margin-top:18px; flex-wrap:wrap}
+/* 总览页首屏不显示 hero（renderHero 会给它 is-hidden），但 KPI 要在数据到达后填进去：
+   高度不预留的话，#view 会整块上移约 280px，这就是首页 CLS 的主要来源（T1.1）。
+   这里先按最终高度占位，占位时不给它画任何边框或者文字。 */
+.home-hero-skel{min-height:clamp(212px,24vw,276px)}
+.home-hero-skel .kpi{background:transparent}
+/* 首屏占位（JS 还没渲染完）：只留版式骨架，不放文字，避免出现「正在读取…」这种噪音 */
+.home-skel .home-h{min-height:1.08em}
+.home-skel .shead h2{min-height:1.4em}
+/* 首屏占位：结构与真卡一致，只把数字与说明调成不可见，
+   这样文字一到位就是原地替换，不会重新排版。 */
+.home-skel{--skel-ink:transparent}
+.home-skel .fv,.home-skel .fd,.home-skel .et,.home-skel .eu,.home-skel .ecard p,
+.home-skel .earrow,.home-skel .ncard-skel{color:var(--skel-ink)}
+.home-skel .ncard-skel{background:transparent}
+.home-skel .ecard-skel{pointer-events:none}
+.kpis-skel .n,.kpis-skel .s{color:transparent}
 .jump a{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line2); padding:7px 12px; font-size:12px;
   background:var(--panel); border-radius:3px}
 .jump a:hover{border-color:var(--accent); color:var(--accent)}
@@ -720,6 +742,11 @@ footer.foot a:hover{color:var(--accent)}
 .ncard h3 a:hover{text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line2)}
 .ncard p{margin:0; font-size:12px; line-height:1.6; color:var(--dim)}
 .ncard p.nclamp{display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden}
+/* 要闻占位：归档（约 2.3k 条）到达前，用与真卡片同高的空骨架守住版面，
+   这样归档只是填充、不会把下面的内容推下去（F21 的 CLS）。 */
+.newsrow-skel .ncard-skel{min-height:164px; background:var(--panel2); border-radius:2px; animation:skelpulse 2.4s ease-in-out infinite}
+@keyframes skelpulse{0%,100%{opacity:.55}50%{opacity:.85}}
+@media (prefers-reduced-motion:reduce){.newsrow-skel .ncard-skel{animation:none}}
 
 .entries{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
   border-top:1px solid var(--ink); margin-bottom:var(--sect)}
@@ -1017,15 +1044,18 @@ footer.foot a:hover{color:var(--accent)}
 
 /* ── motion ── */
 :root{--ease:cubic-bezier(.16,1,.3,1)}
-body{opacity:0;transition:opacity .45s ease}
-body.ready{opacity:1}
-[data-reveal]{opacity:0;transform:translate3d(0,18px,0);
+/* 淡入只在 JS 真的在跑时才生效：没有 JS 时由 <head> 的内联脚本加 .nojs，
+   先加 .js 再加 .ready，避免「先透明、再被 .nojs 救回来」的中间态（F01）。 */
+html.js body{opacity:0;transition:opacity .45s ease}
+html.js body.ready{opacity:1}
+html.nojs body{opacity:1}
+html.js [data-reveal]{opacity:0;transform:translate3d(0,18px,0);
   transition:opacity .85s var(--ease),transform .85s var(--ease);
   transition-delay:calc(var(--i,0) * 60ms)}
-[data-reveal].in{opacity:1;transform:none}
-[data-reveal="mask"]{clip-path:inset(0 100% 0 0);opacity:1;transform:none;
+html.js [data-reveal].in{opacity:1;transform:none}
+html.js [data-reveal="mask"]{clip-path:inset(0 100% 0 0);opacity:1;transform:none;
   transition:clip-path 1.05s var(--ease);transition-delay:calc(var(--i,0) * 80ms)}
-[data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
+html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
 .progress{position:fixed;left:0;top:0;height:2px;width:0;z-index:200;background:#e11d48;
   transition:width .1s linear;opacity:.9}
 [data-theme="dark"] .progress{background:#fb5f7a}
@@ -1033,8 +1063,8 @@ body.ready{opacity:1}
 .rowh::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);opacity:.9;transition:width .32s var(--ease)}
 .rowh:hover::before{width:2px}
 @media (prefers-reduced-motion:reduce){
-  body{opacity:1}
-  [data-reveal],[data-reveal="mask"]{opacity:1!important;transform:none!important;clip-path:none!important}
+  html.js body{opacity:1}
+  html.js [data-reveal],html.js [data-reveal="mask"]{opacity:1!important;transform:none!important;clip-path:none!important}
 }
 </style>
 </head>
@@ -1061,19 +1091,52 @@ body.ready{opacity:1}
 </header>
 
 
-<section class="hero" id="hero">
+<section class="hero home-hero-skel" id="hero" aria-busy="true" hidden>
   <div class="wrap">
     <div>
       <div class="eyebrow" id="heroKicker">INDEX AI</div>
       <h1 id="heroTitle">AI 的价、量、场，<br>一个入口看完。</h1>
       <p id="heroSub">免费额度、token 单价、订阅区价、中转报价、活动、工具箱与评测——八层数据同一套口径，每天自动采集。</p>
     </div>
-    <div class="kpis" id="kpis"></div>
+    <!-- 首屏占位：格子数与字号跟真实 KPI 一样，只把文字留空，数据到了原地填（T1.1） -->
+    <div class="kpis kpis-skel" id="kpis" aria-hidden="true">
+      <div class="kpi kpi-skel"><div class="k">今日最低 Sonnet</div><div class="n">&nbsp;</div><div class="s">&nbsp;</div></div>
+      <div class="kpi kpi-skel"><div class="k">缓存最狠</div><div class="n">&nbsp;</div><div class="s">&nbsp;</div></div>
+      <div class="kpi kpi-skel"><div class="k">能白嫖</div><div class="n">&nbsp;</div><div class="s">&nbsp;</div></div>
+      <div class="kpi kpi-skel"><div class="k">开放活动</div><div class="n">&nbsp;</div><div class="s">&nbsp;</div></div>
+    </div>
   </div>
 </section>
 
 <main class="wrap" id="view" role="tabpanel" tabindex="-1">
-  <div class="bootmsg"><span class="spin"></span>正在读取 data.json…</div>
+  <!-- 首屏占位（不带 JS 也看得见结构）：照总览页的版式先排好三块，
+       数据到达后原地换字，页面不会跳。T1.1 的 CLS 预算主要靠这个。 -->
+  <section class="home-top home-skel" aria-hidden="true">
+    <div class="home-lead">
+      <h2 class="home-h">AI 的价、量、场，一个入口看完。</h2>
+      <p class="home-sub">免费额度、token 单价、订阅区价、中转报价、活动、工具箱与评测——八层数据同一套口径，每天自动采集。下面这几条是今天的关键数字。</p>
+      <div class="home-facts">
+        <div><span class="fk">今日最低 Sonnet</span><span class="fv">—</span><span class="fd">&nbsp;</span></div>
+        <div><span class="fk">缓存最狠</span><span class="fv">—</span><span class="fd">&nbsp;</span></div>
+        <div><span class="fk">能白嫖</span><span class="fv">—</span><span class="fd">&nbsp;</span></div>
+        <div><span class="fk">开放活动</span><span class="fv">—</span><span class="fd">&nbsp;</span></div>
+      </div>
+    </div>
+    <div class="entries">
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+        <a class="ecard ecard-skel"><span class="ecard-top"><span class="et">&nbsp;</span><span class="eu">&nbsp;</span></span><p>&nbsp;</p><span class="earrow" aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+  <div class="shead"><h2>近期重大</h2></div>
+  <div class="newsrow newsrow-skel" aria-hidden="true">
+    <article class="ncard ncard-skel"></article><article class="ncard ncard-skel"></article><article class="ncard ncard-skel"></article><article class="ncard ncard-skel"></article>
+  </div>
 </main>
 
 <div class="wrap"><div class="healthbar" id="healthbar" role="status" aria-live="polite" hidden></div></div>
@@ -1084,6 +1147,16 @@ body.ready{opacity:1}
   <span>挂牌价不含税、企业折扣与区域加价</span>
 </footer></div>
 
+<!-- 同步恢复主题，避免深色用户看到一帧浅色 -->
+<script>
+(() => {
+  try {
+    const h = document.documentElement;
+    if (localStorage.getItem("fr.theme") === "dark") h.dataset.theme = "dark";
+    if (localStorage.getItem("fr.density") === "compact") h.dataset.density = "compact";
+  } catch {}
+})();
+</script>
 <div class="overlay" id="overlay"></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="模型详情"></aside>
 <div class="grain" aria-hidden="true"></div>
@@ -1135,13 +1208,22 @@ const MOTION = (() => {
       homeH.setAttribute("data-reveal", "mask");
       if (!homeH.style.getPropertyValue("--i")) homeH.style.setProperty("--i", 0);
     }
-    document.querySelectorAll("#view .shead, #view .home-h, #view .home-sub, #view .home-facts, #view .newsrow, #view .ncard, #view .threeways, #view .tway, #view .entries, #view .ecard, #view .controls, #view table, #view .card, #view .tcard, #view .irow, #view .evcard, #view .rcard, #view .subrow")
-      .forEach((el, i) => put(el, "", i % 12));
+    const puts = document.querySelectorAll("#view .shead, #view .home-h, #view .home-sub, #view .home-facts, #view .newsrow, #view .ncard, #view .threeways, #view .tway, #view .entries, #view .ecard, #view .controls, #view table, #view .card, #view .tcard, #view .irow, #view .evcard, #view .rcard, #view .subrow");
+    puts.forEach((el, i) => {
+      const fresh = !el.hasAttribute("data-reveal");
+      put(el, "", i % 12);
+      // 首屏就在视口里的元素立即显示，不等两帧后的 rAF：入场动画只属于「滚下来才看到」的内容。
+      if (fresh && inView(el)) el.classList.add("in");
+    });
   }
 
   function arm(root = document) {
     tag();
-    (root === document ? document : root).querySelectorAll("[data-reveal]").forEach((el, i) => {
+    const scope = root === document ? document : root;
+    scope.querySelectorAll("[data-reveal]").forEach((el) => {
+      if (!el.classList.contains("in") && inView(el)) el.classList.add("in");
+    });
+    scope.querySelectorAll("[data-reveal]").forEach((el, i) => {
       if (el.classList.contains("in")) return;
       if (!el.style.getPropertyValue("--i")) el.style.setProperty("--i", Math.min(i, 6));
       if (inView(el)) requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add("in")));
@@ -1262,6 +1344,21 @@ const MOTION = (() => {
     const n = state.data?.news;
     if (Array.isArray(n)) return { n: n.length };
     return n || {};
+  }
+  /** 归档还没到手时需要去拉一次（data.json 只带索引）。 */
+  function needsNewsArchive() {
+    return !Array.isArray(state.data?.news) && !Array.isArray(state.newsFull);
+  }
+
+  /** 归档里首尾日期的跨度（天）。用于 data.json 索引没带 span 的形态；空归档返回 0。 */
+  function newsSpanDays(items) {
+    if (!Array.isArray(items) || !items.length) return 0;
+    const dates = items.map((x) => (x.date || "").slice(0, 10)).filter(Boolean).sort();
+    if (!dates.length) return 0;
+    const from = Date.parse(dates[0] + "T00:00:00Z");
+    const to = Date.parse(dates[dates.length - 1] + "T00:00:00Z");
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return 0;
+    return Math.max(0, Math.round((to - from) / 86400000));
   }
   async function loadNews() {
     if (Array.isArray(state.data?.news)) return state.data.news;
@@ -1416,7 +1513,15 @@ const MOTION = (() => {
 
     // 每个页面只挂跟自己相关的数字，不再全局重复同一组
     const cellsByTab = {
-      home: [],
+      // 总览页的四个关键事实：文案与 viewHome 的 .home-facts 逐字一致，
+      // 这样首屏可以先出 KPI，入口卡在数据到达后补（T1.1 的 CLS）。
+      home: [
+        ["今日最低 Sonnet", cheapestSonnet ? "$" + cheapestSonnet.low.toFixed(2) : "—",
+          cheapestSonnet ? esc(cheapestSonnet.r.name) + " · /1M 输入" : ""],
+        ["缓存最狠", best ? best.pct + "%" : "—", best ? esc(best.id) : ""],
+        ["能白嫖", c.offers, `个渠道 · 国内 ${offers.filter(o => o.region === "CN").length}`],
+        ["开放活动", c.eventsOpen, `共收录 ${c.events} 条`],
+      ],
       free: [
         ["免费额度", c.offers, `${offers.filter(o => o.region === "GLOBAL").length} 国际 · ${offers.filter(o => o.region === "CN").length} 国内`],
         ["赠送金", offers.filter(o => o.category === "api-credit").length, "注册即送额度"],
@@ -1494,8 +1599,11 @@ const MOTION = (() => {
     $("#heroTitle").innerHTML = h.t;
     $("#heroSub").textContent = h.s;
     $("#stamp").textContent = "更新 " + new Date(state.data.meta.generated_at).toLocaleString("zh-CN", { hour12: false }).slice(5);
-    $("#hero").classList.toggle("compact", state.tab !== "free");
-    $("#hero").classList.toggle("is-hidden", state.tab === "home");
+    const hero = $("#hero");
+    hero.classList.remove("home-hero-skel");
+    hero.removeAttribute("aria-busy");
+    hero.classList.toggle("compact", state.tab !== "free");
+    hero.classList.toggle("is-hidden", state.tab === "home");
   }
 
   /* ── compare ── */
@@ -1691,6 +1799,15 @@ const MOTION = (() => {
       .slice(0, 4) : [];
     const news = newsTop.length ? newsTop : (Array.isArray(d.news) ? d.news : []).slice(0, 4);
     const ni0 = Array.isArray(d.news) ? { n: d.news.length } : (d.news || {});
+    // 「近期重大」的数量与跨度首屏就要看见，不能等归档（约 2.3k 条）到达后才排版：
+    // 那是 F21 的布局跳动来源，也是归档失败时整块消失的原因。
+    // 归档到了用归档的头部（n / span），没到用 data.json 索引；两者都没有就退回 major 计数。
+    const nHead = Array.isArray(state.newsFull) && state.newsFull.length
+      ? { n: state.newsFull.length, span: null }
+      : { n: ni0.n || c.news || news.length, span: ni0.span || 0 };
+    // 索引里没有 span（归档形态），就按日期跨度现算；归档没到时不编数字，留空。
+    const nSpan = nHead.span != null ? nHead.span : newsSpanDays(state.newsFull);
+
     const live = (d.relays || []).filter(r => r.status === "ok");
     const best = live
       .map(r => ({ r, p: r.prices?.sonnet55 }))
@@ -1726,7 +1843,6 @@ const MOTION = (() => {
 
       </section>
 
-      ${news.length ? `
       <section class="story" id="story">
         <div class="story-track">
           <div class="story-pin">
@@ -1744,15 +1860,17 @@ const MOTION = (() => {
         </div>
       </section>
 
-      <div class="shead"><h2>近期重大</h2><span class="right"><a href="#signals" style="color:var(--dim);text-decoration:underline">全部 ${ni0.n || c.news || news.length} 条 · 跨度 ${ni0.span || 0} 天 ↗</a></span></div>
-      <div class="newsrow">
+      <div class="shead"><h2>近期重大</h2><span class="right"><a href="#signals" style="color:var(--dim);text-decoration:underline">全部 ${nHead.n} 条${nSpan ? " · 跨度 " + nSpan + " 天" : ""} ↗</a></span></div>
+      ${news.length ? `<div class="newsrow">
         ${news.map(n => `
           <article class="ncard">
             <div class="nmeta"><span class="ntopic">${esc(n.topicLabel || "其他")}</span><span class="ndate">${esc((n.date || "").slice(5))}${n.time ? " " + esc(n.time) : ""}</span></div>
             <h3><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></h3>
             ${n.summary ? `<p class="nclamp">${esc(n.summary)}</p>` : ""}
           </article>`).join("")}
-      </div>` : ""}
+      </div>` : `<div class="newsrow newsrow-skel" aria-hidden="true">
+        ${[0, 1, 2, 3].map(() => `<article class="ncard ncard-skel"></article>`).join("")}
+      </div>`}
 
       <div class="shead"><h2>三条结论</h2></div>
       <div class="threeways">
@@ -3766,14 +3884,29 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     $("#overlay").dataset.open = "0";
   }
 
+  /** 局部重绘：保住当前滚动位置，用于异步数据到达后原地补内容（F21）。 */
+  function rerenderInPlace() {
+    state.keepScroll = scrollY;
+    render();
+  }
+
   /* ── render ── */
+  // 首屏渲染前不要动滚动位置：新加载时地址栏被补成 #home，
+  // 浏览器会拿它去恢复滚动，首页就落在叙事中间了。首帧之后的切页照常回顶。
+  let firstRender = true;
   function render() {
+    const keepScroll = firstRender || state.keepScroll;
+    firstRender = false; state.keepScroll = false;
     renderNav(); renderHero(); renderKpis(); renderHealth();
     const v = $("#view");
     if (state.tab === "home") {
       v.innerHTML = viewHome();
-      if (!Array.isArray(state.data?.news) && !Array.isArray(state.newsFull)) {
-        loadNews().then((items) => { if (items.length && state.tab === "home") render(); }).catch(() => {});
+      // 归档只填充要闻区：priceAxis 与要闻的标题/数量都已经在首屏里了，
+      // 所以这次重绘要保住滚动位置，不能把人弹回首页顶部（F21）。
+      if (needsNewsArchive()) {
+        loadNews().then((items) => {
+          if (items.length && state.tab === "home") rerenderInPlace();
+        }).catch(() => {});
       }
     }
     else if (state.tab === "free") v.innerHTML = viewFree();
@@ -3787,16 +3920,25 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     else if (state.tab === "signals") {
       v.innerHTML = viewSignals();
       // 归档不在 data.json 里，进这一页时才拉；拉到后重绘一次
-      if (!Array.isArray(state.data?.news) && !Array.isArray(state.newsFull)) {
-        loadNews().then((items) => {
-          if (items.length && state.tab === "signals") render();
-          else if (state.tab === "signals") render();   // 空也重绘，把错误说出来
+      if (needsNewsArchive()) {
+        loadNews().then(() => {
+          if (state.tab === "signals") rerenderInPlace();   // 空也重绘，把错误说出来
         });
       }
     }
     else v.innerHTML = viewMethod();
-    history.replaceState(null, "", "#" + state.tab);
-    queueMicrotask(() => { MOTION.arm(); if (state.tab === 'home') renderAxis(); if (state.tab === 'subs') renderSubBars(); if (state.tab === 'events') renderTimeline(); if (state.tab === 'bench') { if (state.benchView === 'value') renderBenchScatter(); } });
+    // 首屏不改地址栏：加载时地址里是 / 或 #home，替换成 #home 会触发一次不必要的导航，
+    // 还会和浏览器的滚动恢复打架。之后每次切页照旧。
+    if (!keepScroll) history.replaceState(null, "", "#" + state.tab);
+    queueMicrotask(() => {
+      MOTION.arm();
+      if (state.tab === 'home') renderAxis();
+      if (state.tab === 'subs') renderSubBars();
+      if (state.tab === 'events') renderTimeline();
+      if (state.tab === 'bench' && state.benchView === 'value') renderBenchScatter();
+      // 局部重绘后把滚动位置放回去：归档到达只填充要闻区，不该把人弹回顶部
+      if (keepScroll) scrollTo({ top: keepScroll, behavior: "auto" });
+    });
   }
 
   /* ── events ── */
@@ -3992,6 +4134,9 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
   }
 
   async function boot() {
+    // 首页会往地址栏补 #home（见 render），新加载时浏览器会去恢复那个滚动位置，
+    // 结果首页一打开就落在价格叙事的中间。这次不做滚动恢复。
+    try { history.scrollRestoration = "manual"; } catch {}
     const theme = localStorage.getItem("fr.theme");
     if (theme === "dark") {
       document.documentElement.dataset.theme = "dark";
@@ -4004,11 +4149,13 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     }
     try {
       const res = await fetch("data.json");
-      if (!res.ok) throw new Error(res.status);
+      if (!res.ok) throw new Error("HTTP " + res.status);
       state.data = await res.json();
     } catch (e) {
+      // F01：任何失败路径都要让错误文案真的可见，不能停在 opacity:0
+      document.body.classList.add("ready");
       $("#kpis").innerHTML = "";
-      $("#view").innerHTML = `<div class="empty"><b>读不到 data.json</b>请用本地服务器打开：<code>python3 -m http.server 4311</code><br>或先运行 <code>node collect.mjs</code> 生成数据。</div>`;
+      $("#view").innerHTML = `<div class="empty"><b>读不到 data.json</b>${esc(e.message || String(e))}。请用本地服务器打开：<code>npx serve dist</code><br>或先运行 <code>npm run collect</code> 生成数据。</div>`;
       return;
     }
     const base = state.data.meta.fx || { USDCNY: 7.1, as_of: "", fetched_at: "" };
@@ -4022,6 +4169,10 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
       .catch(() => { if (state.tab === "signals") render(); });
     $("#footSrc").textContent = `${state.data.meta.counts.sources} 个来源 · 去重丢弃 ${state.data.meta.dedupe.aggregator_dropped + state.data.meta.dedupe.unpriced_dropped} 条`;
   }
+
+  // F01 的最后一道保险：任何未捕获错误都不能把页面留在透明状态
+  addEventListener("error", () => document.body.classList.add("ready"));
+  addEventListener("unhandledrejection", () => document.body.classList.add("ready"));
 
   boot();
 })();

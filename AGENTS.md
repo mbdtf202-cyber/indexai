@@ -63,6 +63,8 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 - AIHOT：分类之间不重叠，要逐个分类翻页
 - macOS launchd 下 `/bin/bash` 读不到 `~/Desktop`，本机常驻任务直接执行 node
 - Playwright 的 `toBeVisible` 把 `opacity:0` 当作可见，判断真可见要看计算样式
+- 禁用 JS 时 `getByText` 看不到 `<noscript>` 里的文案（Chromium 当文本节点），用 `noscript .empty` + 几何断言
+- 首屏渲染要能抗 `data.json` 失败：`#view` 里已有静态壳子，数据到了只换字，别再引入会改变首屏高度的路径（T1.1 的 CLS 预算 0.05）
 - e2e 要拦非同源请求：页面仍直连 Google Fonts 与汇率接口（F45、F52 未修），
   被拦后会产生 `Failed to load resource` 的 console.error —— 这类与前端错误分开断言
 - 断网跑 e2e 要给 webServer 的探测加 `NO_PROXY=127.0.0.1,localhost`，否则代理会拦回环
