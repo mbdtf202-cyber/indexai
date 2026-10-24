@@ -24,9 +24,7 @@ function baseData() {
     resources: [],
     bench: [],
     signals: [],
-    aaModels: [],
     orApps: [],
-    orModels: [],
     hnSignals: [],
   };
   for (const [key, spec] of Object.entries(LAYERS)) {
@@ -51,9 +49,7 @@ function baseData() {
     resources: LAYERS.resources.min,
     bench: LAYERS.bench.min,
     signals: LAYERS.signals.min,
-    aaModels: LAYERS.aaModels.min,
     orApps: LAYERS.orApps.min,
-    orModels: LAYERS.orModels.min,
     hnSignals: LAYERS.hnSignals.min,
   };
   return d;

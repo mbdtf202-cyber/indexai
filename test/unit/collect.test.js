@@ -216,12 +216,12 @@ describe('eventRegion / regionFromCountryCode', () => {
 });
 
 describe('foldRegions', () => {
-  test('低于阈值的小区并入大区并保留 regionRaw', () => {
+  test('低于阈值的小区并入大区，不再回写 regionRaw', () => {
     const events = Array.from({ length: 3 }, () => ({ region: 'japan' }));
     const out = foldRegions(events);
     assert.ok(
-      out.every((e) => e.regionRaw === 'japan'),
-      '应保留原始地区',
+      out.every((e) => !('regionRaw' in e)),
+      'T2.2 起不再写 regionRaw：页面不读，展示分组另有字典（S6.5）',
     );
   });
 
@@ -229,10 +229,10 @@ describe('foldRegions', () => {
     assert.deepEqual(foldRegions([]), []);
   });
 
-  test('小区并入大区时保留 regionRaw（canada → other 是现状）', () => {
+  test('小区并入大区时只改 region（canada → other）', () => {
     const out = foldRegions([{ region: 'canada' }]);
-    assert.equal(out[0].regionRaw, 'canada');
     assert.equal(out[0].region, 'other');
+    assert.ok(!('regionRaw' in out[0]), '不再透传源站的原始地区值');
   });
 
   test('F10：小国家归并不再做跨洲映射', () => {

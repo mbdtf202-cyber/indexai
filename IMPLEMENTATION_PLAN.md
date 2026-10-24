@@ -573,7 +573,7 @@ golden 差异（1 处）：`$.meta.dropped` 新增（`unsafeUrl: 0` + 空样例�
 
 verify 全绿，253 项测试 / 28 项 e2e / 14 秒。
 
-### [ ] T2.2 删死代码与死数据
+### [x] T2.2 删死代码与死数据
 
 依据：F17、F34、F35、F48 · 依赖：T0.4、T0.5
 
@@ -585,6 +585,23 @@ verify 全绿，253 项测试 / 28 项 e2e / 14 秒。
 5. 已纳入类型检查的目录开启 `noUnusedLocals`。
 
 验收：上述符号、CSS 与字段全部消失；R5 通过；`noUnusedLocals` 零报错；golden 与 DOM 快照的差异只来自删除的字段与元素。
+
+结果：
+
+1. **采集端死代码**：删掉 `fetchBench`（旧 Vals 采集，34 行）、整套 AA 独立抓取层 `parseAA` + `fetchAA` + `AA_URL`（56 行）、`FX_CNY`、`KIND_LABEL`、`decodeNews` 导入。AA 的内容本来就由评测层的 AA 源提供，`fetchAA` 只是重复抓一遍页面。同步删掉 `health.mjs` 的 `aaModels` / `orModels` 两条门禁与页面健康横幅里的对应句子、`meta.counts` 与顶层字段 `orModels` / `aaModels`、`relaySamples`。
+2. **停止写出页面不读的字段**：`effVsOfficial`、`effSpread`、`groupSpread`、`template`、`templateSame`、`samples`、`regionRaw`，以及活动行上算完地区即丢的 `countryCode` / `geoCityFallback` / `countryName`（`delete` 掉，不影响 `eventRegion` 的判定链）。`comparable` 保留——页面用它决定这一行有没有信息量。
+3. **页面死代码**：删 `growBars`（23 行）、`renderStarBand`（18 行）、`openRelay`（21 行）与 `data-relay` 分支；`window.__newsBuckets` 改为模块内变量 `newsBuckets`（主脚本已是 module，作用域私有）；删 7 个孤立 CSS 类的 29 行规则（`.distbar`、`.jump`、`.home-side`、`.hs-head`、`.hs-row`、`.starband`、`.sbrow`）；`.pips` 与 `.starmini` 是「有元素无样式」，按建议删掉，推荐指数只显示数字。
+4. **R5 启用**：两条 TODO 都处理了——`health.mjs` 的 `TODO(校准)` 已经过期（还写着 Luma 463，实测 1498），改写为阈值口径说明；`collect.mjs` 那条无编号 TODO 改成结论句。R5 检查时跳过自己的实现文件（那里必然出现 TODO 这个词）。
+5. **`noUnusedLocals` 开启**，立刻抓到 `lib/parquet.mjs` 两个未使用的 page-header 字段（`defEnc` / `repEnc`），已删并注明为什么不读。
+
+**过程中两个值得记的点**：
+
+- 我用「按行首选择器匹配」删 CSS，把多行规则只删了首行，留下 `  background:var(--panel); border-radius:3px}` 这类孤儿续行，一共踩了两处（`.jump a`、`.sbrow`）。是 `biome` 的 `parse` 错误抓出来的——**这也说明 lint 跑在内联 CSS 上是值得的**。
+- 删 `evPips` 后 `e.worth` 那行留下一个空 `<span>`，肉眼很难发现，是复查渲染代码时找到的。
+
+golden 差异（322 处，全部来自被删字段）：`meta.counts` 少 3 项、`meta.collect` 从 11 降到 10（aa 层消失）、`orModels` / `aaModels` 顶层字段消失、每个中转站的 5 个旗舰各少 `effVsOfficial`、`sources` 少 1 条、HTTP 请求数少 1（不再多抓一遍 AA 页面）。**没有任何一处是数值变化**，全部是键消失。
+
+DOM 快照：只有 `events.html` 与 `tools.html` 两页变化（`.pips` 与 `.starmini` 消失），其余 8 页 + 2 张窄屏快照不变。
 
 ### [ ] T2.3 命名统一
 

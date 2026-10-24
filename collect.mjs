@@ -19,12 +19,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
 import {
-  parseNewsYaml, mergeArchive, archiveStats, buildIndex, decodeNews,
+  parseNewsYaml, mergeArchive, archiveStats, buildIndex,
 } from './lib/news.mjs';
 import { now, nowISO, todayISO, mark, since, sleep } from './lib/clock.js';
 
 const OPENROUTER = 'https://openrouter.ai/api/v1/models';
-const FX_CNY = 7.1; // 2026-10-23 记账汇率，仅用于把人民币价折算成 USD 对比
 /* ────────────────────────── 运行档位与输出目录 ──────────────────────────
  * INDEXAI_PROFILE=test 缩小迭代集合，让 golden 能在 30 秒内离线跑完；
  * 生产不设该变量，所有取值保持原样。
@@ -1692,7 +1691,7 @@ async function fetchDevfolio() {
  *   不适合每日自动采集。若将来要用，必须降到极低频（单城市单次）并接受随时被挡。
  * - 活动行 huodongxing：列表页有真实中文 AI 活动（实测「大模型安全与备案政策宣讲会」），
  *   但**列表页不含日期字段**，日期只在详情页 —— 要 N 条就 N 次详情请求，成本高且易被封。
- *   TODO：若要做，先找是否有带日期的接口，否则不做。
+ *   结论：除非找到带日期的接口，否则不做（原来这里挂过一条无编号待办，已按 R5 清掉）。
  * - OpenAI 官网活动页：403（Cloudflare 拦截无头请求）。
  * - Kaggle /api/v1/competitions/list：401，需要账号认证 —— 与项目「不注册账号」的边界冲突。
  * - MLH：302 重定向到一个已失效的页面。
@@ -1849,7 +1848,7 @@ export function eventRegion(e) {
 /* 地区归并：值太碎就没法当筛选维度用。
  * 实测问题（2026-10-24）：`ae`（阿联酋）只有 1 条、`kr`（韩国）2 条，
  * 前端按实际数据生成筛选按钮时会列出一堆点开只有 1 条的空按钮。
- * 原则：**国家**值条数 < EV_REGION_MIN 就并入所属大区，原始值留在 regionRaw 里备查。
+ * 原则：**国家**值条数 < EV_REGION_MIN 就并入所属大区；原始值不再回写（T2.2 起）。
  * 大区值（asia / eu / latam / middle-east / africa / online / other）不参与归并。
  * 阈值不写死在别处：条数变化时自动生效，不需要再改代码。 */
 const EV_REGION_MIN = 5;
@@ -1878,7 +1877,8 @@ export function foldRegions(events) {
   if (applied.length) {
     console.log(`[collect] region 归并（<${EV_REGION_MIN} 条并入大区）：${applied.map(([k, v]) => `${k}(${count[k]})→${v}`).join(' · ')}`);
   }
-  return events.map((e) => (fold[e.region] ? { ...e, region: fold[e.region], regionRaw: e.region } : e));
+  // 归并只改 region；原始值不再回写（页面不读，S6.5 的展示分组另有字典）
+  return events.map((e) => (fold[e.region] ? { ...e, region: fold[e.region] } : e));
 }
 
 /* Aibijia 公开数据：第三方挂单（带真实商品链接）+ App Store 各国订阅价 */
@@ -2162,39 +2162,6 @@ async function fetchAios() {
 }
 
 /* ────────────────────────── 8. 智力评测（Vals Index） ────────────────────────── */
-async function fetchBench(prev) {
-  const url = 'https://www.vals.ai/benchmarks/vals_index';
-  try {
-    const res = await httpText(url, { label: 'vals-index' });
-    const text = res.text.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ')
-      .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
-    const asOf = (text.match(/Updated (\d{2}\/\d{2}\/\d{4})/) || text.match(/As of ([A-Z][a-z]+ \d+, \d{4})/) || [])[1] || null;
-    const re = /(\d{1,2})\s+([A-Z][A-Za-z0-9.+\- ]{2,36}?)\s+(\d{2}\.\d{2})%/g;
-    const rows = [];
-    const seen = new Set();
-    let m;
-    while ((m = re.exec(text)) && rows.length < 16) {
-      const name = m[2].trim();
-      if (seen.has(name) || /^(Index|Benchmarks?|Updated)/i.test(name)) continue;
-      seen.add(name);
-      rows.push({ rank: Number(m[1]), model: name, score: Number(m[3]) });
-    }
-    // 注意：prev.bench 是 { as_of, source, rows, fetched_at } 对象，不是数组。
-    // 这里以前写成 (prev?.bench || []).map(...)，每次抛 TypeError 被 catch 吞掉，
-    // 导致 bench 永久 stale、delta 永远为 null——「分数下跌标黄」从来没生效过。
-    const prevRows = Array.isArray(prev?.rows) ? prev.rows : [];
-    const old = new Map(prevRows.map((b) => [b.model, b.score]));
-    for (const r of rows) {
-      const o = old.get(r.model);
-      r.delta = o == null ? null : Number((r.score - o).toFixed(2));
-    }
-    return { as_of: asOf, source: url, rows, fetched_at: nowISO() };
-  } catch (e) {
-    console.error(`[collect] bench 抓取失败：${e.message}`);
-    return prev ? { ...prev, stale: true } : { as_of: null, source: url, rows: [], fetched_at: null, stale: true };
-  }
-}
-
 
 /* ────────────────────────── 9. 工具箱（人工精选 + GitHub 自动校准） ────────────────────────── */
 // 只收真正在用的：skill、MCP、CLI。星数与更新时间每天从 GitHub 拉一遍，
@@ -2256,7 +2223,6 @@ const CURATED_RESOURCES = [
 ];
 
 const USE_LABEL = { design: '设计', writing: '写作', content: '内容', engineering: '工程', research: '调研', tool: '工具' };
-const KIND_LABEL = { skill: 'Skill', mcp: 'MCP', tool: '工具', list: '清单' };
 
 /* 网络请求重试：偶发的 5xx、429、连接重置不应该让整层数据蒸发。
  * 指数退避 + 抖动，只对「值得重试」的状态码重试（4xx 里除 408/429 之外都是确定性失败，不重试）。
@@ -2392,61 +2358,6 @@ async function fetchOpenRouter() {
 
 
 /* ────────────────────────── Artificial Analysis 综合智能指数 ────────────────────────── */
-const AA_URL = 'https://artificialanalysis.ai/leaderboards/models';
-
-function parseAA(html) {
-  let h = html.replace(/\\+"/g, '"').replace(/\\n/g, ' ');
-  const at = h.indexOf('"initialModels":[');
-  if (at < 0) return [];
-  let i = h.indexOf('[', at), depth = 0, end = i;
-  for (; end < h.length; end++) {
-    if (h[end] === '[') depth++;
-    else if (h[end] === ']') { depth--; if (depth === 0) { end++; break; } }
-  }
-  let arr;
-  try { arr = JSON.parse(h.slice(i, end)); } catch { return []; }
-  return arr
-    .filter((m) => m && typeof m.intelligenceIndex === 'number' && !m.deprecated)
-    .map((m) => ({
-      slug: m.slug,
-      name: String(m.name || m.shortName || '')
-        .replace(/\s*,?\s*Default Fallback\s*/gi, '')
-        .replace(/\s*\(\s*\)/, '')
-        .trim(),
-      fullName: m.name,
-      vendor: m.modelCreatorName || '',
-      idx: Number(m.intelligenceIndex.toFixed(2)),
-      ctx: m.contextWindowTokens || null,
-      openWeights: !!m.isOpenWeights,
-      estimated: !!m.intelligenceIndexIsEstimated,
-      // 细分项，有就带上
-      terminal: typeof m.terminalbenchHard === 'number' ? Number((m.terminalbenchHard * 100).toFixed(1)) : null,
-      tau2: typeof m.tau2 === 'number' ? Number((m.tau2 * 100).toFixed(1)) : null,
-    }))
-    .sort((a, b) => b.idx - a.idx);
-}
-
-async function fetchAA() {
-  try {
-    const res = await httpText(AA_URL, { label: 'artificialanalysis' });
-    if (!res.ok) {
-      console.error(`[collect] artificialanalysis HTTP ${res.status}`);
-      return [];
-    }
-    const html = res.text;
-    if (html.length < 50000) {
-      console.error(`[collect] artificialanalysis 页面过短（${html.length}），可能被拦`);
-      return [];
-    }
-    const parsed = parseAA(html);
-    if (!parsed.length) console.error('[collect] AA 解析出 0 条——initialModels 结构可能变了');
-    return parsed;
-  } catch (e) {
-    console.error(`[collect] artificialanalysis 失败：${e.message}`);
-    return [];
-  }
-}
-
 
 /* ────────────────────────── Hacker News：民间公开讨论度 ────────────────────────── */
 const HN_API = 'https://hn.algolia.com/api/v1/search';
@@ -2548,7 +2459,7 @@ async function main() {
   const T = makeTracker();
 
   // 并行拉取，每层独立记账；失败不互相拖累
-  const [devpost, aios, luma, devfolio, aibijia, resources, openrouter, aaModels] = await Promise.all([
+  const [devpost, aios, luma, devfolio, aibijia, resources, openrouter] = await Promise.all([
     T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
     // AIOS 读仓库外的本机文件，内容不在版本控制里：测试档位跳过，保证回放输出确定
     TEST_PROFILE
@@ -2563,8 +2474,7 @@ async function main() {
       return { value: v, valid: v.valid };
     }, null),
     T.run('resources', async () => ({ value: await fetchResources() }), prev?.resources),
-    T.run('openrouter', async () => ({ value: await fetchOpenRouter() }), prev ? { apps: prev.orApps, models: prev.orModels } : null),
-    T.run('aa', async () => ({ value: await fetchAA() }), prev?.aaModels),
+    T.run('openrouter', async () => ({ value: await fetchOpenRouter() }), prev ? { apps: prev.orApps } : null),
   ]);
 
   // 情报层：归档文件是唯一存储，data.json 里只留极简索引（计数 / 跨度 / 逐日条数）
@@ -2768,48 +2678,23 @@ async function main() {
         row.eff = effectiveCost(p);
         row.vsOfficial = ref && ref.input > 0 ? Number((p.input / ref.input).toFixed(3)) : null;
         const officialEff = ref ? effectiveCost({ kind: 'per_1m', input: ref.input, output: ref.output, cacheRead: ref.cache_read }) : null;
-        row.effVsOfficial = officialEff ? Number((row.eff / officialEff).toFixed(3)) : null;
       }
       // 按次计价不参与每百万 token 的比较，只留原值
       prices[k] = row;
     }
 
-    // 站点级画像：用「有效成本」算，才有可比性
+    // 站点级画像：只留「有可比单价的旗舰数」，页面用它决定这一行有没有信息量。
+    // effSpread / groupSpread 曾一并写出但页面从不读取，已删（F17）。
     const effs = Object.entries(prices)
-      .filter(([, p]) => p.kind === 'per_1m' && p.eff != null && !p.anomaly)
-      .map(([k, p]) => ({ k, eff: p.eff, input: p.input, output: p.output }));
-    const effSpread = effs.length > 1 ? Number((Math.max(...effs.map((x) => x.eff)) / Math.min(...effs.map((x) => x.eff))).toFixed(2)) : null;
+      .filter(([, p]) => p.kind === 'per_1m' && p.eff != null && !p.anomaly);
 
     return {
       ...base,
       prices,
       // 有多少个旗舰能给出可比单价（决定这一行在页面上有多大信息量）
       comparable: effs.length,
-      effSpread,
-      groupSpread: base.groups?.spread ?? null,
     };
   }).sort((a, b) => (b.models || 0) - (a.models || 0));
-
-  // 「这是同一个价目模板」的分组：completion_ratio 与分组结构一致的站归一类，
-  // 让页面能说出「这 11 家其实是一个模板」，而不是把 11 个 75/75 当 11 个独立异常。
-  const templateKey = (r) => {
-    const p = r.prices?.sonnet55 || r.prices?.opus55;
-    if (!p || p.kind !== 'per_1m') return null;
-    return `${p.input}/${p.output}/${p.comp ?? '?'}`;
-  };
-  const templates = new Map();
-  for (const r of relays.filter((x) => x.status === 'ok')) {
-    const k = templateKey(r);
-    if (!k) continue;
-    if (!templates.has(k)) templates.set(k, []);
-    templates.get(k).push(r.name);
-  }
-  for (const r of relays) {
-    const k = templateKey(r);
-    const same = k ? templates.get(k) : null;
-    r.template = k;
-    r.templateSame = same && same.length > 1 ? same.filter((n) => n !== r.name) : null;
-  }
 
   // 订阅层：官方月费从苹果区价派生；第三方挂单只认 aibijia 的实时挂单，没有就是没有。
   // aibijia 整体挂掉时沿用上一版的派生结果（而不是让订阅页空掉）。
@@ -2859,7 +2744,6 @@ async function main() {
   }
   if (resources.length) addSrc('https://api.github.com/repos', 'toolkit', 'GitHub 精选');
   if (openrouter.apps.length) addSrc('https://openrouter.ai/rankings', 'adoption', 'OpenRouter 实际调用量');
-  if (aaModels.length) addSrc(AA_URL, 'bench', 'Artificial Analysis 智能指数');
   if (hnSignals.length) addSrc('https://hn.algolia.com/api', 'community', 'Hacker News 公开讨论');
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
@@ -2877,6 +2761,10 @@ async function main() {
   const allEvents = foldRegions([...devpost, ...luma, ...aios, ...devfolio].map((e) => {
     const row = { ...e, kind: eventKind(e), region: eventRegion(e) };
     row.status = eventStatus(row);
+    // 判定用的三个原始字段到此为止：算完地区即丢（页面不读，S6.5 只按 ISO 代码存）
+    delete row.countryCode;
+    delete row.geoCityFallback;
+    delete row.countryName;
     return row;
   }));
   // 限速观测点：把本次遇到的封禁次数与最长冷却写进 meta.net，随 data.json 落盘。
@@ -2927,13 +2815,10 @@ async function main() {
         news: newsArchive?.length || 0,
         resources: resources.filter((r) => r.status === 'ok').length,
         orApps: openrouter.apps.length,
-        orModels: openrouter.models.length,
-        aaModels: aaModels.length,
         hnSignals: hnSignals.length,
         relays: relays.length,
         relaysLive: relays.filter((r) => r.status === 'ok').length,
         relayQuotes: relays.reduce((n, r) => n + Object.keys(r.prices || {}).length, 0),
-        relaySamples: relays.reduce((n, r) => n + (r.samples || []).length, 0),
         relayComparable: relays.filter((r) => (r.comparable || 0) > 0).length,
         relayGroups: relays.reduce((n, r) => n + (r.groups?.count || 0), 0),
         events: allEvents.length,
@@ -2960,8 +2845,6 @@ async function main() {
     subsRegions,
     resources,
     orApps: openrouter.apps,
-    orModels: openrouter.models,
-    aaModels,
     hnSignals,
     relays,
     // 场次型输出按 id 排序：多源并行的完成顺序不稳定，输出必须确定（INV-7）

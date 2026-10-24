@@ -41,9 +41,7 @@ export const LAYERS = {
   resources:     { min: 12,  warnBelow: 16,  shrink: 0.80, label: '工具箱' },     // 实测 21
   bench:         { min: 120, warnBelow: 140, shrink: 0.75, label: '评测' },       // 实测 155
   signals:       { min: 8,   warnBelow: 12,  shrink: 0.70, label: '一手信号' },   // 实测 21
-  aaModels:      { min: 150, warnBelow: 200, shrink: 0.70, label: 'AA 智能指数' }, // 实测 266
   orApps:        { min: 10,  warnBelow: 15,  shrink: 0.60, label: 'OR 应用榜' },  // 实测 25
-  orModels:      { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'OR 模型榜' },  // 实测 20
   hnSignals:     { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'HN 民间声量' }, // 实测 16
 };
 
@@ -58,10 +56,9 @@ export const LAYERS = {
  * optional:true —— 可选本地层（AIOS 读本机文件）。没装 AIOS 就该是 0，
  * 所以不设绝对下限；但只要上一版有、这一版凭空变 0，就是采集中断，照样判死。
  *
- * TODO(校准) 采集端扩容落地后（Devpost 192 + Luma 463 + AIOS 23 ≈ 678），
- * 按实测总量重算：总量 min≈35%、warnBelow≈55%；分源 min 取各源实测的 ~35%：
- *   devpost ≈ 67、luma ≈ 162、aios 维持可选。
- * 先按保守值跑，避免 collector 中途写 data.json 时误报。 */
+ * 阈值口径：总量 min≈35%、warnBelow≈55%；分源 min 取各源实测的 ~35%。
+ * 实测值见每行末尾的注释（T4.7 起改为按 7 次成功快照的中位数自动校准，
+ * 在那之前这里的数字是人工核对的基线）。 */
 export const EVENT_SOURCES = {
   devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 193；红线 35%，警戒 55%
   luma:     { min: 524, warnBelow: 823, label: '活动源 Luma' },     // 实测 1498（含地理维度）；红线 35%，警戒 55%

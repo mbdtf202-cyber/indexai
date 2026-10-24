@@ -20,6 +20,7 @@ export const ENABLED = {
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
   R2a: true, // T1.4
   R8: true, // T2.1（根目录部分）
+  R5: true, // T2.2
   R12: true, // T0.6
 };
 
@@ -152,6 +153,44 @@ function checkR9() {
         message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
       });
     }
+  }
+  return violations;
+}
+
+/**
+ * R5：`TODO` / `FIXME` 必须带任务编号，例如 `TODO(T4.2)`。
+ *
+ * 理由（INV-4、INV-10）：没有编号的 TODO 等于一句遗言——没人知道它是谁留下的、
+ * 什么时候该处理、算不算「已完成」。带编号才能被计划表追踪，或者干脆删掉。
+ */
+function checkR5() {
+  const violations = [];
+  const files = [
+    ...['collect.mjs', 'bench.mjs', 'health.mjs'].map((f) => f),
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'scripts')).map((f) => relative(ROOT, f)),
+  ];
+  try {
+    statSync(join(ROOT, 'index.html'));
+    files.push('index.html');
+  } catch {
+    // 文件可能已迁到 site/
+  }
+
+  for (const rel of files) {
+    // 规则自己的实现与文档里必然出现「TODO」这个词，跳过本文件
+    if (rel === join('scripts', 'check-invariants.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 只看真正的标记：TODO 后面必须紧跟 (T<数字>.<数字>) 才算合格
+      const m = line.match(/\b(TODO|FIXME)\b(?!\s*\()/);
+      if (!m) return;
+      violations.push({
+        file: rel,
+        line: i + 1,
+        message: `R5 违反：${m[1]} 没有任务编号（写成 ${m[1]}(T4.2) 或删掉）`,
+      });
+    });
   }
   return violations;
 }
@@ -353,6 +392,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R5',
+    description: 'TODO/FIXME 必须带任务编号',
+    check: checkR5,
   },
   {
     id: 'R8',

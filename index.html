@@ -108,7 +108,6 @@ button,input,select{font:inherit; color:inherit}
 .hero.compact .wrap{padding-top:22px; padding-bottom:18px; align-items:center}
 .hero.compact h1{font-size:clamp(22px,2.5vw,32px); margin:6px 0 8px}
 .hero.compact p{font-size:13.5px; max-width:64ch}
-.hero.compact .jump{margin-top:12px}
 .hero .wrap{padding-top:clamp(30px,4vw,54px); padding-bottom:0; display:grid; grid-template-columns:1fr; gap:0; align-items:start}
 .hero h1{max-width:22ch}
 .hero h1{margin:10px 0 12px; font-size:clamp(27px,3.5vw,46px); line-height:1.04; letter-spacing:-.035em; font-weight:700}
@@ -132,7 +131,6 @@ button,input,select{font:inherit; color:inherit}
 .kpi .n small{font-size:12px; color:var(--faint); margin-left:4px; letter-spacing:0}
 .kpi .k{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
 .kpi .s{font-size:12px; color:var(--dim); margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.hero .jump{display:flex; gap:8px; margin-top:18px; flex-wrap:wrap}
 /* 总览页首屏不显示 hero（renderHero 会给它 is-hidden），但 KPI 要在数据到达后填进去：
    高度不预留的话，#view 会整块上移约 280px，这就是首页 CLS 的主要来源（T1.1）。
    这里先按最终高度占位，占位时不给它画任何边框或者文字。 */
@@ -149,21 +147,12 @@ button,input,select{font:inherit; color:inherit}
 .home-skel .ncard-skel{background:transparent}
 .home-skel .ecard-skel{pointer-events:none}
 .kpis-skel .n,.kpis-skel .s{color:transparent}
-.jump a{display:inline-flex; align-items:center; gap:6px; border:1px solid var(--line2); padding:7px 12px; font-size:12px;
-  background:var(--panel); border-radius:3px}
-.jump a:hover{border-color:var(--accent); color:var(--accent)}
-.jump a b{font-family:var(--mono); font-weight:500}
 
 /* ── table note ── */
 .tnote{margin:0 0 10px; font-size:12px; color:var(--faint); font-family:var(--mono); letter-spacing:.02em}
 
 
 
-.distbar{position:relative; height:46px; margin:0 0 18px; border-bottom:1px solid var(--line)}
-.distbar svg{display:block; width:100%; height:46px; overflow:visible}
-.distbar .db-pt{fill:#8b8b8b; opacity:.5}
-.distbar .db-pt.on{fill:var(--accent); opacity:.95}
-.distbar .db-lbl{font-family:var(--mono); font-size:10.5px; fill:var(--faint)}
 
 
 /* ── 中转站价格轴 ── */
@@ -279,19 +268,6 @@ button,input,select{font:inherit; color:inherit}
 .card .foot .evline{flex:1 1 auto}
 .card .foot .evline .tag{margin-left:auto}
 
-
-/* ── 工具箱星数带 ── */
-.starband{display:flex; flex-direction:column; gap:1px; margin:0 0 var(--sect); border-top:1px solid var(--ink)}
-.sbrow{display:grid; grid-template-columns:clamp(120px,17vw,220px) 1fr 58px;
-  align-items:center; gap:12px; padding:4px 0; border-bottom:1px solid var(--line); text-decoration:none; color:inherit}
-.sbrow:hover{background:var(--panel2)}
-.sbrow .n{font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--dim)}
-.sbrow .t{position:relative; height:4px; background:var(--panel3)}
-.sbrow .t i{display:block; height:100%; background:var(--ink); opacity:.7; width:0;
-  animation:growbar .85s cubic-bezier(.16,1,.3,1) forwards; animation-delay:calc(var(--i,0)*30ms)}
-.sbrow .s{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--faint); font-variant-numeric:tabular-nums}
-.sbrow:hover .n{color:var(--ink)}
-@media (max-width:760px){.sbrow{grid-template-columns:110px 1fr 48px}}
 
 
 /* ── 键盘可达性 ── */
@@ -719,7 +695,6 @@ footer.foot a:hover{color:var(--accent)}
 
 /* ── home ── */
 .home-top{display:grid; grid-template-columns:1fr; gap:0; background:transparent; border:0; margin-bottom:0}
-.home-side{display:none}
 .home-lead{background:var(--panel); padding:30px clamp(16px,2.4vw,34px) 26px}
 .kicker{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:14px}
 .home-h{margin:0 0 10px; font-size:clamp(30px,4.1vw,50px); line-height:1.06; letter-spacing:-.025em; font-weight:600}
@@ -733,13 +708,6 @@ footer.foot a:hover{color:var(--accent)}
 .home-facts .fv{font-family:var(--mono); font-size:20px; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
 .home-facts .fd{font-size:11.5px; color:var(--faint); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
-.home-side{display:none}
-.hs-head{font-family:var(--mono); font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:10px}
-.hs-row{display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:7px 0; border-top:1px solid var(--line); color:var(--dim); text-decoration:none; font-size:12.5px}
-.hs-row:first-of-type{border-top:0}
-.hs-row:hover{color:var(--ink)}
-.hs-row b{font-family:var(--mono); font-size:14px; color:var(--ink); font-variant-numeric:tabular-nums}
-.hs-row:hover b{color:var(--accent)}
 
 .newsrow{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; background:transparent;
   border-top:1px solid var(--ink); margin-bottom:var(--sect)}
@@ -990,7 +958,6 @@ footer.foot a:hover{color:var(--accent)}
   .hero .wrap{padding-top:16px; padding-bottom:14px; grid-template-columns:1fr; gap:14px}
   .hero h1{font-size:clamp(24px,7.4vw,30px); line-height:1.08; margin:8px 0 8px}
   .hero p{font-size:12.5px; line-height:1.6}
-  .hero .jump{display:none}
   .hero .kpis{grid-template-columns:1fr 1fr; gap:1px}
   .kpi{padding:8px 10px 7px}
   .kpi .k{font-size:10.5px; letter-spacing:.08em}
@@ -1015,7 +982,6 @@ footer.foot a:hover{color:var(--accent)}
   .home-facts{grid-template-columns:1fr 1fr; margin-top:18px}
   .home-facts>div{padding:9px 10px 8px}
   .home-facts .fv{font-size:17px}
-  .home-side{display:none}
   .newsrow{grid-template-columns:1fr}
   .threeways{grid-template-columns:1fr}
   .entries{grid-template-columns:1fr 1fr}
@@ -1279,6 +1245,9 @@ const MOTION = (() => {
 })();
 
 (() => {
+
+  /** 情报密度带的分桶缓存：渲染时写入，点击处理器按索引读取（F35：不再挂 window）。 */
+  let newsBuckets = null;
 
   const TABS = [
     { id: "home", label: "总览", hint: "一站看全" },
@@ -2365,8 +2334,6 @@ const MOTION = (() => {
     for (const e of (state.data.events || [])) { const v = e[k] ?? ""; m[v] = (m[v] || 0) + 1; }
     return m;
   };
-  const evPips = (n, total) => `<i class="pips" aria-hidden="true">${[0, 1, 2, 3]
-    .map(k => `<b class="${k < Math.round(n / total * 4) ? "on" : ""}"></b>`).join("")}</i>`;
 
   function viewEvents() {
     const all = state.data.events || [];
@@ -2400,7 +2367,8 @@ const MOTION = (() => {
         ["时间", `<span class="mono" style="font-size:12px">${when}</span>`],
         e.prize ? ["奖励", esc(e.prize) + (e.regs ? ` · ${e.regs.toLocaleString()} 人报名` : "")]
           : e.regs ? ["报名", `${e.regs.toLocaleString()} 人`] : null,
-        e.worth != null ? ["推荐", `${e.worth}<span class="tag" style="margin-left:6px">${evPips(e.worth, 100)}</span>`] : null,
+        // 推荐指数只显示数字（旧的四格 pips 没有样式，已经删掉）
+        e.worth != null ? ["推荐", String(e.worth)] : null,
       ].filter(Boolean);
       const themes = (e.themes || []).slice(0, 4);
       return `
@@ -2518,7 +2486,7 @@ const MOTION = (() => {
           <a class="tcard${r.archived ? " stale" : ""}" href="${esc(safeUrl(r.url) || "#")}"${safeUrl(r.url) ? ' target="_blank" rel="noopener"' : ""}>
             <div class="th">
               <h3>${esc(r.title)}</h3>
-              <span class="tstars"><i class="starmini" style="--w:${Math.min(100, (Math.log10(Math.max(r.stars,1)) / 5.5) * 100).toFixed(0)}%"></i>${kfmt(r.stars)}<em>★</em></span>
+              <span class="tstars">${kfmt(r.stars)}<em>★</em></span>
             </div>
             <p class="why">${esc(r.why)}</p>
             <div class="tm">
@@ -2538,29 +2506,7 @@ const MOTION = (() => {
 
 
   /* 图形入场：条从 0 长到目标宽度 */
-  function growBars(sel, prop = "width") {
-    const els = [...document.querySelectorAll(sel)];
-    if (!els.length) return;
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    els.forEach((el) => {
-      const target = el.style[prop] || getComputedStyle(el)[prop];
-      el.dataset.target = target;
-      el.style[prop] = prop === "width" ? "0%" : "0px";
-      el.style.transition = "none";
-    });
-    const io2 = new IntersectionObserver((es) => {
-      es.forEach((e) => {
-        if (!e.isIntersecting) return;
-        const el = e.target;
-        requestAnimationFrame(() => {
-          el.style.transition = reduce ? "none" : `${prop} 1s cubic-bezier(.16,1,.3,1)`;
-          el.style[prop] = el.dataset.target;
-        });
-        io2.unobserve(el);
-      });
-    }, { threshold: 0.15 });
-    els.forEach((el) => io2.observe(el));
-  }
+
 
   /* ── 价格轴：453 个模型在对数刻度上的分布 ── */
   function renderAxis() {
@@ -2893,24 +2839,7 @@ const MOTION = (() => {
 
 
   /* ── 工具箱：星数带（对数刻度） ── */
-  function renderStarBand() {
-    const host = document.getElementById("starBand");
-    if (!host) return;
-    const rows = (state.data.resources || []).filter(r => r.status === "ok" && r.stars > 0)
-      .sort((a, b) => b.stars - a.stars);
-    if (!rows.length) { host.style.display = "none"; return; }
-    const lo = Math.log10(rows[rows.length - 1].stars);
-    const hi = Math.log10(rows[0].stars);
-    const span = hi - lo || 1;
-    host.innerHTML = rows.map((r, i) => {
-      const pct = ((Math.log10(r.stars) - lo) / span) * 100;
-      return `<a class="sbrow" href="${esc(r.url || "#")}" target="_blank" rel="noopener">
-        <span class="n">${esc(r.title)}</span>
-        <span class="t"><i style="--w:${Math.max(3, pct).toFixed(1)}%; --i:${i}"></i></span>
-        <span class="s">${kfmt(r.stars)}</span>
-      </a>`;
-    }).join("");
-  }
+
 
 
   /* ══════════ 评测页：一张总表 + 列切换 ══════════
@@ -3500,7 +3429,7 @@ const MOTION = (() => {
     }
     void winStart;
     const maxN = Math.max(1, ...buckets.map(b => b.n));
-    window.__newsBuckets = buckets.map(b => ({ t: b.t, t1: b.t1 }));
+    newsBuckets = buckets.map(b => ({ t: b.t, t1: b.t1 }));
     const heat = (n) => n === 0 ? 0 : Math.min(1, 0.18 + 0.82 * Math.log1p(n) / Math.log1p(maxN));
 
     const activeCount = filtered.length;
@@ -3916,27 +3845,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     $("#drawer").dataset.open = "1"; $("#drawer").setAttribute("aria-hidden", "false");
     $("#overlay").dataset.open = "1";
   }
-  function openRelay(domain) {
-    const r = state.data.relays.find(x => x.domain === domain);
-    if (!r) return;
-    const samples = (r.samples || []).slice(0, 40);
-    $("#drawer").innerHTML = `
-      <button class="close" type="button" data-close aria-label="关闭">✕</button>
-      <div class="eyebrow">RELAY · ${esc(r.status)}</div>
-      <h2>${esc(r.name)}</h2>
-      <div class="sub">${esc(r.domain)}</div>
-      <dl>
-        <dt>模型数</dt><dd class="mono">${(r.models || 0).toLocaleString()}</dd>
-        <dt>更新</dt><dd class="mono">${esc(r.checked_at || "—")}</dd>
-        <dt>价目接口</dt><dd class="mono" style="font-size:12px;word-break:break-all">${esc(r.url)}</dd>
-      </dl>
-      ${samples.length ? `<div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:none;border-top:var(--rule)">
-        <table style="min-width:0"><thead><tr><th style="cursor:default">模型</th><th class="num" style="cursor:default">输入</th><th class="num" style="cursor:default">输出</th></tr></thead>
-        <tbody>${samples.map(x => `<tr><td><span class="mono" style="font-size:12px">${esc(x.n)}</span></td><td class="num">${x.i}</td><td class="num">${x.o}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">这家没开放价目接口，只登记站点。</p>`}
-      <p class="note"><a href="https://${esc(r.domain)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">打开店铺 ↗</a> · 价格来自 /api/pricing 倍率换算，不含充值折扣</p>`;
-    $("#drawer").dataset.open = "1"; $("#drawer").setAttribute("aria-hidden", "false");
-    $("#overlay").dataset.open = "1";
-  }
+
 
   function closeDrawer() {
     $("#drawer").dataset.open = "0"; $("#drawer").setAttribute("aria-hidden", "true");
@@ -4003,7 +3912,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
   /* ── events ── */
   function bind() {
     document.addEventListener("click", (ev) => {
-      const t = ev.target.closest("[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-relay],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-vendorset],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn");
+      const t = ev.target.closest("[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-vendorset],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn");
       if (!t) return;
       if (t.dataset.tab) {
         if (t.dataset.tab === state.tab) return;
@@ -4056,7 +3965,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
       }
       if (t.dataset.newsbucket) {
         // 点密度格 = 把时间窗收到这一格所在的范围，回到「日」尺度看细节
-        const b = window.__newsBuckets && window.__newsBuckets[Number(t.dataset.newsbucket)];
+        const b = newsBuckets && newsBuckets[Number(t.dataset.newsbucket)];
         if (b) {
           state.newsRange = String(Math.max(1, Math.ceil((b.t1 - b.t) / 864e5)));
           state.newsScale = "d";
@@ -4081,7 +3990,6 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     if (t.dataset.benchmore) { state.benchLimit = (state.benchLimit || 60) + 60; render(); return; }
       if (t.hasAttribute("data-vendorset")) { state.vendorSet = t.dataset.vendorset; state.limit = 80; render(); return; }
       if (t.dataset.toolkind) { state.toolKind = t.dataset.toolkind; render(); return; }
-      if (t.dataset.relay) { if (ev.target.closest("a")) return; openRelay(t.dataset.relay); return; }
       if (t.dataset.sortkey) { state.sortKey = t.dataset.sortkey; state.sortDir = 1; render(); return; }
       if (t.dataset.channel) { state.channel = t.dataset.channel; render(); return; }
       if (t.dataset.sort) {
@@ -4163,7 +4071,6 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     }
     // 某层空掉：只在真的空时提，不重复 health.mjs 的全部阈值
     if (!(c.subs > 0)) issues.push({ bad: true, t: "官方订阅档位为空，订阅页只有第三方挂单" });
-    if (!(c.aaModels > 0)) issues.push({ bad: false, t: "Artificial Analysis 智能指数这一层本次没采到" });
     if (!(c.orApps > 0)) issues.push({ bad: false, t: "OpenRouter 应用榜本次没采到" });
     if ((meta.collect || []).some((x) => x.status === "stale")) {
       const layers = meta.collect.filter((x) => x.status === "stale").map((x) => x.layer);
