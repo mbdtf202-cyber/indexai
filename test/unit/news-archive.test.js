@@ -1,7 +1,7 @@
 /**
  * lib/news.mjs 第二批用例（T0.3）：摘要压缩、编码解码、归档合并。
  *
- * F07（标题截到 96 字且不加省略号）与 F08（情报只剩聚合站链接）
+ * F07 已修：标题与 URL 一律不截断（INV-9）。F08（情报只剩聚合站链接）仍未修。
  * 以 todo 用例记录，本任务不修。
  */
 
@@ -104,13 +104,13 @@ describe('encodeNews / decodeNews', () => {
     assert.equal(enc.d, '2026-10-24');
   });
 
-  test('F07：超长标题不应被静默截断且不加省略号', { todo: 'F07 标题截到 96 字不省略' }, () => {
+  test('F07：超长标题不应被静默截断且不加省略号', () => {
     const longTitle = '标'.repeat(200);
     const enc = encodeNews({ url: 'https://x/y', title: longTitle });
     assert.equal(enc.t.length, longTitle.length);
   });
 
-  test('F07：超长 URL 不应被截断（会生成死链）', { todo: 'F07 URL 截到 168 字' }, () => {
+  test('F07：超长 URL 不应被截断（会生成死链）', () => {
     const longUrl = `https://example.com/${'a'.repeat(200)}`;
     const enc = encodeNews({ url: longUrl, title: 't' });
     assert.equal(enc.u, longUrl);

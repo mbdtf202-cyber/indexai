@@ -279,7 +279,7 @@ models: 474  aggregator: 462   （与健康采集完全一致）
 
 golden 差异（1 处）：`$.meta.collect.length` 10 → 11——`models` 现在是独立记账的层，多了一条记录（`models:fresh`）。所有数据字节未变。
 
-### [ ] T1.6 情报不截断
+### [x] T1.6 情报不截断
 
 依据：F07 · INV-9 · 依赖：T0.3
 
@@ -289,6 +289,26 @@ golden 差异（1 处）：`$.meta.collect.length` 10 → 11——`models` 现�
 3. F07 的 `todo` 用例转正。
 
 验收：300 字符 URL 与 150 字标题入库后完全一致；去重键使用完整 URL。
+
+结果：`lib/news.mjs` 删掉 `CLIP_TITLE` / `CLIP_URL` 两个常量（不留 null 占位，INV-10），`encodeNews` 的 `title` 与 `u` 不再 `slice`。注释里原本写着「标题不压」，实现却在压——现在两者一致了。
+
+F07 的两条 `todo` 用例转正（`npm test` 的 todo 从 8 降到 6）。
+
+**现有归档的截断统计**（`news-archive.json`，2,246 条）：
+
+- 标题长度恰为 96：**1 条**
+- URL 长度恰为 168：**0 条**（潜伏，未发生）
+
+那一条的样例（URL 省略）：
+
+```
+https://aihot.news/items/qovcune9w40laikj226y5u1cy
+→ 「…多时候是没有价值 这并不是 AI 的问题 只是经济学的基本原」
+```
+
+读者从这条 title 上看不出被截过，也补不回来——只能等 T6.4 解析原始出处时按 id 重取。数量只有 1 条，代价可控。
+
+golden 差异：**无**。回放数据里最长标题 79 字，没有任何一条触及旧的 96 上限，所以这次修复对回放输出逐字节无影响（已核：`news-archive.json` 352 条、0 行变化）。
 
 ### [ ] T1.7 新鲜度门禁
 
