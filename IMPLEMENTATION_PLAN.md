@@ -76,21 +76,15 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 结果：新建 `package.json`（private、ESM、无 dependencies、devDeps 精确锁定 typescript 5.9.3 / @types/node 24.10.1 / @biomejs/biome 2.3.4）、`.node-version`＝24、`biome.jsonc`（旧 `.mjs` 与 `index.html` 的错误规则在 overrides 里关闭，待 T3.1e 恢复）、`tsconfig.json`（allowJs+checkJs，仅 lib/**，0 类型错误）、`scripts/check-invariants.js`（规则框架，启用 R1）、`test/unit/news.test.js`（22 通过 + 1 todo 记录 F26）、`.gitignore` 追加 `coverage/` 与 `.data/`。在 `/tmp` 模拟干净检出执行 `npm ci && npm run verify` 通过；`dependencies` 检查退出码 0；`git diff HEAD -- collect.mjs bench.mjs health.mjs index.html` 为空。本机原本只有 Node 22，已装 Node 24.11.0 到 `~/.local/node/` 用于验证。
 
-### [ ] T0.2 回放与录制
+### [x] T0.2 回放与录制
 
 依据：S2.1 · INV-7 · 依赖：T0.1
-
-步骤：
-1. `test/support/http-replay.js`：用 `node --import` 预加载，替换 `globalThis.fetch`。请求键为 `sha1('GET ' + url)`，文件 `fixtures/http/<host>/<sha1>.json`，内容 `{url, finalUrl, status, contentType, encoding, body}`；正文超过 64 KB 时 `encoding` 为 `gzip+base64`。
-2. 回放必须同步读文件并返回已决的 Promise，让并发请求的完成顺序确定（中转站探测、Luma 并发池的输出顺序依赖它）。用 `finalUrl` 覆盖 `Response.url`（中转站探测读它判断跳转）。未录制的请求直接抛错，错误信息带完整 URL。
-3. 故障注入，供后续用例使用：按主机或 URL 前缀把响应替换为指定状态码、网络错误或永不返回。接口形如环境变量 `INDEXAI_FAULTS='{"huggingface.co":404}'`，或在测试进程内调用。
-4. `test/support/http-record.js`：同样预加载，用真实 fetch 请求并落盘。不保存任何请求头；响应只保存状态码、最终 URL、content-type 与正文。
-5. 往返测试：用 `node:http` 在 127.0.0.1 起一个服务，录制后再回放，比对状态码、正文与 `finalUrl`。全程不访问外网。
-6. 启用 R9 的 `fixtures/http` 部分（≤ 5 MB）。
 
 验收：
 - 往返测试逐字节一致；未录制请求抛错且信息含 URL；三种故障注入各有用例。
 - 断网时 `npm test` 仍通过。
+
+结果：新增 `test/support/http-replay.js`（`sha1('GET '+url)` 键、`fixtures/http/<host>/<sha1>.json`、超 64 KB 走 `gzip+base64`、`finalUrl` 覆盖 `Response.url`、同步读盘后返回已决 Promise 以保证并发顺序确定、未录制请求抛错并带完整 URL）与 `test/support/http-record.js`（只存状态码/最终 URL/content-type/正文，不存请求头，只允许 GET）。故障注入支持 `{status}`、`{networkError}`、`{hang}`、`{body}`，可由 `INDEXAI_FAULTS` 环境变量或进程内 `setFaults()` 配置。`test/unit/http-replay.test.js` 10 个用例覆盖往返一致、gzip 还原、重定向 finalUrl、未录制报错、三种故障注入、`installReplay` 幂等。启用 R9 的 `fixtures/http`（≤5 MB）部分，新建 `fixtures/http/`。踩坑记录：`node --test` 会设置 `NODE_TEST_CONTEXT`，最初的自动安装条件把它当成回放信号，把测试里的真实 `fetch` 悄悄换掉；已收窄为只认 `INDEXAI_REPLAY=1` 或 `--import` 预加载。用 `HTTP_PROXY=http://127.0.0.1:9` 模拟断网，`npm test` 33 项仍全过。
 
 ### [ ] T0.3 特征测试
 

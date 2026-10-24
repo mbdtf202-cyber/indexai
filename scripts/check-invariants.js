@@ -17,6 +17,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** 各条规则的启用状态。到了任务就打开，之后永远开着。 */
 export const ENABLED = {
   R1: true, // T0.1
+  R9: true, // T0.2 起包含 fixtures/http；T0.4、T0.5 再扩到 golden 与 data
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */
@@ -92,8 +93,71 @@ function checkR1() {
   return [];
 }
 
+/**
+ * fixtures 各目录的体积上限（S1.4，单位字节）：
+ *   http   ≤ 5 MB   回放数据必须小而真实
+ *   golden ≤ 3 MB   采集输出的逐字节基线
+ *   data   ≤ 1 MB   页面测试用的裁剪快照
+ */
+export const FIXTURE_LIMITS = {
+  http: 5 * 1024 * 1024,
+  golden: 3 * 1024 * 1024,
+  data: 1 * 1024 * 1024,
+};
+
+/** 统计目录总字节数；目录不存在返回 0。 */
+function dirSize(dir) {
+  let total = 0;
+  const walk = (d) => {
+    let entries;
+    try {
+      entries = readdirSync(d);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(d, name);
+      let st;
+      try {
+        st = statSync(full);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) walk(full);
+      else total += st.size;
+    }
+  };
+  walk(dir);
+  return total;
+}
+
+/**
+ * R9：fixtures 各目录不超过体积上限。
+ * 回放数据必须小到能随仓库走，否则本地与 CI 都会变慢。
+ */
+function checkR9() {
+  const violations = [];
+  for (const [name, limit] of Object.entries(FIXTURE_LIMITS)) {
+    const dir = join(ROOT, 'fixtures', name);
+    const size = dirSize(dir);
+    if (size > limit) {
+      const mb = (size / 1024 / 1024).toFixed(2);
+      const capMb = (limit / 1024 / 1024).toFixed(1);
+      violations.push({
+        file: `fixtures/${name}`,
+        line: 1,
+        message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
+      });
+    }
+  }
+  return violations;
+}
+
 /** 规则表。每条含 id、说明与检查函数。 */
-export const RULES = [{ id: 'R1', description: 'package.json 没有 dependencies', check: checkR1 }];
+export const RULES = [
+  { id: 'R1', description: 'package.json 没有 dependencies', check: checkR1 },
+  { id: 'R9', description: 'fixtures 各目录不超过体积上限', check: checkR9 },
+];
 
 /**
  * 运行启用的规则，返回全部违例。

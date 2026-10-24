@@ -16,7 +16,8 @@
     "invariants": "node scripts/check-invariants.js",
     "test": "node --test \"test/unit/**/*.test.js\" \"test/golden/**/*.test.js\" \"test/contract/**/*.test.js\"",
     "verify": "npm run lint && npm run typecheck && npm run invariants && npm test",
-    "collect": "node collect.mjs"
+    "collect": "node collect.mjs",
+    "record": "node --import ./test/support/http-record.js"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.4",
