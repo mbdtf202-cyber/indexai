@@ -1,0 +1,60 @@
+Copyright (c) 2026 mbdtf202-cyber
+
+本仓库的许可分两部分，适用范围不同。请按你要用的内容对照下面两节。
+
+================================================================================
+第一部分：代码 —— MIT License
+================================================================================
+
+适用于本仓库的源代码与站点实现，包括但不限于 collect.mjs、bench.mjs、
+health.mjs、index.html、site/、lib/、scripts/、test/，以及根目录的配置文件。
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
+第二部分：自有整理数据 —— CC BY 4.0
+================================================================================
+
+适用于本项目自己整理、核校并汇集的数据，包括 curated/ 目录下的内容、
+news-seed.json、news-milestones.json，以及 data.json 中由本项目人工整理的
+字段（官方定价的核实结果、免费额度的说明文字、套餐档位、活动标签等）。
+
+这部分以 Creative Commons Attribution 4.0 International（CC BY 4.0）授权：
+你可以复制、分发、修改、商用，但必须——
+
+  1. 保留署名：注明来源为 IndexAI（https://indexai.pages.dev/）；
+  2. 提供许可链接：https://creativecommons.org/licenses/by/4.0/
+  3. 标明是否做了修改。
+
+CC BY 4.0 全文见上述链接。
+
+================================================================================
+第三部分：上游数据不归本项目授权
+================================================================================
+
+本仓库与站点中的部分内容来自第三方公开数据源（OpenRouter、Artificial
+Analysis、LMArena、SWE-bench、Devpost、Luma、aibijia 等）。这些内容的权利
+属于各自的上游提供方，按各自的许可条款使用，不在本文件授权范围内。
+
+本项目只做公开发布数据的抓取、归一与呈现，不为这些内容转授任何权利。
+引用或再利用时请查阅对应的上游来源条款。各来源的署名清单见站点的数据页
+（方法页）与 data.json 的 sources 字段。
+
+若你是上游权利方，认为某项内容的使用方式不妥，请通过仓库 issue 联系，
+我们会调整或移除。

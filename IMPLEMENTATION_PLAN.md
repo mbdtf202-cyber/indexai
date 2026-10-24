@@ -763,13 +763,37 @@ DOM 快照：5 页变化（subs、relays、method 及两张窄屏快照），全
 
 验收：全仓检索 `indexai.pages.dev` 在代码与配置里只剩 `package.json:8`。H8 已注明「可以做了」，并写明只需改 `homepage` 一处。
 
-### [ ] T2.9 许可证（D7）
+### [x] T2.9 许可证（D7）
 
 依据：F51 · 依赖：T2.1
 
 步骤：根目录加 `LICENSE`（MIT，`Copyright (c) 2026 mbdtf202-cyber`）；README 的「许可」一节写明 `curated/` 等自有整理数据采用 CC BY 4.0，上游数据按各自许可，署名清单在 T5.10 的数据页。根目录白名单加入 `LICENSE`。
 
 验收：`LICENSE` 存在且 `package.json` 的 `license` 为 MIT；R8 通过。
+
+结果：新增 `LICENSE`（三段式）与 `test/unit/license.test.js`（6 项，全绿）。
+
+**LICENSE 不是整仓一个许可，而是分三块**，文件里逐个划清适用范围：
+
+1. **代码 MIT** —— `collect.mjs` / `index.html` / `lib/` / `site/` / `scripts/` / `test/` 与根目录配置。MIT 全文照抄，版权行 `Copyright (c) 2026 mbdtf202-cyber`。
+2. **自有整理数据 CC BY 4.0** —— `curated/`、`news-seed.json`、`news-milestones.json`，以及 `data.json` 里人工核校的字段。写明三个义务：署名、附许可链接、标明是否修改。
+3. **上游数据不归本项目授权** —— 明确列出 OpenRouter / Artificial Analysis / LMArena / SWE-bench / Devpost / Luma / aibijia 等，声明「只做抓取与呈现，不转授任何权利」，并留了一句给上游权利方的联系方式。
+
+**为什么必须写第三段**：只说「代码 MIT + 数据 CC BY 4.0」时，读者会合理推断整个 `data.json` 都能按 CC BY 4.0 用——但其中相当一部分是别人的数据。把「我们不为你转授」写清楚，比笼统说「上游按各自许可」有用得多。
+
+README 的许可一节改成三行表格（代码 / 自有数据 / 上游），每行写「你能做什么」而不只是许可名；并指出上游署名清单由 `data.json` 的 `sources` 字段自带，方法页会渲染。
+
+R8 白名单里原本预留的是 `LICENSE.txt`，改成 `LICENSE`——**那个占位说明之前就打算加许可文件，只是一直没做**。
+
+验收核对：`LICENSE` 存在、MIT 全文与版权行正确、`package.json` 的 `license` 为 MIT；R8 通过；测试额外钉住了「README 有许可一节且含 MIT / CC BY 4.0 / 上游三要素」与「白名单里有 LICENSE」。
+
+---
+
+## M2 里程碑结论（2026-10-25）
+
+T2.1–T2.9 全部完成，**退出条件达成**：去向为 T2.x 的发现（F16、F17、F22、F27、F28–F37、F49–F52 等）逐条关闭；**R5、R6、R8（根目录）、R10 四条规则全部启用并通过**。
+
+仓库形态变化：删掉 5 个孤儿文件与 2 个生成物的跟踪、257 行死代码、9 个孤立 CSS 类、2 份重复的静态服务器（`serve.mjs` 与 `scripts/serve.js` 合并为后者）；条目数与体积都显著下降，而 `verify` 的覆盖面从 219 项测试扩到 **292 项**（e2e 14 → 28 项）。
 
 ---
 

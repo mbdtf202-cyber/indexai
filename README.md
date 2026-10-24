@@ -124,11 +124,23 @@ node scripts/serve.js --port 4311   # 本地预览 http://127.0.0.1:4311/（先 
 - **`prefers-reduced-motion` 掩盖缺陷**。淡入动画在减少动效下被覆盖，
   于是「整页可见」的断言一直是假绿。断言可见性要读计算样式。
 
-## 边界与许可
+## 边界
 
 - 只采公开数据；第三方挂单只展示数量与价格区间，不下发商品页链接。
-- 上游数据按各自许可署名（OpenRouter CC BY 4.0、Artificial Analysis 等）。
-- 代码与自有整理数据的许可见 `LICENSE`。
+- 不注册账号、不登录、不绕过鉴权或限流、不伪装客户端。
+
+## 许可
+
+本仓库分三块授权，**不是整仓一个许可**（完整条款见 [`LICENSE`](LICENSE)）：
+
+| 内容 | 许可 | 你能做什么 |
+|---|---|---|
+| 代码（`collect.mjs`、`index.html`、`lib/`、`site/`、`scripts/`、`test/`…） | **MIT** | 随便用，含商用与闭源再发布，保留版权声明即可 |
+| 自有整理数据（`curated/`、`news-seed.json`、`news-milestones.json`，以及 `data.json` 里人工核校的字段） | **CC BY 4.0** | 复制、修改、商用都行，署名 IndexAI 并附许可链接即可 |
+| 上游数据（OpenRouter、Artificial Analysis、LMArena、SWE-bench、Devpost、Luma、aibijia 等） | **各自的上游许可** | 由上游决定；本项目**不为你转授**任何权利 |
+
+上游署名清单由数据本身给出：`data.json` 的 `sources` 字段逐条带 URL 与类型，
+方法页会把它们渲染出来。
 
 ## 规划
 

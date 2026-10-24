@@ -309,7 +309,7 @@ const ROOT_WHITELIST = new Set([
   'PROMPT_build.md',
   'README.md',
   'UPGRADE_PLAN.md',
-  'LICENSE.txt',
+  'LICENSE',
   // 工具链
   'package.json',
   'package-lock.json',
