@@ -546,7 +546,7 @@ golden 差异（1 处）：`$.meta.dropped` 新增（`unsafeUrl: 0` + 空样例�
 
 退出条件：去向为 T2.x 的发现全部关闭；R5、R6、R8（根目录）、R10 启用并通过。
 
-### [ ] T2.1 删除孤儿与草稿
+### [x] T2.1 删除孤儿与草稿
 
 依据：F28、F30、F37 · 依赖：T0.6
 
@@ -557,6 +557,21 @@ golden 差异（1 处）：`$.meta.dropped` 新增（`unsafeUrl: 0` + 空样例�
 4. 启用 R8 的根目录部分，白名单按当前根目录实际应有的文件列出。
 
 验收：`git ls-files` 不含上述文件；R8（根目录）通过；workflow 的发布清单只含站点真正需要的文件。
+
+结果：
+
+1. **删除 5 个孤儿与草稿**：`news-history.json`、`news-provenance.json`、`directions.html`、`logo-preview.html`、`deploy.mjs`。同步清掉引用：`health.mjs` 的 `HISTORY` 常量（本来就没用过）、workflow 发布清单里的两个草稿页、README 的文件表与「本地备用」整节。
+2. **README 改写发布方式**：新增「本地发布」一节，写明两步 —— `npm run build -- --data .` 后用 `npx wrangler pages deploy dist`，并注明第二条只能在有人值守的机器上跑、循环永不执行。同时把「为什么 data.json 不进仓库」改成「什么进仓库，什么不进」，说清生成物与「攒出来就补不回来」的归档之间的区别。
+3. **停止跟踪生成物**：`git rm --cached data.json bench.json`，`.gitignore` 补上这两个名字并删掉「仍被跟踪」的过时注释。
+4. **启用 R8（根目录部分）**：`ROOT_WHITELIST` 穷举当前根目录应有的 24 项；新增文件必须同时改这张表，改动会出现在 diff 里。
+
+**R8 一启用就抓出全部 9 处违例**（2 个生成物、4 个孤儿、`docs/`、`test-results/`），不是事后补的规则。过程中修正了 R8 的一处设计错误：它最初只看磁盘目录，把已被 gitignore 的 `data.json` / `bench.json` / `test-results/` 也算违例。规则要管的是「仓库里有什么」，所以现在先读 `.gitignore` 的顶层模式，被忽略的条目跳过。
+
+顺带删掉了 `docs/FREEFAI-MIGRATION.md`（那次误建的迁移记录，内容已在 UPGRADE_PLAN 的结论里）。
+
+验收：`git ls-files` 无匹配；R8 通过；workflow 发布清单改为「5 个数据文件 + favicon/\_headers + assets/ + lib/url.js」，草稿页不再发布。
+
+verify 全绿，253 项测试 / 28 项 e2e / 14 秒。
 
 ### [ ] T2.2 删死代码与死数据
 

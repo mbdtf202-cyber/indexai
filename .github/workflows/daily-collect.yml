@@ -88,9 +88,10 @@ jobs:
           # news-archive.json 是情报页的真实数据源（data.json 里只有索引），必须一起发
           # news-milestones.json 是「超级大事件」那层，文件很小但页面必须有它
           cp index.html data.json bench.json news-archive.json news-milestones.json dist/
-          for f in favicon.svg logo-preview.html directions.html _headers; do
-            [ -f "$f" ] && cp "$f" dist/ || true
-          done
+          # 静态资源：图标、响应头、自托管字体（T1.11 起页面不再请求第三方域名）
+          cp favicon.svg _headers dist/
+          cp -R assets dist/assets
+          mkdir -p dist/lib && cp lib/url.js dist/lib/url.js
           du -sh dist
 
       # 情报归档必须跟着仓库走：跨度是一天一天攒出来的，仓库丢了就再也补不回来

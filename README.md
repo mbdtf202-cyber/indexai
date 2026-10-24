@@ -14,12 +14,11 @@ AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中
 | `collect.mjs` | 采集 / 归一 / 去重 / 探测，产出 `data.json` |
 | `health.mjs` | 分层健康检查：基线阈值 + 语义校验，采集和 CI 共用 |
 | `serve.mjs` | 零依赖静态服务器（本地预览用） |
-| `deploy.mjs` | 本机一键采集 + 发布（CI 的本地等价物，备用） |
 | `bench.mjs` | 9 个公开评测源的采集与归一（每次运行覆盖 `bench.json`） |
 | `bench.json` | 评测明细（约 3.5 MB，首屏不加载，打开评测页才拉） |
 | `lib/parquet.mjs` | 零依赖 Parquet + Snappy 读取器（读 LMArena 官方数据集用） |
 | `data.json` | 站点主数据源（每次运行覆盖；评测只留目录与统计） |
-| `news-history.json` | 新闻历史（逐日累积，进仓库，用来撑「近一周／一月」跨度） |
+| `news-archive.json` | 情报归档（只增不删，按月分片前是单文件，进仓库撑时间跨度） |
 | `_headers` | Cloudflare 缓存头 |
 | `favicon.svg` | 站点图标 |
 
@@ -173,21 +172,29 @@ gh run view <run-id> -R mbdtf202-cyber/indexai --log-failed
 > 要选 **Edit Cloudflare Workers** 模板，或手动加 Pages 权限。
 > 现在 token 预检这一步会明确告诉你这个原因，而不是抛一串 wrangler 原始报错。
 
-### 为什么 data.json 不进仓库
+### 什么进仓库，什么不进
 
-每天 700 KB，一年 +250 MB。CI 只把它上传到 Pages，不 commit。
-`news-history.json` 则进仓库——它需要逐日累积才能撑出时间跨度，且体积小。
+`data.json`（约 700 KB）与 `bench.json`（约 3.5 MB）都是**每天重建的生成物**，
+不进仓库：一年会给仓库加两百多 MB，而它们随时能用当天的快照重建。
+CI 只在发布时把它们拷进 `dist/`。
+
+进仓库的只有两类：代码与人工维护的输入，以及**攒出来就补不回来**的
+`news-archive.json` / `news-seed.json`（源站只给最近约 7 天，跨度只能一天天累积）。
 
 ---
 
-## 本地备用
+## 本地发布
+
+仓库里**没有**一键发布脚本（曾经有过 `deploy.mjs`，它把本机路径写死、
+发布清单还漏了两个数据文件，已经删掉）。需要手工发布时按两步走：
 
 ```bash
-node deploy.mjs                # 采集 + 发布（走本机 wrangler 登录态）
-node deploy.mjs --skip-collect # 只发布
+npm run build -- --data .        # 用本机真实数据生成 dist/
+npx wrangler pages deploy dist --project-name indexai
 ```
 
-日志 `/tmp/indexai-deploy.log`。
+第二条会用本机 wrangler 登录态，**只能在有人值守的机器上执行**；
+自动采集循环（`loop.sh` / Ralph）永远不跑这一条。
 
 本机还有一个 launchd 常驻的本地预览服务：`com.raki.indexai.serve`（`serve.mjs 4311`，开机自启、崩溃重拉）。
 **它只服务本地，不参与发布。**

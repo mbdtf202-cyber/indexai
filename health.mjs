@@ -19,7 +19,6 @@ import { readFile } from 'node:fs/promises';
 import { now, todayISO } from './lib/clock.js';
 
 const DATA = new URL('./data.json', import.meta.url);
-const HISTORY = new URL('./news-history.json', import.meta.url);
 
 /* ────────────────────────── 基线 ──────────────────────────
  * min       ：低于这个数直接判死（源挂了、解析器失效）

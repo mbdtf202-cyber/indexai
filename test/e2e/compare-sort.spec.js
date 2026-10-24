@@ -19,7 +19,7 @@ async function columnValues(page, headerText) {
       const cell = tr.children[idx];
       if (!cell) return null;
       const raw = (cell.textContent || '').trim();
-      const n = Number(raw.replace(/[^0-9.\-]/g, ''));
+      const n = Number(raw.replace(/[^0-9.-]/g, ''));
       return { raw, num: Number.isFinite(n) && raw !== '—' ? n : null };
     });
   }, headerText);

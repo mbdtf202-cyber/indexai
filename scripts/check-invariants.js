@@ -19,6 +19,7 @@ export const ENABLED = {
   R1: true, // T0.1
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
   R2a: true, // T1.4
+  R8: true, // T2.1（根目录部分）
   R12: true, // T0.6
 };
 
@@ -156,6 +157,102 @@ function checkR9() {
 }
 
 /**
+ * R8：仓库根目录只有白名单文件（dist/ 的部分等 M5 有构建清单后再加）。
+ *
+ * 理由（INV-10）：根目录每多一个文件，新人就要多猜一次「这是不是还在用」。
+ * 孤儿文件、草稿页、一次性脚本都是这么留下来的 —— F28、F30、F37 全是这个形态。
+ * 白名单是**穷举**：新增根目录文件必须同时改这张表，改动会出现在 diff 里。
+ */
+const ROOT_WHITELIST = new Set([
+  // 文档与协作
+  '.gitignore',
+  '.node-version',
+  'AGENTS.md',
+  'IMPLEMENTATION_PLAN.md',
+  'PROMPT_build.md',
+  'README.md',
+  'UPGRADE_PLAN.md',
+  'LICENSE.txt',
+  // 工具链
+  'package.json',
+  'package-lock.json',
+  'biome.jsonc',
+  'tsconfig.json',
+  'playwright.config.js',
+  'loop.sh',
+  // 采集与体检（T3.1 起并入 pipeline/）
+  'collect.mjs',
+  'bench.mjs',
+  'health.mjs',
+  // 站点（M5 起拆进 site/）
+  'index.html',
+  'favicon.svg',
+  '_headers',
+  // 数据：只有人工维护的种子与归档进仓库
+  'news-archive.json',
+  'news-seed.json',
+  'news-milestones.json',
+  // 本地预览（T3.1d 起迁到 scripts/serve.js）
+  'serve.mjs',
+  // 目录
+  'lib',
+  'test',
+  'scripts',
+  'site',
+  'pipeline',
+  'fixtures',
+  'assets',
+  'dist',
+  'curated',
+  'registry',
+  'types',
+  'node_modules',
+]);
+
+/** 读 .gitignore 的顶层模式，用来判断某个根目录项是否属于「生成物」。 */
+function ignoredRootNames() {
+  const names = new Set();
+  let raw;
+  try {
+    raw = readFileSync(join(ROOT, '.gitignore'), 'utf8');
+  } catch {
+    return names;
+  }
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#') || t.startsWith('!')) continue;
+    // 只认顶层条目（不含 / 的，或形如 name/ 的）
+    if (t.includes('/') && !/^\/?[^/]+\/$/.test(t)) continue;
+    names.add(t.replace(/^\//, '').replace(/\/$/, ''));
+  }
+  return names;
+}
+
+function checkR8() {
+  const violations = [];
+  const ignored = ignoredRootNames();
+  let entries;
+  try {
+    entries = readdirSync(ROOT, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  for (const e of entries) {
+    // 点开头的是工具与编辑器临时物（.git / .wrangler / .DS_Store / .ralph …）
+    if (e.name.startsWith('.')) continue;
+    if (ROOT_WHITELIST.has(e.name)) continue;
+    // 被 .gitignore 忽略的是生成物，不属于「仓库里有什么」
+    if (ignored.has(e.name)) continue;
+    violations.push({
+      file: e.name,
+      line: 1,
+      message: `R8 违反：根目录不该出现 ${e.name}（要么删掉，要么加进 ROOT_WHITELIST 并说明理由）`,
+    });
+  }
+  return violations;
+}
+
+/**
  * R2a：采集端（collect.mjs / bench.mjs / health.mjs / lib/*.js）的 `fetch(`
  * 只出现在 `lib/http.js`。
  *
@@ -256,6 +353,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R8',
+    description: '根目录只有白名单文件',
+    check: checkR8,
   },
   {
     id: 'R2a',
