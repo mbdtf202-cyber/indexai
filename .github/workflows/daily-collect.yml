@@ -22,9 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  # 线上这份就是「上一次成功发布的状态」，作为采样的基线比仓库里的旧 data.json 准
-  PREV_DATA_URL: https://indexai.pages.dev/data.json
-  SITE_URL: https://indexai.pages.dev/
+  # 站点地址不在这里写死：它只有 package.json 的 homepage 一份（T2.8 · D4）。
+  # 需要时用 `node -p "require('./package.json').homepage"` 现读，见各步骤。
   # 账号 ID 不是密钥（每次 API 请求的 URL 里都有它），但允许用 secret 覆盖
   CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '7beaa67bbff49099132fb4a13b99fb2b' }}
 
@@ -55,6 +54,8 @@ jobs:
       # 「整源失败沿用上次」永远拿不到旧榜（F02）。
       - name: 拉取线上基线数据
         run: |
+          SITE_URL="$(node -p "require('./package.json').homepage")"
+          PREV_DATA_URL="${SITE_URL%/}/data.json"
           if curl -fsS --max-time 30 "$PREV_DATA_URL" -o data.json; then
             echo "基线 data.json：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
           else
@@ -152,6 +153,8 @@ jobs:
         run: |
           set -euo pipefail
           sleep 5
+          SITE_URL="$(node -p "require('./package.json').homepage")"
+          PREV_DATA_URL="${SITE_URL%/}/data.json"
           curl -fsS --max-time 30 "$PREV_DATA_URL" -o /tmp/live.json
           local_gen=$(node -p 'require("./data.json").meta.generated_at')
           live_gen=$(node -p 'require("/tmp/live.json").meta.generated_at')
@@ -162,6 +165,7 @@ jobs:
           else
             echo "线上已是本轮数据"
           fi
+          SITE_URL="$(node -p "require('./package.json').homepage")"
           curl -fsS -o /dev/null -w "首页 HTTP %{http_code}，%{size_download} 字节\n" --max-time 30 "$SITE_URL"
 
       - name: 摘要

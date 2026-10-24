@@ -32,7 +32,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 - [ ] **H5 本机预览**（**T2.6 已完成，可以做了**）：预览服务改为只服务 `dist/`。用本机真实数据构建一次：`npm run build -- --data .`；launchd 的 `com.raki.indexai.serve` **需要改**——脚本已从 `serve.mjs` 迁到 `scripts/serve.js`，参数形式也变了（见 H6）。
 - [ ] **H6 预览脚本迁移**（T3.1d 之后）：预览脚本移到 `scripts/serve.js`，更新 launchd plist 的程序参数并 `launchctl kickstart -k gui/$(id -u)/com.raki.indexai.serve`。
 - [ ] **H7 API key**（T6.9 之前，越早越好）：申请 Artificial Analysis 与 OpenRouter 的免费 API key；GitHub 仓库 Secrets 添加 `AA_API_KEY`、`OPENROUTER_API_KEY`；Ralph 录制回放数据时，在循环环境里提供同名环境变量（只读 key，不是部署密钥）。
-- [ ] **H8 自定义域名**（D4，T2.8 之后任何时候）：选定并购买域名，在 Cloudflare Pages 项目 `indexai` 绑定；然后只改 `package.json` 的 `homepage`。
+- [ ] **H8 自定义域名**（**T2.8 已完成，可以做了**）：选定并购买域名，在 Cloudflare Pages 项目 `indexai` 绑定；然后**只改 `package.json` 的 `homepage` 一处**——UA、工作流的基线拉取与探活都从它现读，不需要别的改动。
 
 ## 发现
 
@@ -741,13 +741,27 @@ golden 差异（7 处，逐条）：
 
 DOM 快照：5 页变化（subs、relays、method 及两张窄屏快照），全部来自统计表与表尾说明。
 
-### [ ] T2.8 站点地址单点（D4 准备）
+### [x] T2.8 站点地址单点（D4 准备）
 
 依据：F52 · INV-5 · 依赖：T1.4
 
 步骤：站点地址只从 `package.json` 的 `homepage` 读取：UA、workflow（用 `node -p` 读取）、README 之外的所有代码都改为引用它。
 
 验收：代码与工作流里检索 `indexai.pages.dev` 只剩 `package.json` 一处（README 与两份计划文档除外）。在 H8 后面注明「可以做了」。
+
+结果：新增 `test/unit/site-url.test.js`（3 项，全绿）。**站点地址现在只有 `package.json` 一处**。
+
+三处硬编码逐条处理：
+
+1. **`lib/http.js`**：它本来就从 `package.json` 读，但**读不到时会回落到一个写死的地址**。这个兜底恰恰在最不该出错的时候生效——包丢了说明构建有问题，带着旧域名继续发请求只会让排查更难。改成读不到就抛，并导出 `SITE_URL` 供别处引用。
+2. **workflow 的 `env:` 块**：`PREV_DATA_URL` 与 `SITE_URL` 两条写死。但 `env:` 在 job 启动前求值，那时 Node 还没装好，`node -p` 跑不了。改为删掉这两条，在每个用到它的步骤里现读（三处：拉基线、对比线上、首页探活）。
+3. README 里的那处保留——文档要给人看地址。
+
+实测 shell 片段求值正确：`SITE_URL=https://indexai.pages.dev/`、`PREV_DATA_URL=https://indexai.pages.dev/data.json`。
+
+**过程中的失误**：我批量替换 workflow 时把 `SITE_URL="$(node -p "...")` 结尾的引号吃掉了，三处里有 1 处漏补。**YAML 校验抓到了**（`yaml.safe_load` 直接报错），而不是等到 CI 跑起来才发现——这也是把 YAML 校验放进提交前流程的价值。
+
+验收：全仓检索 `indexai.pages.dev` 在代码与配置里只剩 `package.json:8`。H8 已注明「可以做了」，并写明只需改 `homepage` 一处。
 
 ### [ ] T2.9 许可证（D7）
 
