@@ -21,6 +21,7 @@ export const ENABLED = {
   R2a: true, // T1.4
   R8: true, // T2.1（根目录部分）
   R5: true, // T2.2
+  R10: true, // T2.5
   R12: true, // T0.6
 };
 
@@ -153,6 +154,60 @@ function checkR9() {
         message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
       });
     }
+  }
+  return violations;
+}
+
+/**
+ * R10：用量画像与有效成本公式只在 `lib/cost.js`（INV-5 · F36）。
+ *
+ * 理由：同一个公式曾在四处各写一份、参数还不一样（采集端 s=0.3、比价页 s=0.2、
+ * 中转页 s=0.3、方法页两套都抄）。任何一处改动，另外三处就悄悄错，
+ * 而表现出来的只是「同一个模型在两张表里价格不同」——读者只会看到矛盾。
+ *
+ * 检查两件事：
+ * 1. 除 lib/cost.js 外，任何文件里不该再出现 `(1 - h` 这类公式骨架；
+ * 2. 除 lib/cost.js 与方法页文案渲染处，不该再出现写死的阶梯数字 0.7 / 0.2 / 0.3
+ *    与 `h`/`s` 成对赋值（画像只在这里定义）。
+ */
+function checkR10() {
+  const violations = [];
+  const files = [
+    'collect.mjs',
+    'bench.mjs',
+    'health.mjs',
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+  ];
+  try {
+    statSync(join(ROOT, 'index.html'));
+    files.push('index.html');
+  } catch {
+    // 站点入口已迁走时跳过
+  }
+
+  const ALLOWED = new Set(['lib/cost.js', join('lib', 'cost.js')]);
+
+  for (const rel of files) {
+    if (ALLOWED.has(rel)) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 公式骨架：(1 - h) / (1−h) 出现在别处 = 又复刻了一份
+      if (/\(\s*1\s*[-−]\s*h\s*\)/.test(line)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R10 违反：有效成本公式在别处复刻，应调用 lib/cost.js 的 effectiveCost()',
+        });
+      }
+      // 画像成对赋值（h: 0.7 / s: 0.3 这种）也是复刻
+      if (/\bh\s*[:=]\s*0\.\d+/.test(line) && /\bs\s*[:=]\s*0\.\d+/.test(line)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R10 违反：用量画像在别处定义，应读 lib/cost.js 的 PROFILES',
+        });
+      }
+    });
   }
   return violations;
 }
@@ -392,6 +447,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R10',
+    description: '用量画像与有效成本公式只在 lib/cost.js',
+    check: checkR10,
   },
   {
     id: 'R5',

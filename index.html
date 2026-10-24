@@ -1144,6 +1144,7 @@ html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
 <script type="module">
 
 import { safeUrl } from "./lib/url.js";
+import { effectiveCost as costOf, profileOf, FORMULA as COST_FORMULA, FORMULA_ZH } from "./lib/cost.js";
 
 /* ══════ motion（独立于主 IIFE，主流程可以随时调 MOTION.arm()） ══════ */
 const MOTION = (() => {
@@ -1300,7 +1301,8 @@ const MOTION = (() => {
     evKind: "all", evSrc: "all", evRegion: "all", newsTopic: "all", newsRange: "all", newsImp: "all", newsScale: "m", newsLimit: 12, benchView: "table", benchGroup: "all", benchPicks: null, benchLimit: 60, benchFull: null, benchLoading: null, benchError: null, newsFull: null, newsLoading: null, newsError: null, ms: null, msLoading: null, msErr: null, msSel: null, newsWin: "all", vendorSet: "", evLimit: 18, evPastLimit: 30, toolKind: "all",
     freeOnly: false, paidOnly: false, cacheOnly: false,
     sortKey: "focus", sortDir: 1,
-    hit: 0.7, outShare: 0.2,
+    // 比价表默认画像来自 lib/cost.js（F36：不再在这里写死数字）
+    hit: profileOf("compare").h, outShare: profileOf("compare").s,
     region: "all", cat: "all", sigSrc: "all", limit: 80, cmpView: "models",
     relayFlag: "sonnet55",
     fx: null,
@@ -1450,12 +1452,13 @@ const MOTION = (() => {
 
   const isNew = (m) => m.created && (Date.now() / 1000 - m.created) < 14 * 86400;
 
-  /* 有效成本：每 1M 总 token，输入占 (1-s)，输出占 s，输入中命中率 h 走缓存价 */
+  /* 有效成本：公式与画像都在 lib/cost.js（F36）。这里只负责把滑杆的值揉成画像。 */
   function effort(m) {
     if (m.input == null) return null;
-    const cr = m.cache_read == null ? m.input : m.cache_read;
-    const h = m.cache_read == null ? 0 : state.hit;
-    return (1 - state.outShare) * ((1 - h) * m.input + h * cr) + state.outShare * m.output;
+    return costOf(
+      { kind: "per_1m", input: m.input, output: m.output, cacheRead: m.cache_read },
+      { h: state.hit, s: state.outShare, w: 0 },
+    );
   }
 
   /* ── chrome ── */
@@ -1771,7 +1774,8 @@ const MOTION = (() => {
           <input type="range" id="hit" min="0" max="100" step="5" value="${Math.round(state.hit * 100)}" aria-label="缓存命中率"></div>
         <div class="slider"><div class="row"><span class="eyebrow">输出 token 占比</span><output id="outOut">${pct(state.outShare)}</output></div>
           <input type="range" id="outShare" min="5" max="80" step="5" value="${Math.round(state.outShare * 100)}" aria-label="输出占比"></div>
-        <div class="formula">有效成本 = <b>(1−s)·[(1−h)·输入 + h·缓存读] + s·输出</b> / 1M tokens</div>
+        <div class="formula">有效成本 = <b>${esc(FORMULA_ZH)}</b> / 1M tokens
+          <span class="dim">· 比价口径 ${esc(profileOf("compare").label)}（h=${pct(profileOf("compare").h)}，s=${pct(profileOf("compare").s)}）</span></div>
       </div>
       <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动">
         <table><caption class="sr">模型 token 价格对比</caption>
@@ -2172,8 +2176,12 @@ const MOTION = (() => {
     const worstPoint = usable[usable.length - 1] || null;
     const spread = bestPoint && worstPoint && bestPoint.eff > 0
       ? (worstPoint.eff / bestPoint.eff) : null;
+    // 口径与采集端一致：agent 画像（F36：数字不再写在这一行里）
     const officialEff = official
-      ? Number(((1 - 0.3) * ((1 - 0.7) * official.input + 0.7 * (official.cache ?? official.input)) + 0.3 * official.output).toFixed(4))
+      ? costOf(
+          { kind: "per_1m", input: official.input, output: official.output, cacheRead: official.cache ?? official.input },
+          profileOf("agent"),
+        )
       : null;
 
     // ── 价差条形图（按有效成本，含最低可达价刻度）──
@@ -3767,10 +3775,11 @@ const MOTION = (() => {
       <p>比价表默认不是按价格排，而是按<strong>厂商主流度 + 模型发布时间</strong>：OpenAI、Anthropic、Google、DeepSeek、通义、Kimi、智谱、MiniMax、xAI、Mistral、Meta 等排前，同厂商内新发布在前；点任意表头可换成价格排序。</p>
 
       <h2>有效成本怎么算</h2>
-      <div class="code">cost_per_1M = (1 − s) · [(1 − h) · input + h · cache_read] + s · output
+      <div class="code">${esc(COST_FORMULA)}
 h = 缓存命中率       s = 输出 token 占比
 cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</div>
-      <p>默认 <code>h=70%</code>、<code>s=20%</code>；滑块就是这两个变量。</p>
+      <p>比价表默认 <code>h=${pct(profileOf("compare").h)}</code>、<code>s=${pct(profileOf("compare").s)}</code>（${esc(profileOf("compare").label)}）；
+      中转站页用 <code>h=${pct(profileOf("agent").h)}</code>、<code>s=${pct(profileOf("agent").s)}</code>（${esc(profileOf("agent").label)}）。滑块只影响比价表。</p>
 
       <h2>中转站口径</h2>
       <p>OneAPI / NewAPI 有两套并存的价目写法，<strong>表达式优先</strong>：</p>
@@ -3783,10 +3792,10 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
    输出 = 上式 × completion_ratio
    缓存读 = 上式 × cache_ratio
 
-有效成本 = (1−s)·[(1−h)·输入 + h·缓存读] + s·输出</div>
+${esc(COST_FORMULA)}</div>
       <p><strong>为什么必须表达式优先：</strong>同时给出两种写法的站点里，<code>model_ratio</code> 是废弃占位值——例如某站 <code>model_ratio=37.5</code> 算出 $75，而其 <code>billing_expr</code> 写着 <code>p*2+c*10</code>，真实价是 $2 / $10。只认倍率会把一批正常站点误标成「异常」。</p>
       <p><strong>分组倍率（group_ratio）</strong>才是中转站的定价核心，跨站差 20–220 倍。页面上的价格取<strong>代表分组</strong>（default，或组名里声明倍率最接近 1 的公开组），用于横向比较；另单列<strong>最低可达价</strong>并标出组名，因为那通常要求特定分组权限（会员、Claude Code 专属等）。</p>
-      <p>有效成本按固定画像折算：<code>h=70%</code> 缓存命中、<code>s=30%</code> 输出占比（agent 编程的典型构成）。<strong>输入价常常各家相同</strong>，差价主要来自输出倍率与缓存折扣，所以排序用有效成本。</p>
+      <p>有效成本按固定画像折算：<code>h=${pct(profileOf("agent").h)}</code> 缓存命中、<code>s=${pct(profileOf("agent").s)}</code> 输出占比（${esc(profileOf("agent").label)}）。<strong>输入价常常各家相同</strong>，差价主要来自输出倍率与缓存折扣，所以排序用有效成本。</p>
       <p><code>model_price > 0</code> 或表达式 <code>fixed(...)</code> 的按次计价不参与每百万 token 比较；与同口径官方价差 2.5 倍以上（便宜模型放宽到 8 倍，避免小模型被绝对差价误判）才标「口径?」。</p>
 
       <h2>订阅与第三方挂单</h2>

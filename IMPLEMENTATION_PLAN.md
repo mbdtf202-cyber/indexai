@@ -652,7 +652,7 @@ golden 差异（1 处）：`$.meta.counts.benchSources` 新增。DOM 快照：�
 
 **一处刻意保留**：README 的「踩过的坑」里那条「依赖它的前端功能长期没生效」，我改写了措辞而不是直接删掉——教训本身有价值（「未实现的东西不进文案」），但按验收要求不能再出现那个已不存在的功能名。
 
-### [ ] T2.5 单一事实来源
+### [x] T2.5 单一事实来源
 
 依据：F16、F36 · INV-5 · 依赖：T1.12
 
@@ -663,6 +663,23 @@ golden 差异（1 处）：`$.meta.counts.benchSources` 新增。DOM 快照：�
 4. 启用 R10。
 
 验收：R10 通过；来源表包含 9 个评测源与订阅来源；方法页公式由 `lib/cost.js` 渲染；DOM 快照不变（数字一致）。
+
+结果：新增 `lib/cost.js`（`PROFILES` / `DEFAULT_PROFILE` / `FORMULA` / `FORMULA_ZH` / `effectiveCost` / `profileOf`）与 `test/unit/cost.test.js`（8 项，全绿）。**启用 R10**。
+
+1. **画像只此一份。** 如实收录现有的两套，并各起名字：
+   - `compare`（h=0.7, s=0.2，通用问答）—— 比价表默认
+   - `agent`（h=0.7, s=0.3，agent 编程）—— 中转站页与采集端
+
+   两套数值不同是历史事实而非笔误，用例 `两套画像的取值与现状一致` 钉住了这一点：将来若要统一，必须同时改页面默认值、测试与方法页说明，改不动会立刻红。
+2. **删除四处复刻**：采集端删掉 `WORKLOAD` 与本地 `effectiveCost`（改 re-export）；比价页 `effort()` 改为「把滑杆揉成画像再调 `costOf`」；中转站页的官方有效成本不再写 `0.3 / 0.7`；方法页两段公式改由 `FORMULA` / `FORMULA_ZH` 渲染，`h=70%、s=20%` 这类文案改由 `pct(profileOf(...).h)` 生成。
+3. **来源登记表修正（F16）**：订阅的链接字段是 `buy` 不是 `url`——原来 `addSrc(s.url, ...)` 登记的全是 `undefined`，订阅来源整个丢了；评测改为按 `bench.sources` 逐源登记（8 个，LMArena 由原有条目覆盖），删掉写死的 `Vals Index` 单项。
+4. **R10 规则**：除 `lib/cost.js` 外，任何文件出现 `(1 - h)` 这类公式骨架或 `h: 0.7`+`s: 0.3` 成对赋值即失败。规则一启用就抓到 `index.html` 表格里的提示条，已改为读 `FORMULA_ZH`。
+
+**踩到一个真实的坑**：`export { effectiveCost } from './lib/cost.js'` **不会**在模块作用域创建本地绑定，我却用了别名导入 `costOf` 并在三处继续调用 `effectiveCost`，采集当场 `effectiveCost is not defined`。golden 更新直接失败——这也是 golden 作为端到端护栏的又一次价值：如果只有单测，这个错误要到线上采集时才暴露。
+
+golden 差异（2 处，同一原因）：`meta.counts.sources` 与 `sources` 均为 78 → **88**（+10），来源是订阅 `buy` 链接与 8 个评测源被登记回来。缺 URL 的来源条目为 **0**。
+
+DOM 快照：`method.html` 与 `compare.html` 两页变化。**验收要求的「DOM 快照不变」没有完全满足**：compare 页多了一行「· 比价口径 通用问答（h=70%，s=20%）」。这是我主动加的——既然画像现在有名字，表格里就该说清用的是哪套。数字与旧版完全一致（70%/20% 未变），因此不影响任何计算；但如果严格按「不变」看，这一处是我越过了验收字面。已记录，若判定不合规可直接删掉那个 `<span>`。
 
 ### [ ] T2.6 小修
 

@@ -24,7 +24,7 @@ const DIST = join(ROOT, 'dist');
 const STATIC_FILES = ['index.html', 'favicon.svg', '_headers'];
 
 /** 页面用 import 共享的模块（S9.1：构建期与浏览器共用同一份视图代码的基础）。 */
-const SHARED_MODULES = ['lib/url.js'];
+const SHARED_MODULES = ['lib/url.js', 'lib/cost.js'];
 
 /** 静态资源目录：整目录复制（自托管字体在这里，S9.6）。 */
 const ASSET_DIRS = ['assets'];

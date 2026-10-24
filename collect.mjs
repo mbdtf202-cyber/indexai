@@ -16,6 +16,7 @@
 import { writeFile, readFile } from 'node:fs/promises';
 import { httpGet, httpJson, httpText, httpTotals } from './lib/http.js';
 import { safeUrl } from './lib/url.js';
+import { effectiveCost as costOf, profileOf } from './lib/cost.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
@@ -293,23 +294,9 @@ const FLAGSHIP = [
   { key: 'deepseekflash', label: 'DeepSeek V4.1 Flash', re: /deepseek[-_ ]?v?4[.\-]?1[-_ ]?flash/i, official: [0.1408, 0.5634] },
 ];
 
-// 有效成本画像：agent 编程的典型 token 构成
-// h = 缓存命中比例，s = 输出占全部计费 token 的比例，w = 缓存写入比例
-const WORKLOAD = { h: 0.7, s: 0.3, w: 0.0, label: 'agent 编程' };
-
-/**
- * 把一个报价折成「每百万有效 token 的美元成本」。
- * 有效成本 = (1−s)·[(1−h−w)·input + h·cache_read + w·cache_write] + s·output
- * 缺缓存价时按「无折扣」处理（cache_read := input），宁可高估不虚构折扣。
- */
-export function effectiveCost(p) {
-  if (!p || p.kind !== 'per_1m') return null;
-  const { h, s } = WORKLOAD;
-  const cacheRead = p.cacheRead != null ? p.cacheRead : p.input;
-  const cacheWrite = p.input;
-  const inPart = (1 - h - WORKLOAD.w) * p.input + h * cacheRead + WORKLOAD.w * cacheWrite;
-  return Number(((1 - s) * inPart + s * p.output).toFixed(4));
-}
+// 有效成本与用量画像只有一份，在 lib/cost.js（INV-5、F36）。
+// 这里重新导出，保持既有 import 路径可用（collect/bench 的调用点不用改）。
+export { effectiveCost, PROFILES, FORMULA } from './lib/cost.js';
 
 /* ────────────────────────── helpers ────────────────────────── */
 export const per1M = (v) => {
@@ -2627,7 +2614,7 @@ async function main() {
     const output = ref.output ?? f.official[1] ?? null;
     const cacheRead = ref.cache_read ?? null;
     const officialEff = input != null && output != null
-      ? effectiveCost({ kind: 'per_1m', input, output, cacheRead })
+      ? costOf({ kind: 'per_1m', input, output, cacheRead }, profileOf('agent'))
       : null;
     return {
       key: f.key,
@@ -2677,9 +2664,9 @@ async function main() {
       const ref = officialRef[k];
       const row = { ...p };
       if (p.kind === 'per_1m') {
-        row.eff = effectiveCost(p);
+        row.eff = costOf(p, profileOf('agent'));
         row.vsOfficial = ref && ref.input > 0 ? Number((p.input / ref.input).toFixed(3)) : null;
-        const officialEff = ref ? effectiveCost({ kind: 'per_1m', input: ref.input, output: ref.output, cacheRead: ref.cache_read }) : null;
+        const officialEff = ref ? costOf({ kind: 'per_1m', input: ref.input, output: ref.output, cacheRead: ref.cache_read }, profileOf('agent')) : null;
       }
       // 按次计价不参与每百万 token 的比较，只留原值
       prices[k] = row;
@@ -2736,7 +2723,8 @@ async function main() {
     }
   }
   for (const s of signals) addSrc(s.url, s.source_type || 'x', s.handle || 'signal');
-  for (const s of subs) addSrc(s.url, 'official', s.product);
+  // F16：订阅的链接字段叫 buy，不是 url（以前这里登记的全是 undefined）
+  for (const s of subs) addSrc(s.buy || s.source, 'official', s.product);
   if (subsThird.length) addSrc('https://aibijia.org/', 'marketplace', '第三方挂单价');
   for (const r of subsRegions.slice(0, 4)) addSrc('https://data.aibijia.org/apple_subscriptions.json', 'marketplace', r.plan);
   if (luma.length) addSrc('https://api.lu.ma/discover/get-paginated-events', 'events', 'Luma');
@@ -2750,7 +2738,11 @@ async function main() {
   for (const r of relays) addSrc(`https://${r.domain}/api/pricing`, 'relay', r.name);
   addSrc('https://devpost.com/api/hackathons', 'events', 'Devpost');
   if (devfolio.length) addSrc('https://api.devfolio.co/api/hackathons', 'events', 'Devfolio');
-  addSrc('https://www.vals.ai/benchmarks/vals_index', 'bench', 'Vals Index');
+  // 评测按 bench.sources 逐源登记（F16）：以前只写死了一个 Vals，另外 8 个源在页面上不存在
+  for (const src of bench.sources || []) {
+    if (src.ok === false) continue;
+    addSrc(src.home, 'bench', src.name);
+  }
 
   const cacheDiscount = models
     .filter((m) => m.cache_read != null && m.input)
