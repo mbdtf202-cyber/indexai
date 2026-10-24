@@ -23,10 +23,14 @@ export const ENABLED = {
   R5: true, // T2.2
   R10: true, // T2.5
   R6: true, // T2.6
+  R3: ['pipeline', 'lib'], // T3.1c（site 部分留到 T5.2）
   R12: true, // T0.6
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */
+/** R3 的适用目录：随 ENABLED.R3 变化，两者必须一致。 */
+const R3_DIRS = ['pipeline', 'lib'];
+
 const SCAN_DIRS = ['lib', 'test', 'scripts', 'site', 'pipeline'];
 const ROOT_EXTS = ['.mjs', '.js', '.ts', '.json'];
 const SKIP_DIRS = new Set([
@@ -154,6 +158,42 @@ function checkR9() {
         line: 1,
         message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
       });
+    }
+  }
+  return violations;
+}
+
+/**
+ * R3：单文件不超过 400 行（INV-10 · F56）。
+ *
+ * 理由：一个三千行的 collect.mjs 里，改一条价格要在两千行里定位、diff 里看不出
+ * 改了哪个数字。行数上限是「能不能一次装进脑子」的粗略代理——
+ * 它不完美，但比「感觉太大了」可执行得多。
+ *
+ * 当前只对 `pipeline/` 与 `lib/` 启用；`site/` 部分要等 T5.2 拆完路由再开。
+ */
+const R3_LIMIT = 400;
+
+function checkR3() {
+  const violations = [];
+  for (const dir of R3_DIRS) {
+    const full = join(ROOT, dir);
+    let files;
+    try {
+      files = collectFiles(full);
+    } catch {
+      continue;
+    }
+    for (const file of files) {
+      const rel = relative(ROOT, file);
+      const count = readLines(file).length;
+      if (count > R3_LIMIT) {
+        violations.push({
+          file: rel,
+          line: 1,
+          message: `R3 违反：${count} 行，超过上限 ${R3_LIMIT}`,
+        });
+      }
     }
   }
   return violations;
@@ -423,7 +463,11 @@ function checkR2a() {
     readLines(join(ROOT, rel)).forEach((line, i) => {
       // 去掉行注释与块注释的粗略处理：够用，误报比漏报便宜
       const code = line.replace(/\/\/.*$/, '');
-      if (/\bfetch\s*\(/.test(code)) {
+      // 白名单：层契约里的 `layer.fetch(ctx)` 与 `.fetch(` 形式的属性调用
+      // 是协议调用，不发起网络。真正要拦的是裸 `fetch(` 与 `globalThis.fetch`。
+      const isMethodCall = /\.\s*fetch\s*\(/.test(code);
+      const isDefinition = /^\s*(async\s+)?fetch\s*\([^)]*\)\s*\{/.test(code);
+      if (/\bfetch\s*\(/.test(code) && !isMethodCall && !isDefinition) {
         violations.push({
           file: rel,
           line: i + 1,
@@ -489,6 +533,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R3',
+    description: '单文件不超过 400 行',
+    check: checkR3,
   },
   {
     id: 'R6',

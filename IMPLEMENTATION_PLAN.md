@@ -850,13 +850,38 @@ golden 与 DOM 快照：**均无变化**（纯重命名与注释，不触碰任�
 
 golden 与 DOM 快照：**均无变化**（数据逐字节一致）。新增 2 项测试（294 项）。
 
-### [ ] T3.1c 采集层拆分
+### [x] T3.1c1 采集层拆分（fx，试金石）
+
+<!-- 大任务拆成 c1/c2… 按层推进；本条对应 fx 层 -->
 
 依据：F56 · S4.4 契约 · INV-11 · 依赖：T3.1b
 
 步骤：按 §4.3 建 `pipeline/layers/<id>/`：models、offers、subs、relays、events（devpost、luma、devfolio、aios 作为同层的源）、news、bench、toolkit、adoption、fx。每层导出契约里的 `id`、`sources`、`fetch`、`normalize`；`merge` 与 `health` 先原样沿用现有逻辑。一次搬一两层也可以，按 T3.1c1、T3.1c2 原位拆分。
 
 验收：golden 不变；R3 对 `pipeline/`、`lib/` 启用并通过。
+
+结果（本轮只做 **fx 层**，按规格「一次搬一两层」分成 c1/c2…）：
+
+1. **`pipeline/contract.js`**：把层契约变成可执行断言。`validateLayer()` 校验形状，`loadLayers()` 扫目录逐个校验，**任何一层不合规就在加载期抛**——而不是等采集跑到一半才炸。
+2. **`pipeline/layers/fx/index.js`**：第一个按契约落地的层（99 行）。导出 `id / sources / budget / fetch / normalize / merge / health`；不读文件、不直接 fetch、不碰 `Date.now()`，全部经 ctx 注入。
+3. **`collect.mjs`** 改用该层，删掉本地 `fetchFx`（11 行）。
+4. **启用 R3**（单文件 ≤ 400 行，先对 `pipeline/` 与 `lib/` 生效；`site/` 留到 T5.2）。
+
+**这次踩了一个真实的坑，值得记下来**：第一次搬完，golden 立刻显示 17 处差异——
+
+```
+- $.meta.fx.USDCNY: (删除)      + $.meta.fx.rate: (新增)
+- $.meta.fx.as_of: (删除)      + $.meta.fx.asOf: (新增)
+  $.subs[0].cny: number -> null   ← 下游读不到汇率，人民币价全塌了
+```
+
+原因是我在层内部用了 `rate` / `asOf` 这种更可读的命名，**但 it 是输出到 data.json 的字段名**。层可以有自己的内部命名，边界处必须映射回既有形状。第二版在 `normalize` 里映射成 `USDCNY / as_of` 后 golden 归零。
+
+这就是「搬家」任务的真实风险：**顺手改名看起来是改进，实际是破坏契约**。如果没有 golden 逐字节比对，这个错误会一直潜伏到有人发现订阅页的折合价全是「—」。
+
+**R2a 也误报了两处**：它拦 `\bfetch\s*\(`，而层契约本身就要求导出 `fetch` 方法。已收紧为「排除属性调用 `.fetch(` 与方法定义 `async fetch(ctx) {`」——真正要拦的是裸 `fetch(`。
+
+规则从 8 条增至 **9 条**（新增 R3）。新增 `test/unit/pipeline-contract.test.js`（16 项），其中一条直接对**真实的层目录**跑校验，而不只是测校验器本身。
 
 ### [ ] T3.1d 编排器替代 collect.mjs
 

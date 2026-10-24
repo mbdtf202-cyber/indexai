@@ -18,6 +18,7 @@ import { httpGet, httpJson, httpText, httpTotals } from './lib/http.js';
 import { safeUrl } from './lib/url.js';
 import { effectiveCost as costOf, profileOf } from './lib/cost.js';
 import { subsThirdStats, subsThirdTotal } from './lib/subs-stats.js';
+import fxLayer from './pipeline/layers/fx/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -743,16 +744,6 @@ async function probeAll(entries) {
 
 
 /* ────────────────────────── 6. 汇率 ────────────────────────── */
-async function fetchFx(prev) {
-  try {
-    const j = await httpJson('https://open.er-api.com/v6/latest/USD', { label: 'fx', tries: 2 });
-    const rate = j?.rates?.CNY;
-    if (!rate) throw new Error('no CNY');
-    return { USDCNY: Number(rate.toFixed(4)), as_of: (j.time_last_update_utc || '').slice(0, 16), source: 'open.er-api.com', fetched_at: nowISO() };
-  } catch {
-    return prev ? { ...prev, stale: true } : { USDCNY: 7.1, as_of: 'fallback', source: 'fallback', fetched_at: nowISO() };
-  }
-}
 
 /* ────────────────────────── 7. AI 活动 ────────────────────────── */
 /* AIOS 活动库：可选层，**只认环境变量** `AIOS_OPPORTUNITIES`。
@@ -2217,7 +2208,27 @@ async function main() {
   // 上一版评测快照必须从 bench.json 读：data.json 里的 bench 只剩目录（F02）。
   const prevBench = readPrevBench();
 
-  const fx = await fetchFx(prev?.meta?.fx);
+  /* fx 走层契约（T3.1c）：编排器只认 id/sources/fetch/normalize/merge/health，
+   * 层自己不读文件、不直接 fetch、不碰 Date.now()——全部经 ctx 注入。
+   * 这一步先只搬 fx（最小的层），验证契约形态可行；其余层按 T3.1c1/c2 继续。 */
+  const fxCtx = {
+    http: { json: httpJson },
+    now,
+    prev: prev?.meta?.fx ?? null,
+  };
+  let fx;
+  try {
+    const raw = await fxLayer.fetch(fxCtx);
+    const norm = fxLayer.normalize(raw, fxCtx);
+    fx = fxLayer.merge(fxCtx.prev, norm.records, fxCtx);
+    const verdict = fxLayer.health.rules[0].check(fx);
+    if (verdict.level !== 'ok') {
+      console.warn(`[collect] fx 门禁：${verdict.level} — ${verdict.message || ''}`.trim());
+    }
+  } catch (e) {
+    console.warn(`[collect] fx 抓取失败：${e.message}`);
+    fx = fxLayer.merge(fxCtx.prev, null, fxCtx);
+  }
   const T = makeTracker();
 
   // 并行拉取，每层独立记账；失败不互相拖累
