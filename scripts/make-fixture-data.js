@@ -229,12 +229,19 @@ const events = pickEvents(data.events || []);
 const benchSmall = pickBench(bench);
 const newsSmall = pickNews(archive);
 
+// data.json 里的 bench 只放目录，boards 只进 bench.json —— 与 collect.mjs 的瘦身规则一致。
+// 以前这里整套 `benchSmall`（含 boards）塞回 data.json，把 F02 的根因盖住了：
+// 页面测试看到一个「带 boards 的 data.json」，就永远发现不了线上基线是空的。
+const benchCatalogOnly = { ...benchSmall };
+delete benchCatalogOnly.boards;
+benchCatalogOnly.file = 'bench.json';
+
 const outData = {
   ...data,
   // meta 原样保留：页面用 generated_at / counts / fx / collect 渲染状态与口径
   models,
   events,
-  bench: benchSmall,
+  bench: benchCatalogOnly,
   news: {
     // data.json 里的 news 只是索引；裁剪后重算，别留全量索引
     ...(data.news || {}),

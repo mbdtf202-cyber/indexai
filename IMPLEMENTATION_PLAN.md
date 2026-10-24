@@ -40,6 +40,8 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 - [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
 - [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N04（来自 T1.2）：HF 上 LMArena 的 `latest-00000-of-00001.parquet` 在两个回放 fixture 里都解析失败（一层 Thrift 里没读出任何列，一层报 `unsupported value type 15`）。`text` 配置报 `numRows 1`，是覆盖 `model_name` 列的那层。这不是本轮引入的：T0.4 的 golden 里 arena 一直是 0 榜、`ok:false`。导致「LMArena 贡献 137/163 个榜」这件事在离线环境里完全无法验证（F03 的实例数据也因此只能来自线上）。去向：需要重新录制一份能解析的 parquet（`npm run record`）并补 golden，建议并入 T6.8（τ-bench 一并处理）或单开任务。
+- [ ] N05（来自 T1.2）：`INDEXAI_ARENA_BOARDS` 是为测试新增的环境变量，与 S1.3 的「命令随任务落地逐步加入」不冲突，但它是第二套「缩小迭代集合」的机制。M3 拆层时应与 `INDEXAI_PROFILE` 合并成一个 `ctx.profile`。去向：T3.1。
 - [ ] N03（来自 T1.1）：`smoke.spec.js` 的「整页可见」断言一直是假绿（见结果 1），Playwright 默认 `reducedMotion: reduce` 会掩盖 `opacity:0` 的缺陷。之后所有可见性断言都必须读计算样式而不是 `toBeVisible`。去向：已写进 AGENTS.md。
 
 ## 适应度规则启用表
@@ -160,7 +162,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 DOM 快照：10 个标签全部重生成，差异只有两类——首屏元素从 `card`（两帧后才 `in`）变成 `card in`，以及 home 多了首屏就存在的 `.home-top` 壳子与要闻骨架（正是本任务的目标）。快照连跑三轮一致。
 
-### [ ] T1.2 评测回退
+### [x] T1.2 评测回退
 
 依据：F02 · S8.6 · 依赖：T0.4
 
@@ -171,6 +173,21 @@ DOM 快照：10 个标签全部重生成，差异只有两类——首屏元素�
 4. 用例：故障注入 `huggingface.co` 全部 404，并提供一份上一版 `bench.json` fixture。
 
 验收：用例输出里 arena 榜一个不少且都标 `stale`；`bench.json` 不丢榜；该场景下评测层不跌破门禁下限。
+
+结果：新增 `test/unit/bench-fallback.test.js`（7 项，全绿）。fetch 由测试自己接管，按 URL 返回 `fixtures/files/lmarena-agent-latest.parquet`（真实 parquet），用 `INDEXAI_ARENA_BOARDS` 把榜单缩到 `agent` / `agent_bash_reliability` 两条，单用例内即可跑完。
+
+代码改动：
+
+1. `collect.mjs` 新增并导出 `readPrevBench(path = BENCH_OUT)`：读输出目录的完整 `bench.json`，缺文件／坏 JSON／缺 `boards` 一律返回 `null`（首次运行的合法情况）。`main()` 用它取上一版，传进 `fetchBenchmarks`。
+2. `bench.mjs`：
+   - 新增 `setPrevBench`（模块级只读引用），`fetchBenchmarks` 开头写入，供各源函数做**配置级**回退；
+   - `fetchArenaBoards` 在 catch 之后，对失败配置把上一版同 `cfg` 的榜放回来并标 `stale: true`，同时记 `failed`（走 `sources[].partial`）；
+   - 整源失败分支不再覆盖已有的（配置级回退放进来的）旧榜；
+   - **「有榜」不等于「抓到了」**：arena 返回 `freshCount`，本轮一条都没解析出来时按 `ok:false` 处理——否则旧榜把 boards 补满，页面会把「沿用」说成「新鲜」（INV-4）。`sources[].boards`/`rows` 也改为统计实际发布出去的条数。
+3. `daily-collect.yml` 的基线步骤同时拉 `bench.json`（`${PREV_DATA_URL%/*}/bench.json`），缺失只 warn 不失败。
+4. `scripts/make-fixture-data.js`：`fixtures/data/data.json` 的 `bench` 改为目录（删 `boards`、补 `file: 'bench.json'`），与 collect 的瘦身规则一致。**这就是 F02 一直被掩盖的原因**：页面测试的 data.json 带着 boards，谁都不会发现线上基线是空的。
+
+golden 差异（两处，同一原因）：`data.json` 的 `$.bench.sources[0].error` 与 `bench.json` 的 `$.sources[0].error` 各新增一项——回放数据里的 HF parquet 解析不了（见 N04），arena 这一源现在会如实带上失败原因。榜数、行数、其它源全部不变。
 
 ### [ ] T1.3 Luma 冷却上界
 

@@ -20,6 +20,17 @@ import { readParquet } from './lib/parquet.mjs';
 const UA = { 'User-Agent': 'IndexAI/1.0 (+https://indexai.pages.dev)' };
 const HF = 'https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset/resolve/main';
 
+/**
+ * 本次采集的「上一版评测快照」。由 fetchBenchmarks 开头写入（见 setPrevBench），
+ * 供各源函数做配置级回退。它在本模块内是只读的：只有 setPrevBench 能改。
+ */
+let PREV_BENCH = null;
+
+/** @param {object|null} prev 完整的上一版 bench 快照（带 boards） */
+export function setPrevBench(prev) {
+  PREV_BENCH = prev && typeof prev === 'object' ? prev : null;
+}
+
 /* ─────────────── 通用工具 ─────────────── */
 
 import { now, nowISO, todayISO, sleep } from './lib/clock.js';
@@ -45,7 +56,8 @@ async function fetchText(url, { tries = 3, timeout = 45000, headers = UA } = {})
   throw new Error(`${url.split('/')[2]}: ${lastErr?.message || 'fetch failed'}`);
 }
 
-async function fetchBuffer(url, opt = {}) {
+/** 供测试直接校验回放路径（T1.2 的 HF fixture 命中）。 */
+export async function fetchBuffer(url, opt = {}) {
   let lastErr;
   const tries = opt.tries ?? 3;
   for (let i = 0; i < tries; i++) {
@@ -154,9 +166,11 @@ const CAT_LABEL = Object.fromEntries(ARENA_TEXT_CATS);
 async function fetchArenaBoards() {
   const out = [];
   const failed = [];
+  // 本次实际抓到的榜（不含配置级回退的旧榜）：判断这一源是否新鲜只能看它
+  const fresh = [];
 
   // 串行下载：24 个文件总计 1.7MB，逐个来最稳，也不给 CDN 添乱
-  const boards = TEST_PROFILE ? ARENA_BOARDS.slice(0, 2) : ARENA_BOARDS;
+  const boards = arenaBoardSet();
   for (const b of boards) {
     const url = `${HF}/${b.cfg}/latest-00000-of-00001.parquet`;
     try {
@@ -211,6 +225,7 @@ async function fetchArenaBoards() {
 
         const publishDate = sub[0]?.leaderboard_publish_date || null;
         const id = cat === 'overall' ? b.cfg : `${b.cfg}__${cat}`;
+        fresh.push({ id, cfg: b.cfg });
         out.push({
           id,
           name: cat === 'overall' ? b.name : `${b.name.replace(/·总榜$/, '')}·${CAT_LABEL[cat] || cat}`,
@@ -231,7 +246,30 @@ async function fetchArenaBoards() {
       failed.push(`${b.cfg}: ${e.message}`);
     }
   }
-  return { boards: out, failed };
+
+  /*
+   * 配置级回退（F02）：某个配置的 parquet 拉不到时，这一配置的历史榜仍然要发布，
+   * 只是标 stale。整源失败时这里同样会补上——上层再用 prev.boards 兜底，
+   * 两层保险覆盖「所有配置都失败」与「只有个别配置失败」。
+   */
+  for (const b of boards) {
+    if (!failed.some((m) => m.startsWith(`${b.cfg}:`))) continue;
+    for (const old of oldBoardsFor(b.cfg)) {
+      if (out.some((nb) => nb.id === old.id)) continue;
+      out.push({ ...old, stale: true });
+    }
+  }
+
+  return { boards: out, failed, freshCount: fresh.length };
+}
+
+/**
+ * 取某个配置的上一版榜。
+ * fetchArenaBoards 没有 prev 参数，靠模块级的「上一版快照」传进来（见 setPrevBench）。
+ * 这样不必改 8 个源函数签名，也不会让它们互相依赖。
+ */
+function oldBoardsFor(cfg) {
+  return Object.values(PREV_BENCH?.boards || {}).filter((b) => b.source === 'arena' && b.cfg === cfg);
 }
 
 /* ─────────────── 2. SWE-bench（官网内嵌 JSON，5 个榜） ─────────────── */
@@ -791,6 +829,8 @@ const SOURCE_INFO = {
  * @param {object|null} prev 上一次的 bench 结果，用于失败时保留快照
  */
 export async function fetchBenchmarks(prev) {
+  // 各源函数做配置级回退时要用同一份上一版（见 oldBoardsFor）
+  setPrevBench(prev);
   const tasks = [
     ['arena', fetchArenaBoards],
     ['swebench', fetchSwebench],
@@ -816,7 +856,14 @@ export async function fetchBenchmarks(prev) {
   const sources = [];
   const stale = [];
 
-  for (const s of settled) {
+  /** 这一源本轮是否真抓到了东西（freshCount 只在 arena 提供；其它源看 boards）。 */
+  const hasFresh = (r) => (typeof r.freshCount === 'number' ? r.freshCount > 0 : (r.boards?.length || 0) > 0);
+
+  for (const src of settled) {
+    // 「有榜」不等于「抓到了」：配置级回退会用旧榜把 boards 补满，
+    // 若本轮实际解析出 0 条，这一源必须按失败处理（标 stale、别报 ok）。
+    const nothingFresh = !hasFresh(src);
+    const s = nothingFresh ? { ...src, ok: false, error: src.error || '本轮没有任何配置解析成功' } : src;
     const prevBoards = Object.values(prev?.boards || {}).filter((b) => b.source === s.id);
     if (s.ok && s.boards?.length) {
       for (const b of s.boards) boards[b.id] = b;
@@ -833,20 +880,28 @@ export async function fetchBenchmarks(prev) {
         partial: s.failed?.length ? s.failed : undefined,
       });
     } else {
-      // 失败：沿用上次快照，标记 stale
-      for (const b of prevBoards) boards[b.id] = { ...b, stale: true };
+      // 失败：沿用上次快照，标记 stale。
+      // 注意不能覆盖配置级回退已经放进来、已经标过 stale 的同 id 旧榜：
+      // 那种情况下 rows 数量是「有」的，统计口径要保持一致，sources 也如实记 ok:false。
+      for (const b of prevBoards) {
+        if (boards[b.id]) continue;
+        boards[b.id] = { ...b, stale: true };
+      }
+      // 实际发布出去的这条源的榜：配置级回退可能已经放进了一部分，不能只数 prevBoards
+      const published = Object.values(boards).filter((b) => b.source === s.id);
+      const carried = prevBoards.length > 0 || published.length > 0;
       sources.push({
         id: s.id,
         name: SOURCE_INFO[s.id]?.name || s.id,
         home: SOURCE_INFO[s.id]?.home || null,
         note: SOURCE_INFO[s.id]?.note || null,
-        boards: prevBoards.length,
-        rows: prevBoards.reduce((a, b) => a + b.rows.length, 0),
+        boards: published.length,
+        rows: published.reduce((a, b) => a + (b.rows?.length || 0), 0),
         updated: prevBoards.map((b) => b.updated).filter(Boolean).sort().pop() || null,
         ok: false,
         error: s.error,
       });
-      if (prevBoards.length) stale.push(s.id);
+      if (carried) stale.push(s.id);
     }
   }
 
@@ -925,6 +980,20 @@ export async function fetchBenchmarks(prev) {
       stale,
     },
   };
+}
+
+/*
+ * 测试档位用的榜单集合覆盖（T1.2）。
+ * 与 INDEXAI_PROFILE 的区别：profile 按固定切片缩（前 2 条），这里允许测试点名
+ * 具体配置，用它自己的回放数据跑「整源失败 / 单配置失败」两条路径。
+ * 生产不设这个变量，集合恒为 ARENA_BOARDS。
+ */
+function arenaBoardSet() {
+  const raw = process.env.INDEXAI_ARENA_BOARDS;
+  if (!raw) return TEST_PROFILE ? ARENA_BOARDS.slice(0, 2) : ARENA_BOARDS;
+  const wanted = JSON.parse(raw);
+  const byCfg = new Map(ARENA_BOARDS.map((b) => [b.cfg, b]));
+  return wanted.map((w) => ({ ...byCfg.get(w.cfg), ...w }));
 }
 
 export { GROUPS, SOURCE_INFO, ARENA_BOARDS };

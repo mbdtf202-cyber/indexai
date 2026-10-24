@@ -13,7 +13,7 @@
  */
 
 import { writeFile, readFile } from 'node:fs/promises';
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
 import {
@@ -34,6 +34,26 @@ const outUrl = (name) =>
 
 const OUT = outUrl('data.json');
 const BENCH_OUT = outUrl('bench.json');
+
+/**
+ * 读上一版评测快照（F02）。
+ *
+ * 为什么不能只用 data.json：那里的 `bench` 只剩目录（catalog / stats / file），
+ * `boards` 已经拆进 bench.json。拿它当基线等于 `prev.boards === undefined`，
+ * bench.mjs 的「整源失败沿用上次」因此从未生效——任一评测源挂掉，它的榜直接消失。
+ *
+ * @param {string|URL} [path] 默认读本次输出目录里的 bench.json
+ * @returns {object|null} 完整快照；文件不存在或读不懂时返回 null（首次运行的合法情况）
+ */
+export function readPrevBench(path = BENCH_OUT) {
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || !parsed.boards) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
 
 /* ────────────────────────── 1. 厂商显示名 ────────────────────────── */
 const VENDOR = {
@@ -2424,6 +2444,8 @@ function makeTracker() {
 async function main() {
   let prev = null;
   try { prev = JSON.parse(await readFile(OUT, 'utf8')); } catch { /* 首次运行 */ }
+  // 上一版评测快照必须从 bench.json 读：data.json 里的 bench 只剩目录（F02）。
+  const prevBench = readPrevBench();
 
   const fx = await fetchFx(prev?.meta?.fx);
   const T = makeTracker();
@@ -2459,10 +2481,15 @@ async function main() {
     : (prev?.hnSignals || []);
 
   // 评测：8 个公开源并采（LMArena 24 榜 / SWE-bench / Aider / Terminal-Bench / τ-bench / Vals / ARC-AGI / SimpleBench）
+  // T.run 的基线只用于「本次为空时是否沿用」的判断，给个轻量代理：
+  // prevBench 是 ~3MB 的对象，交给 size() 只会数出一堆无意义的键。
+  const benchPrevMarker = prevBench ? { boards: prevBench.stats?.boards || 0 } : null;
   const bench = await T.run('bench', async () => {
-    const b = await fetchBenchmarks(prev?.bench);
-    return { value: b.stats.boards ? b : (prev?.bench || b) };
-  }, prev?.bench);
+    // 注意传的是「上一版完整快照」而不是 prev.bench（那是目录，没有 boards）。
+    // 整源失败时 bench.mjs 会沿用该源自己的旧榜并标 stale（F02、S8.6）。
+    const b = await fetchBenchmarks(prevBench);
+    return { value: b.stats.boards ? b : (prevBench || b) };
+  }, benchPrevMarker);
 
   const res = await fetchRetry(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'openrouter-models' });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
@@ -2761,6 +2788,8 @@ async function main() {
 
   // 评测数据量大（~3MB），拆到 bench.json 按需加载；data.json 只留目录与统计供首屏用
   const benchFull = data.bench;
+  // 目录型字段之外一律不进 data.json：`boards` 含全部行的分数（~3 MB），
+  // 它只能出现在 bench.json。页面与采集基线都靠 data.bench.file 找到真实文件（F02）。
   data.bench = {
     as_of: benchFull.as_of,
     latest: benchFull.latest,

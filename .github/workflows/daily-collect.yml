@@ -49,12 +49,23 @@ jobs:
 
       # 拿线上现网数据当 prev：这样「相对上次缩水」的检测、bench 的 delta、
       # 各层失败时的回退，都有真实的上一版可用，而不是仓库里某个旧快照。
+      #
+      # data.json 与 bench.json 必须一起拉：data.json 里的 bench 只剩目录，
+      # 真正带 boards 的上一版在 bench.json。只拉 data.json 会让评测层的
+      # 「整源失败沿用上次」永远拿不到旧榜（F02）。
       - name: 拉取线上基线数据
         run: |
           if curl -fsS --max-time 30 "$PREV_DATA_URL" -o data.json; then
-            echo "基线已获取：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
+            echo "基线 data.json：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
           else
             echo "::warning::拿不到线上 data.json，本轮将按首次采集处理（delta 与缩水检测会缺失）"
+          fi
+          # bench.json 缺失不致命，但要在 log 里说清「这轮评测没有可沿用的旧版」
+          bench_url="${PREV_DATA_URL%/*}/bench.json"
+          if curl -fsS --max-time 60 "$bench_url" -o bench.json; then
+            echo "基线 bench.json：$(wc -c < bench.json) 字节，$(node -p 'Object.keys(require("./bench.json").boards||{}).length') 个榜"
+          else
+            echo "::warning::拿不到线上 bench.json，评测层本轮没有可沿用的旧榜"
           fi
 
       # collect.mjs 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
