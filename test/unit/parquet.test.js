@@ -1,5 +1,5 @@
 /**
- * lib/parquet.mjs 的特征测试（T0.3）。
+ * lib/parquet.js 的特征测试（T0.3）。
  *
  * 用 fixtures/files/lmarena-agent-latest.parquet 这份真实的小文件
  * （LMArena agent 榜，50 行 8 KB）验证解析，避免只测人造数据。
@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { readParquet, snappyDecode, makeThrift } from '../../lib/parquet.mjs';
+import { readParquet, snappyDecode, makeThrift } from '../../lib/parquet.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE = join(HERE, '..', '..', 'fixtures', 'files', 'lmarena-agent-latest.parquet');

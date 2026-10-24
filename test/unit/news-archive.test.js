@@ -1,5 +1,5 @@
 /**
- * lib/news.mjs 第二批用例（T0.3）：摘要压缩、编码解码、归档合并。
+ * lib/news.js 第二批用例（T0.3）：摘要压缩、编码解码、归档合并。
  *
  * F07 已修：标题与 URL 一律不截断（INV-9）。F08（情报只剩聚合站链接）仍未修。
  * 以 todo 用例记录，本任务不修。
@@ -17,7 +17,7 @@ import {
   archiveStats,
   buildIndex,
   retentionDays,
-} from '../../lib/news.mjs';
+} from '../../lib/news.js';
 
 describe('squeezeSummary', () => {
   test('去掉来源尾巴（🔗 / via AIHOT / 阅读原文）', () => {

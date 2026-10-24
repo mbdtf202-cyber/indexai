@@ -24,7 +24,7 @@ import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
 import {
   parseNewsYaml, mergeArchive, archiveStats, buildIndex,
-} from './lib/news.mjs';
+} from './lib/news.js';
 import { now, nowISO, todayISO, mark, since, sleep } from './lib/clock.js';
 
 const OPENROUTER = 'https://openrouter.ai/api/v1/models';

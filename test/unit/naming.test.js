@@ -96,3 +96,20 @@ describe('命名统一（F32）', () => {
     );
   });
 });
+
+describe('lib/ 扩展名一致（T3.1a）', () => {
+  test('lib/ 下没有 .mjs，全是 .js', () => {
+    const dir = join(ROOT, 'lib');
+    const mjs = readdirSync(dir).filter((f) => f.endsWith('.mjs'));
+    assert.deepEqual(mjs, [], `lib/ 下还有 .mjs：${mjs.join(', ')}（T3.1a 统一为 .js）`);
+  });
+
+  test('没有指向旧扩展名的导入', () => {
+    const hits = find(/lib\/(news|parquet)\.mjs/);
+    assert.deepEqual(
+      hits,
+      [],
+      `还在导入旧扩展名：\n${hits.map((h) => `  ${h.file}:${h.line}`).join('\n')}`,
+    );
+  });
+});

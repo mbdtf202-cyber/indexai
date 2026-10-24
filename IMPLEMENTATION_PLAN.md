@@ -801,13 +801,28 @@ T2.1–T2.9 全部完成，**退出条件达成**：去向为 T2.x 的发现（F
 
 退出条件：任一层失败都不影响其它层发布；所有外部请求受主机策略表约束；人工数据有 schema 与到期日。T3.1a–e 期间 golden 必须逐字节不变。
 
-### [ ] T3.1a 基础库归位
+### [x] T3.1a 基础库归位
 
 依据：F56 · §4.3 · 依赖：M2 完成
 
 步骤：`lib/news.mjs`、`lib/parquet.mjs` 改名为 `.js`；`lib/http.js`、`lib/clock.js`、`lib/url.js`、`lib/cost.js` 补齐 JSDoc 类型；`tsconfig.json` 覆盖整个 `lib/`；更新所有导入与 `site/build.js` 的复制清单。
 
 验收：golden 与 DOM 快照不变；`typecheck` 覆盖 `lib/**` 并通过。
+
+结果：
+
+1. **扩展名统一**：`lib/news.mjs` → `lib/news.js`、`lib/parquet.mjs` → `lib/parquet.js`（`git mv`，历史保留）。5 处导入同步：`collect.mjs`、`bench.mjs`、三个测试文件。
+2. **`tsconfig.json` 已覆盖 `lib/**/*.js`**——改扩展名后类型检查自动生效，不需要改配置。原 include 是 `lib/**/*.mjs` 与 `lib/**/*.js` 两条并列，前者现在匹配不到任何文件。
+3. **补齐 JSDoc**：`clock.js` +9 处（`isReplay` / `fixedNow` / `nowISO` / `mark` / `since` / 三个计数器 / `sleep` 的返回类型）、`cost.js` +4 处（`profileOf` 的返回结构、三个 `@type {string}`）、`http.js` +4 处并新增两个 typedef：`HttpOptions`（四个 `httpXxx` 共用的选项）与 `HostStats`（单主机账目）。
+
+**补类型时抓到两处真错误**：
+
+- `assertHttpUrl` 我按名字以为是「返回校验后的字符串」，写成了 `@returns {string}`；实际它返回 `URL` 对象（调用方在用 `.host` / `.href`）。是 typecheck 报 `Property 'host' does not exist on type 'string'` 才发现的。
+- `httpStats` 的返回类型与局部累加器分别描述了一次，两处不一致（`Record<string, unknown>` vs 具体形状）。抽成 `HostStats` typedef 后共用，才不会漂移。
+
+**新增两条测试**（`test/unit/naming.test.js`）：`lib/` 下不得有 `.mjs`、不得有指向旧扩展名的导入。这类「改名只改一半」的残留，靠人眼过 diff 很难保证。
+
+golden 与 DOM 快照：**均无变化**（纯重命名与注释，不触碰任何行为）。
 
 ### [ ] T3.1b 人工数据外置
 

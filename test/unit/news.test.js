@@ -1,5 +1,5 @@
 /**
- * lib/news.mjs 的第一批用例（T0.1）。
+ * lib/news.js 的第一批用例（T0.1）。
  *
  * 这些用例锁定现有行为作为特征测试，不表达「应该怎样」。
  * 已知缺陷（F07 标题截断、F26 按人名扣分）以 todo 用例记录，
@@ -9,7 +9,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { classifyNews, scoreNews, newsImportance, retentionDays } from '../../lib/news.mjs';
+import { classifyNews, scoreNews, newsImportance, retentionDays } from '../../lib/news.js';
 
 describe('classifyNews', () => {
   test('价格类标题归到 price', () => {

@@ -15,7 +15,7 @@
  *   }
  */
 
-import { readParquet } from './lib/parquet.mjs';
+import { readParquet } from './lib/parquet.js';
 import { httpGet, httpText, httpBuffer, USER_AGENT } from './lib/http.js';
 
 /** 请求头复用统一客户端的那一份：UA 只在 lib/http.js 定义（T2.3）。 */
