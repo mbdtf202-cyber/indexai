@@ -955,6 +955,26 @@ golden 差异：**无**（`resources` 的输出形状与原来逐字段一致）
 
 golden 差异：**无**（修好 `readSeed` 后逐字节一致）。
 
+### [x] T3.1c5 采集层拆分（bench）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c4
+
+结果：`pipeline/layers/bench/index.js`（约 100 行）+ `test/unit/bench-layer.test.js`（8 项）。
+
+**这一层刻意很薄，是有意的设计判断**：重活（12 个榜的解析器、逐源回退、LMArena parquet）
+已经在 `bench.mjs` 两千多行里做完并且有整组测试覆盖。层如果重写任何一部分，
+就等于把已经验证过的东西再实现一遍——风险全在重复实现里。
+
+层的职责只有两件：转手（把 `ctx.prev` 原样传给 `fetchBenchmarks`）与整层兜底。
+**逐源沿用已经在 `bench.mjs` 内部做了**（`oldBoardsFor`），到这一层只剩
+「所有源都挂了、一个榜都没有」这一种情况——那时整份沿用上一版快照才对。
+
+用例里专门有一条钉住「prev 必须原样传下去」：`bench.mjs` 的逐源回退完全依赖它，
+而在这一层如果传成 `prev.bench`（那是目录、没有 boards）会静默退化成「每次都是首次采集」。
+这正是 T1.2 修过的 F02。
+
+golden 差异：**无**。
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c

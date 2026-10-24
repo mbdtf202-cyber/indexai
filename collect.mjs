@@ -22,6 +22,7 @@ import fxLayer from './pipeline/layers/fx/index.js';
 import adoptionLayer from './pipeline/layers/adoption/index.js';
 import resourcesLayer from './pipeline/layers/resources/index.js';
 import newsLayer from './pipeline/layers/news/index.js';
+import benchLayer from './pipeline/layers/bench/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -2225,12 +2226,19 @@ async function main() {
   // T.run 的基线只用于「本次为空时是否沿用」的判断，给个轻量代理：
   // prevBench 是 ~3MB 的对象，交给 size() 只会数出一堆无意义的键。
   const benchPrevMarker = prevBench ? { boards: prevBench.stats?.boards || 0 } : null;
-  const bench = await T.run('bench', async () => {
-    // 注意传的是「上一版完整快照」而不是 prev.bench（那是目录，没有 boards）。
-    // 整源失败时 bench.mjs 会沿用该源自己的旧榜并标 stale（F02、S8.6）。
-    const b = await fetchBenchmarks(prevBench);
-    return { value: b.stats.boards ? b : (prevBench || b) };
-  }, benchPrevMarker);
+  const bench = await T.run(
+    'bench',
+    async () => {
+      /* 评测走层契约（T3.1c5）：层很薄，重活仍在 bench.mjs。
+       * 注意 ctx.prev 传的是「上一版完整快照」而不是 prev.bench（那是目录，
+       * 没有 boards）。整源失败时 bench.mjs 会沿用该源自己的旧榜并标 stale（F02、S8.6）。 */
+      const ctx = { fetchBenchmarks, prev: prevBench };
+      const raw = await benchLayer.fetch(ctx);
+      const norm = benchLayer.normalize(raw);
+      return { value: benchLayer.merge(prevBench, norm.records) };
+    },
+    benchPrevMarker,
+  );
 
   /*
    * 模型目录走分层记账（F06）。基线只取上一版里的 aggregator 行：
