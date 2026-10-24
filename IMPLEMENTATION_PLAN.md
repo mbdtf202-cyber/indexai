@@ -410,7 +410,7 @@ golden 差异（2 处，均为本任务目标）：
 - `$.events[118].region`: `in` → `other`（上面那条 Bangalore，标题不再参与判定）
 - `$.events[172].kind`: `conference` → `meetup`（"…Innovation Forum" 不再因英文 forum 判成会议）
 
-### [ ] T1.9 比价与中转页
+### [x] T1.9 比价与中转页
 
 依据：F18、F19、F20 · 依赖：T0.5
 
@@ -422,6 +422,28 @@ golden 差异（2 处，均为本任务目标）：
 5. e2e：点「缓存读」后首行的 `cache_read` 最小，且只有一个表头的 `aria-sort` 不是 none；每个旗舰都画出参考线（DeepSeek 也要有）；fixture 里放一个 stale 站并断言它出现。
 
 验收：上述 e2e 与采集端的单元测试通过。
+
+结果：新增 `test/e2e/compare-sort.spec.js`（3 项，全绿）。e2e 由 14 项增到 **17 项**。
+
+1. **F18 排序键。** 「缓存读」改用独立键 `cache_read`（按本列价格排序），「折扣」保留 `cache`（按 `cache_read / input`）。旧实现两列共用 `cache`，点「缓存读」实际按折扣率排，且两个表头同时亮箭头。用例断言：表头排序键无重复、`cache_read` 存在、点后只有 1 个 `aria-sort` 非 none。
+2. **F19 下发 `meta.flagships`。** 采集端把 `FLAGSHIP` × `officialRef` 算成 `{key, label, input, output, cache_read, officialEff}` 下发。页面删除手抄的 `RELAY_FLAGS` 与「展示名拆词拼正则」的 `officialOf`，改读这份数据。实测下发值：Sonnet 5.5 `2/10` eff 4.4 · Opus 5.5 `4/20` eff 8.8 · GPT-6.1 Sol `2/10` · Gemini 4 Argon `2/10` · **DeepSeek V4.1 Flash `0.1408/0.5634` eff 0.2676**（原来永远匹配不到的那个）。
+3. **F20 沿用旧价的 TTL。** 旧逻辑「失败但有旧价」时无条件沿用，停更的站可以永远挂着昨天的数字。现在三态统一走同一段后处理：成功→新价；失败且 `checked_at` 在 14 天内→沿用并带 `staleDays`；超过 14 天→清空价目。`checked_at` 一律保留「上次真的成功」的日期，页面据此显示「上次成功 MM-DD」。
+4. 前端对空清单兜底：旧快照没有 `meta.flagships` 时，中转页直说「这一版数据没有旗舰清单」，不抛异常。
+
+**过程中踩到的两个坑（都已修）**：
+
+- `FLAGSHIP` 那段代码原本插在 `officialRef` 之前，`Cannot access 'officialRef' before initialization`。
+- F20 第一次重构用了「`status === 'ok'` 就提前 `return r`」，跳过了下面的价格后处理——`golden` 立刻显示 `eff / vsOfficial / effVsOfficial` 三组字段**全部被删空**（50 处差异）。改成先定 `base` 再统一后处理才对。这类「看起来只是加个分支」的改动，只有 golden 逐字节比较抓得住。
+- 前端 `RELAY_FLAGS` 在模块顶层求值，那时 `state.data` 还是 `null`（`Cannot read properties of null (reading 'meta')`），改成惰性 `relayFlags()`。
+
+golden 差异（4 处）：
+
+- `$.meta.flagships`：新增（F19）
+- `$.relays[0..2].stale`：新增且均为 `false`——旧记录没有这个字段，现在显式写出（F20）
+
+DOM 快照：`compare.html` 与 `relays.html` 变化（缓存读列换了排序键、旗舰清单改为读数据），其余 8 页不变。
+
+fixture 重生：本机 `data.json` 是旧版采集产物（没有 `meta.flagships`），先把新产出的字段补进去再跑 `npm run fixture:data`，否则 relays 页只会显示兜底文案。
 
 ### [ ] T1.10 样式硬伤
 

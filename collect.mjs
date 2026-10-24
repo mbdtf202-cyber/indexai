@@ -2672,11 +2672,73 @@ async function main() {
     officialRef[f.key] = { input: m?.input ?? f.official[0], output: m?.output ?? f.official[1] };
   }
 
+  /* 沿用旧价的 TTL（S3.3：中转站 14 天）。
+   * 旧实现只看「上一版有没有价」，于是停更的站可以永远挂着昨天的数字。
+   * 现在超过 TTL 就不再沿用：宁可少一条，也不要展示两周前的价还装作今天的。 */
+  const RELAY_STALE_TTL_DAYS = 14;
+  const daysSince = (iso) => {
+    if (!iso) return Number.POSITIVE_INFINITY;
+    const t = Date.parse(`${String(iso).slice(0, 10)}T00:00:00Z`);
+    if (!Number.isFinite(t)) return Number.POSITIVE_INFINITY;
+    return Math.round((Date.parse(`${todayISO()}T00:00:00Z`) - t) / 86400000);
+  };
+
+  /*
+   * 旗舰清单与官方参考价（F19）。
+   *
+   * 页面以前用「展示名拼正则」去找官方价，DS V4.1 Flash 这种简写永远匹配不到 DeepSeek，
+   * 于是中转站页的「官方 $x」参考线从来不画。采集端这里已经算好了 officialRef，
+   * 直接下发：key / label / 官方 input·output·cache_read，以及按中转画像算出的官方有效成本。
+   * 页面只读这份数据，不再自己猜。
+   */
+  const flagships = FLAGSHIP.map((f) => {
+    const ref = officialRef[f.key] || {};
+    const input = ref.input ?? f.official[0] ?? null;
+    const output = ref.output ?? f.official[1] ?? null;
+    const cacheRead = ref.cache_read ?? null;
+    const officialEff = input != null && output != null
+      ? effectiveCost({ kind: 'per_1m', input, output, cacheRead })
+      : null;
+    return {
+      key: f.key,
+      label: f.label,
+      input,
+      output,
+      cache_read: cacheRead,
+      officialEff: officialEff == null ? null : Number(officialEff.toFixed(4)),
+    };
+  });
+
   const relays = [...probed.values()].map((r) => {
     const old = prevRelays.get(r.domain);
-    const base = r.status === 'ok'
-      ? r
-      : { ...r, stale: true, prices: old?.prices || {}, models: old?.models || 0, groups: old?.groups || null, checked_at: old?.checked_at || null };
+
+    /* 三种来源，统一走同一段后处理（eff / vsOfficial 等）：
+     * 1. 本次探测成功     —— 用新价，stale=false
+     * 2. 失败但在 TTL 内  —— 沿用旧价，stale=true 并带 staleDays
+     * 3. 失败且已过 TTL   —— 清空价目，不展示两周前的价格（S3.3 的 14 天 TTL）
+     * 旧实现在「失败但有旧价」时无条件沿用，停更的站可以永远挂着昨天的数字。 */
+    let base;
+    if (r.status === 'ok') {
+      base = { ...r, stale: false, checked_at: r.checked_at || null };
+    } else {
+      const age = daysSince(old?.checked_at);
+      const hasPrices = old && old.prices && Object.keys(old.prices).length > 0;
+      if (hasPrices && age <= RELAY_STALE_TTL_DAYS) {
+        base = {
+          ...r,
+          stale: true,
+          staleDays: age,
+          prices: old.prices || {},
+          models: old.models || 0,
+          groups: old.groups || null,
+          // 保留「上次真的成功」的那一天：页面据此显示「上次成功 MM-DD」，
+          // 而不是把沿用说成今天采集的（F20）
+          checked_at: old.checked_at || null,
+        };
+      } else {
+        base = { ...r, stale: false, staleDays: null, prices: {}, models: 0, groups: null, checked_at: null };
+      }
+    }
 
     // 给每个旗舰价补上「有效成本」与「对官方比」，缺值留 null 而不是 0
     const prices = {};
@@ -2867,6 +2929,8 @@ async function main() {
       },
       dedupe: { aggregator_dropped: catalog.dropped || 0, unpriced_dropped: catalog.unpriced || 0, models_dropped: modelsDedup.dropped, offers_merged: offersDedup.merged },
       bestCacheDiscount: cacheDiscount[0] ? { ...cacheDiscount[0], pct: Math.round(cacheDiscount[0].off * 100) } : null,
+      // 旗舰清单（F19）：页面画参考线只读这份，不再用正则猜官方价
+      flagships,
       vendors,
     },
     models,

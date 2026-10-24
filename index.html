@@ -1627,7 +1627,9 @@ const MOTION = (() => {
     const dir = state.sortDir, key = state.sortKey;
     const val = (m) => {
       if (key === "eff") { const e = effort(m); return e == null ? Infinity : e; }
+      // 折扣 = 缓存读相对输入价的百分比；缓存读列本身就是价格，两者不能共用一个键（F18）
       if (key === "cache") return m.cache_read == null || !m.input ? Infinity : m.cache_read / m.input;
+      if (key === "cache_read") return m.cache_read == null ? Infinity : m.cache_read;
       if (key === "name") return m.name.toLowerCase();
       if (key === "vendor") return m.vendor.toLowerCase();
       return m[key] == null ? Infinity : m[key];
@@ -1764,7 +1766,7 @@ const MOTION = (() => {
         <table><caption class="sr">模型 token 价格对比</caption>
           <thead><tr>
             ${th("name","模型")}${th("vendor","厂商",false,true)}${th("ctx","上下文",true)}${th("input","输入",true)}
-            ${th("cache","缓存读",true,true)}${th("cache_write","缓存写",true)}${th("output","输出",true)}
+            ${th("cache_read","缓存读",true,true)}${th("cache_write","缓存写",true)}${th("output","输出",true)}
             ${th("cache","折扣",true,true)}${th("eff","有效成本",true)}<th class="hidesm">来源</th>
           </tr></thead>
           <tbody id="tbody">${tbody}</tbody>
@@ -2075,13 +2077,20 @@ const MOTION = (() => {
    *  2) completion_ratio 各站不同（1×–7.5×），输出贵不贵比输入更影响账单；
    *  3) 同一家站内部还有分组倍率（差 20–220 倍），「最低可达价」单列并标组名。
    */
-  const RELAY_FLAGS = [
-    { key: "sonnet55", label: "Sonnet 5.5" },
-    { key: "opus55", label: "Opus 5.5" },
-    { key: "gpt61sol", label: "GPT-6.1 Sol" },
-    { key: "gemini4argon", label: "Gemini 4 Argon" },
-    { key: "deepseekflash", label: "DS V4.1 Flash" },
-  ];
+  /* 旗舰清单由采集端下发（meta.flagships，见 collect.mjs 的 FLAGSHIP）。
+   * 旧实现在这里手抄一份，再用「展示名拆词拼正则」去找官方价：
+   * 拆 "DS V4.1 Flash" 得到 /DS/ 与 /Flash/，永远匹配不到 DeepSeek。
+   * 现在只读数据，页面不可能再跟采集端口径不一致（INV-5、F19）。 */
+  // 惰性读取：这段代码在模块顶层执行，那时 state.data 还没加载（T1.9 踩过）
+  const relayFlags = () =>
+    (state.data?.meta?.flagships || []).map((f) => ({
+      key: f.key,
+      label: f.label,
+      input: f.input,
+      output: f.output,
+      cache_read: f.cache_read,
+      officialEff: f.officialEff,
+    }));
 
   const relayStatus = (st) =>
     st === "ok" ? ["公开", "ok"]
@@ -2095,14 +2104,17 @@ const MOTION = (() => {
   function viewRelays() {
     const rs = state.data.relays || [];
     const live = rs.filter(r => r.status === "ok");
+    // 旧快照可能没有 meta.flagships（换数据源的第一天）：这时不画图，直说缺什么
+    const RELAY_FLAGS = relayFlags();
+    if (!RELAY_FLAGS.length) {
+      return `<div class="empty"><b>这一版数据没有旗舰清单</b>采集中未下发 meta.flagships（旧快照，或采集端早于 T1.9）。重新采集后这里会显示各站的旗舰对比。</div>`;
+    }
     const flag = RELAY_FLAGS.find(f => f.key === state.relayFlag) || RELAY_FLAGS[0];
+    // 官方参考价直接来自 meta.flagships，不再用展示名拼正则（F19）
     const officialOf = (key) => {
       const f = RELAY_FLAGS.find(x => x.key === key);
-      const m = (state.data.models || []).find(x =>
-        x.channelKind === "direct" && x.input > 0 &&
-        new RegExp(f.label.split(" ").pop().replace(/\./g, "[.\\-]?"), "i").test(x.name) &&
-        new RegExp(f.label.split(" ")[0].replace(/-/g, "[-_ ]?"), "i").test(x.name));
-      return m ? { input: m.input, output: m.output, cache: m.cache_read } : null;
+      if (!f || f.input == null) return null;
+      return { input: f.input, output: f.output, cache: f.cache_read, eff: f.officialEff };
     };
 
     // 当前选中模型的全部报价点
