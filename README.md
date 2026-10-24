@@ -1,227 +1,137 @@
 # IndexAI
 
-AI 的价格与额度索引：**免费额度、模型价格、官方订阅、中转站价目、活动、公开评测**，每天自动采集一次。
+AI 模型价格与情报索引。每天从公开数据源采集一次，出一份可回溯的对照：
+**token 单价（含缓存）**、**免费额度**、**订阅区价**、**中转站报价**、
+**AI 活动**、**工具箱**、**评测**、**情报**。
 
-线上：**https://indexai.pages.dev/** · 仓库：https://github.com/mbdtf202-cyber/indexai
+- 站点：<https://indexai.pages.dev/>（地址只在 `package.json` 的 `homepage` 定义一次）
+- 规格与路线图：[`UPGRADE_PLAN.md`](UPGRADE_PLAN.md)
+- 任务与进度：[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)
+- 操作手册（每轮必读）：[`AGENTS.md`](AGENTS.md)
 
----
+## 是什么
 
-## 文件
+这是一个**索引**，不是聚合器：每条数据都带来源 URL、采集时间、口径与置信度。
+每个数字都能点回原始出处；采集失败的那一层会明确标出来，而不是悄悄消失。
 
-| 文件 | 作用 |
-|---|---|
-| `index.html` | 站点本体（单文件、无构建，默认浅色，首屏总览） |
-| `collect.mjs` | 采集 / 归一 / 去重 / 探测，产出 `data.json` |
-| `health.mjs` | 分层健康检查：基线阈值 + 语义校验，采集和 CI 共用 |
-| `serve.mjs` | 零依赖静态服务器（本地预览用） |
-| `bench.mjs` | 9 个公开评测源的采集与归一（每次运行覆盖 `bench.json`） |
-| `bench.json` | 评测明细（约 3.5 MB，首屏不加载，打开评测页才拉） |
-| `lib/parquet.mjs` | 零依赖 Parquet + Snappy 读取器（读 LMArena 官方数据集用） |
-| `data.json` | 站点主数据源（每次运行覆盖；评测只留目录与统计） |
-| `news-archive.json` | 情报归档（只增不删，按月分片前是单文件，进仓库撑时间跨度） |
-| `_headers` | Cloudflare 缓存头 |
-| `favicon.svg` | 站点图标 |
+三条边界（写死，不随需求松口）：
 
----
+1. **只用公开数据与官方免费接口**。不注册账号、不登录、不绕过鉴权或限流、不伪装。
+2. **页面运行时不请求任何第三方域名**。字体自托管，汇率在采集期取一次，统计一律不做。
+3. **不确定的数字宁可标「—」**。缺值不补 0，不猜，不用正则从展示名里拼价格。
 
 ## 跑起来
 
 ```bash
-node serve.mjs 4311        # 本地预览 → http://127.0.0.1:4311/
-node collect.mjs           # 重采一次，约 9 分钟，覆盖 data.json
-node health.mjs            # 单独体检；不达标 exit 1
+npm ci                    # 只装开发依赖；运行时零依赖
+npm run collect           # 真实采集一次（约 9 分钟，CI 每日运行）
+npm run verify            # 提交前必须全过：lint → typecheck → invariants → test → build → e2e
+node serve.mjs 4311       # 本地预览 http://127.0.0.1:4311/
 ```
 
----
+`npm run `${'`'}verify` 里的浏览器测试会拦掉一切非同源请求——页面只要多发一个外部请求，
+测试就失败。这是 INV-13 的执行方式。
 
-## 数据健康：这套东西为什么不会悄悄烂掉
-
-这是本项目最重要的一条设计，也是踩过坑之后加的。
-
-**问题**：所有数据源都包在 `try/catch` 里，失败就返回空数组。采集脚本照常写出 `data.json` 并发布，
-站点看起来一切正常，实际上某一层已经空了好几天。曾经的真实事故：
-
-- `SUBSCRIPTIONS = []`（死常量），页面照常渲染「官方档位 0」，README 却写着「订阅 10 档」
-- `bench` 里把对象当数组 `.map()`，每次抛错被吞掉，「评测下跌标黄」从来没生效过
-- Devpost 活动一律硬编码 `status: 'open'`，25 个已截止的活动还挂在「开放中」
-- Devpost 日期解析只认一种格式，20/65 个活动日期变 null、被标成「未知」
-
-**现在的机制**：
-
-1. **逐层记账**（`collect.mjs` 的 `makeTracker`）。每个数据源记 `fresh / stale / failed`，
-   写进 `meta.collect[]`。某层本次为空但有上一版 → 沿用上一版并打 `stale`；
-   两版都没有 → `failed`。前端和方法页都能读到这个状态。
-2. **硬门禁**（`health.mjs` 的 `assertLayers`）。每层设 `min`（绝对红线）和 `shrink`（相对缩水比例）。
-   任一红线不过 → **抛错，不写 `data.json`，线上保持上一版**。残缺数据绝不覆盖好数据。
-3. **语义校验**。数量够 ≠ 数据对，另外检查：
-   - `status=open` 的活动不能已过截止日
-   - 模型不能 `input=0` 但 `output>0`，不能没有任何价格，不能没有来源 URL
-   - `generated_at` 不能是未来、不能超过 48 小时
-   - 汇率必须在合理区间
-   - 所有中转站不能全部探测失败
-4. **CI 二次校验**。`node health.mjs` 作为独立 step 再跑一遍，
-   防止将来改 `collect.mjs` 时绕过内嵌门禁。
-5. **失败可见**。job 失败自动开 GitHub issue（已存在则追加评论），
-   首屏有健康横幅（数据陈旧／某层空掉时出现，平时完全不存在）。
-
-紧急情况下想强行发布残缺数据：`ALLOW_DEGRADED=1 node collect.mjs`。会有明显警告。
-
----
-
-## 八层数据
-
-| 层 | 来源 | 更新 |
-|---|---|---|
-| 免费额度（37） | 官方活动页 / 文档，写在 `CURATED_OFFERS` | 人工 |
-| 比价（474） | OpenRouter 实时目录 + 官方定价页核实 | 自动 + 人工 |
-| 订阅（16 档官方 / 18 组区价 774 条 / 209 条挂单） | App Store 公开内购页 + 发卡平台直链 | 自动 |
-| 中转站（约 50 在册 / 约 20 有公开价目） | 各站 `/api/pricing`（OneAPI/NewAPI） | 每次自动探测 |
-| 活动（约 1700 条 / 约 1690 在场） | Devpost 分页（open+upcoming）+ Luma 发现流（27 城市地理维度）+ Devfolio + 本地 AIOS 活动库 | 每次自动 |
-| 工具箱（21） | 人工精选稀缺 skill / CLI，GitHub API 校准星数 | 每次自动 |
-| 评测（163 榜 / 3.2 万条分数 / 1,200 模型） | LMArena 24 榜、SWE-bench 5 榜、Aider、Terminal-Bench、τ-bench、ARC-AGI 2 榜、SimpleBench、Vals、Artificial Analysis 14 榜 | 每次自动 |
-| 情报（每日约 50 条要闻 + 21 条信号） | 公开新闻流按主题打分 + X/官方博客正文 | 每次自动 |
-
-另有几个辅助层：OpenRouter 应用榜（25）、模型调用量榜（20）、Hacker News 民间声量（16）、来源登记表（125）。
-
-### 订阅层的口径
-
-官方档位**不是手写的**，全部从 App Store 美国区的公开内购价派生：
-`apple_subscriptions.json` → 取每个 plan 的美国区 `price_value` → 一档一行，带 `app_store_url`。
-拿不到美国区价格的档位直接跳过，不猜价、不用历史值填。
-
-> 曾经这里是 `const SUBSCRIPTIONS = []`，而 README 写着「10 档」。现在派生不出来就是 health 红线。
-
-### 活动层的口径
-
-状态**只由日期决定**，不照抄数据源的 `status` 字段：
+## 数据怎么流转
 
 ```
-past     —— end 已过（没有 end 就用 start）
-upcoming —— start 在未来
-open     —— 正在进行中
-unknown  —— 两个日期都没有 → 标未知，不假装开放
+上游源 ──lib/http.js（超时·重试·限速·记账）──▶ 抓取
+      ──▶ 归一（逐行 schema 校验，坏行隔离）
+      ──▶ 与上一版合并（TTL / lastSeen / 部分结果补齐）
+      ──▶ 层级门禁（ok / warn / red）
+      ──▶ 通过：写快照　未通过：保留上一版并记 stale
+      ──▶ 派生（跨层对齐、有效成本、变化流）
+      ──▶ 站点构建（预渲染 + 分层数据文件 + manifest）
 ```
 
-Devpost 的 `submission_period_dates` 有三种真实写法，解析器都要认：
-`Oct 05 - Nov 12, 2026` / `Oct 05 - 27, 2026` / `Jul 16, 2026 - Jan 15, 2027`。
+站点是 `(代码, 数据快照)` 的纯函数：任何一天的站点都能用当天的快照重建。
 
----
+## 数据健康：为什么这套东西不会悄悄腐烂
+
+所有数据源失败时都返回空数组、采集照常写出文件——这是最典型的腐烂方式：
+站点看起来一切正常，某一层其实已经空了好几天。本项目踩过这个坑，所以：
+
+1. **逐层记账**。每个源记 `fresh / stale / failed`，写进 `meta.collect[]`。
+   本次为空但有上一版 → 沿用并打 `stale`；两版都没有 → `failed`。
+2. **层级门禁**。每层有绝对下限、相对缩水比例、新鲜度三项检查。
+   不过关就不写盘，线上保留上一版。残缺数据不覆盖好数据。
+3. **语义校验**。数量够 ≠ 数据对：已截止的活动不能标 `open`；
+   模型不能 `input=0` 但 `output>0`；不能没有来源 URL；汇率回退到固定值要报警。
+4. **失败可见**。任何降级、沿用、隔离都进 manifest 并在页面可见；
+   连续两次 `red` 开 issue，恢复后自动关闭。
+
+紧急情况下强行发布残缺数据：`ALLOW_DEGRADED=1 node collect.mjs`（会有明显警告）。
+
+详细的来源清单、每层的门禁数值与当前覆盖率由**方法页**从代码常量生成，
+不写在这份 README 里——手抄的数字一定会过期。
 
 ## 口径
 
+有效成本（默认画像：agent 编程，缓存命中 70%、输出占比 30%）：
+
 ```
 有效成本 = (1 − s) · [(1 − h) · input + h · cache_read] + s · output
-
-中转站（两种写法并存，表达式优先）：
-① billing_expr       tier("base", p * 2 + c * 10 + cr * 0.1)
-                     p=输入 c=输出 cr=缓存读 cc=缓存写，单位即 $ / 1M
-② model_ratio 倍率    input  = model_ratio × 分组倍率 × $2 / 1M
-                     output = 上式 × completion_ratio
-                     cache  = 上式 × cache_ratio
 ```
 
-- 排序默认 **主流优先**：大厂在前，同厂商内新模型在前。
-- 汇率来自 `open.er-api.com`，站点每 8 小时刷新一次，失败时沿用上次值。
-- 中转站价目是接口披露价，不含充值折扣。
-- **表达式必须优先于倍率**：同时给出两者的站点里 `model_ratio` 多是废弃占位值（实测某站 `37.5` 算出 $75，而其 `billing_expr` 写的是 `p*2+c*10`，真实价 $2/$10）。只认倍率会把一批正常站点误标成「异常」。
-- **分组倍率（`group_ratio`）才是定价核心**，跨站差 20–220 倍。页面取「代表分组」（default，或组名声明倍率最接近 1 的公开组）做横向比较；「最低可达价」单列并标组名，因为通常要求特定分组权限。
-- 免费额度行（`:free`、`-free`、`-0x`、公益/福利组）不计入比价，否则「最低价」永远指向免费额度。
-- 与同口径官方价差 2.5 倍以上标「口径?」；便宜模型（官方 < $0.5）放宽到 8 倍，避免小模型被绝对差价误判。
-- 页面价差计算会剔除偏离同模型中位价 10 倍以上的离群报价，并在页面上列出被剔除者及原因。
-- 第三方挂单来自 `data.aibijia.org` 公开 JSON，**每条带商品页直链**；质保通常几小时，不推荐、不保证可用。
-- 各区订阅价同源（App Store 公开页），每个国家都能点进对应区商店。
-- 评测分数下跌标黄，提示可能的版本回退或渠道掺水，需人工复核。
-- 评测各榜量纲不同（Elo / 百分数 / 指数），对照表按**榜内名次换算成相对位置**再并排，不直接相加。
-- 同一模型的多个推理档位（High / Max / xHigh）合并成一条，保留最强档，避免一个模型刷屏。
-- 榜单超过 6 个月没更新会标出「N 个月前」。SWE-bench 全系与 Aider 目前属于这一类：分数能看，但不代表当前能力。
-- LMArena 的 `latest` 文件里可能混着几代快照（text_to_image 混了 2025 年的旧批次），采集时只保留最新 `leaderboard_publish_date` 那一批。
-
----
-
-## 每天自动更新（云端）
+中转站两种计价写法并存，**表达式优先**：
 
 ```
-GitHub Actions  .github/workflows/daily-collect.yml   每天 09:00（UTC 01:00）
-      ├─ 拉线上 data.json 当基线   ← 保证 delta 与缩水检测有真实上一版
-      ├─ node collect.mjs          采集（内含健康门禁）
-      ├─ node health.mjs           二次独立校验
-      ├─ 组装 dist/                 index.html + data.json + _headers
-      ├─ 校验 Cloudflare token     权限不对立刻报错并给出修法
-      ├─ wrangler pages deploy     → Cloudflare Pages
-      ├─ 线上验证                   确认线上确实是本轮数据
-      └─ on failure → 自动开 issue
+① billing_expr     tier("base", p * 2 + c * 10 + cr * 0.1)
+② model_ratio 倍率  input = model_ratio × 分组倍率 × $2 / 1M
 ```
 
-不依赖任何一台机器开机。手动触发：
+几条硬规则，都在代码里由测试守着：
 
-```bash
-gh workflow run daily-collect -R mbdtf202-cyber/indexai
-gh run list -R mbdtf202-cyber/indexai --limit 3
-gh run view <run-id> -R mbdtf202-cyber/indexai --log-failed
-```
-
-### 需要的仓库 Secret
-
-| Secret | 说明 |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | 权限需含 **Account → Cloudflare Pages → Edit** |
-| `CLOUDFLARE_ACCOUNT_ID` | 账号 ID（也可直接写在 workflow 里） |
-
-> **踩过的坑**：用 R2 模板创建的 token，`/tokens/verify` 会返回 `active`，
-> 但调 Pages API 报 `Authentication error [code: 10000]`。
-> 要选 **Edit Cloudflare Workers** 模板，或手动加 Pages 权限。
-> 现在 token 预检这一步会明确告诉你这个原因，而不是抛一串 wrangler 原始报错。
-
-### 什么进仓库，什么不进
-
-`data.json`（约 700 KB）与 `bench.json`（约 3.5 MB）都是**每天重建的生成物**，
-不进仓库：一年会给仓库加两百多 MB，而它们随时能用当天的快照重建。
-CI 只在发布时把它们拷进 `dist/`。
-
-进仓库的只有两类：代码与人工维护的输入，以及**攒出来就补不回来**的
-`news-archive.json` / `news-seed.json`（源站只给最近约 7 天，跨度只能一天天累积）。
-
----
-
-## 本地发布
-
-仓库里**没有**一键发布脚本（曾经有过 `deploy.mjs`，它把本机路径写死、
-发布清单还漏了两个数据文件，已经删掉）。需要手工发布时按两步走：
-
-```bash
-npm run build -- --data .        # 用本机真实数据生成 dist/
-npx wrangler pages deploy dist --project-name indexai
-```
-
-第二条会用本机 wrangler 登录态，**只能在有人值守的机器上执行**；
-自动采集循环（`loop.sh` / Ralph）永远不跑这一条。
-
-本机还有一个 launchd 常驻的本地预览服务：`com.raki.indexai.serve`（`serve.mjs 4311`，开机自启、崩溃重拉）。
-**它只服务本地，不参与发布。**
-
-```bash
-launchctl print gui/$(id -u)/com.raki.indexai.serve | head -5
-```
-
-> **踩过的坑**：macOS 的 TCC 会拦住 launchd 里由 `/bin/bash` 发起的对 `~/Desktop` 的读取
-> （`Operation not permitted`），但 node 二进制不受此限制。
-> 所以 plist 直接执行 node，不经过 shell。
-
----
+- **表达式必须优先于倍率**。同时给出两者的站点里 `model_ratio` 多是废弃占位值
+  （实测某站 `37.5` 算出 $75，而 `billing_expr` 写的是 `p*2+c*10`，真实价 $2/$10）。
+  只认倍率会把一批正常站点误标成「异常」。
+- **分组倍率才是定价核心**，跨站能差 20–220 倍。横向比较用「代表分组」，
+  「最低可达价」单列并标组名，因为那通常要求特定权限。
+- **免费额度行不计入比价**，否则「最低价」永远指向免费额度。
+- 与同口径官方价差 2.5 倍以上标「口径?」；便宜模型放宽，避免被绝对差价误判。
+- 评测各榜量纲不同（Elo / 百分数 / 指数），按**榜内名次**换算后并排，不直接相加。
+- 同一模型的多个推理档位合并成一条，保留最强档。
+- 榜单超过 6 个月没更新会标出年龄——分数能看，但不代表当前能力。
 
 ## 加东西
 
-- 官方直连：往 `CURATED_OFFICIAL` 加一条（USD/1M，带 `src`）。
-- 免费额度：往 `CURATED_OFFERS` 加一条（带 `source`、`conf`）。
-- 新闻：`data.aibijia.org/news-frontline.yaml`，`NEWS_TOPICS` 控制分类、`scoreNews` 控制精选权重。
-- 中转站：往 `RELAYS` 加 `{domain, name, auto}`，`auto: true` 会每天探 `/api/pricing`。
-- 活动：默认读 `AIOS_OPPORTUNITIES` 指向的 AIOS 导出文件；该层可选，读不到会明确提示并跳过。
-- 新增数据层：**同时**在 `collect.mjs` 用 `T.run(...)` 包起来、在 `health.mjs` 的 `LAYERS` 里加阈值。
+| 想加什么 | 改哪里 |
+|---|---|
+| 一个免费额度 | `collect.mjs` 的 `CURATED_OFFERS`，必须带 `source` 与核实过的额度原文 |
+| 一个官方价 | `CURATED_OFFICIAL`，带定价页 URL 与核实日期 |
+| 一个中转站 | `RELAYS`，带 `domain` 与发现渠道 |
+| 一条一手信号 | `SIGNALS`，带原文 URL、日期与引用原话 |
+| 一个新数据层 | 先读 `UPGRADE_PLAN.md` 的层契约（§4.4），再在 `IMPLEMENTATION_PLAN.md` 里开任务 |
 
----
+改人工数据时代码里要带证据（URL + 核实日期），这是 `INV-2` 的要求：
+每个数字都可回溯，否则它就只是一句断言。
 
-## 边界
+## 踩过的坑
 
-- 只采公开页面与公开接口；**不注册账号、不绕过登录**去拿需要授权的价格。
-- 挂牌价 ≠ 账单：不含税、企业折扣、区域加价。
-- 免费额度随时会变，卡片上的日期是核实日期，链接指向官方页。
+这些是真实事故的复盘，留着防止重犯：
+
+- **`catch` 后静默返回空数组**。整层空了几天，页面照常渲染「0 档」，
+  README 却还写着一个过期的数字。现在所有失败路径都要响。
+- **把对象当数组 `.map()`**。每次抛错被 `catch` 吞掉，依赖它的那个前端功能长期没生效，
+  而页面上的承诺一直挂着。现在未实现的东西不进文案。
+- **硬编码状态字段**。Devpost 活动一律写 `status: 'open'`，已截止的还挂在「开放中」。
+  现在状态一律按日期算。
+- **日期解析只认一种格式**。一批活动日期变 `null`、被标成「未知」。
+- **正则猜价格**。用展示名拆词拼正则去找官方价，`DS V4.1 Flash` 永远匹配不到 DeepSeek。
+  现在由采集端下发结构化的旗舰清单。
+- **注释里出现 `<style`**。HTML 解析器会在那里提前结束 `<script>`，
+  整页脚本语法错误——内联脚本的注释里不能写这个。
+- **`prefers-reduced-motion` 掩盖缺陷**。淡入动画在减少动效下被覆盖，
+  于是「整页可见」的断言一直是假绿。断言可见性要读计算样式。
+
+## 边界与许可
+
+- 只采公开数据；第三方挂单只展示数量与价格区间，不下发商品页链接。
+- 上游数据按各自许可署名（OpenRouter CC BY 4.0、Artificial Analysis 等）。
+- 代码与自有整理数据的许可见 `LICENSE`。
+
+## 规划
+
+里程碑与任务在 [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)，
+规格与决策在 [`UPGRADE_PLAN.md`](UPGRADE_PLAN.md)（唯一规格源）。
+本 README 不写任何会过期的统计数字与文件清单。

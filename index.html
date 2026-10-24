@@ -1265,13 +1265,14 @@ const MOTION = (() => {
     home: { k: "INDEX AI", t: "AI 的价、量、场，<br>一个入口看完。", s: "免费额度、token 单价、订阅区价、中转站报价、活动、评测与要闻——同一套口径，每天自动采集。" },
     free: { k: "FREE TIERS", t: "免费的先用完，<br>再谈花钱。", s: "还在送额度的产品与服务：额度多少、能用哪些模型、门槛是什么、什么时候结束。每条都附官方页面，能自己点开核。" },
     compare: { k: "PRICES", t: "同一个模型，<br>不同渠道不同价。", s: "官方直连、聚合平台、中转站分开列；缓存命中、缓存写入、分时价都摊在表里，不合并成一个「最低价」。" },
-    subs: { k: "SUBSCRIPTIONS", t: "订阅价，官网上写多少<br>就是多少。", s: "ChatGPT、Claude、Copilot 各档月费，按当日汇率折人民币；第三方挂单只当行情看，不推荐。" },
+    subs: { k: "SUBSCRIPTIONS", t: "订阅价，官网上写多少<br>就是多少。", s: "各产品官方档位月费，按当日汇率折人民币；第三方挂单只当行情看，不推荐。" },
     relays: { k: "RELAYS", t: "中转站的公开价目，<br>每天探一遍。", s: "读 OneAPI / NewAPI 的价目接口，按倍率换算成每百万 token。需要登录才能看的价格不采，也不替它猜。" },
     events: { k: "AI EVENTS", t: "能报名、有奖、<br>给额度的 AI 活动。", s: "Devpost 开放中的黑客松 + Luma 的 AI 场次，加上本地 AIOS 收录的活动，按截止日期排；过期的单独归档。" },
     tools: { k: "TOOLKIT", t: "好用的东西，<br>不堆。", s: "只收稀缺的：解决具体问题、别处不好找、作者在维护。人尽皆知的（Playwright、GitHub MCP 这类）不收。星数只作参考，排序按使用价值。" },
-    bench: { k: "BENCHMARKS", t: "同一批题目，<br>各自跑一遍。", s: "9 个公开权威榜单、160 多个细分维度，同一模型放在一张表里横向对照；分数掉了就标出来，不解释成「版本优化」。" },
+    // 数字全部来自数据（c.bench / c.benchRows），HERE 通过 renderHero 里的占位替换注入
+    bench: { k: "BENCHMARKS", t: "同一批题目，<br>各自跑一遍。", s: "__BENCH_SOURCES__ 个公开权威榜单、__BENCH_ROWS__ 个细分维度，同一模型放在一张表里横向对照；口径与更新日期都写在表头。" },
     signals: { k: "INTELLIGENCE", t: "AI 圈在发生什么，<br>挑过再给你。", s: "每日要闻按价格、模型、融资、政策、安全分类打分精选；下面是 X 与官方的价格一手信号，只收抓到正文的。" },
-    method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "五层数据、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
+    method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "每一层数据的来源、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
   };
   const VENDOR_RANK = ["OpenAI","Anthropic","Google","DeepSeek","Alibaba Qwen","Moonshot","Zhipu","MiniMax","xAI","Meta","Mistral","ByteDance","Tencent"];
   const RANK = new Map(VENDOR_RANK.map((v, i) => [v, i]));
@@ -1424,6 +1425,15 @@ const MOTION = (() => {
   const pct = (x) => Math.round(x * 100) + "%";
   const confTitle = { high: "高置信：实时 API 或官方定价页", med: "中置信：需换算或页面不完整", low: "低置信：未取到原始页面" };
   const hostOf = (u) => String(u || "").replace(/^https?:\/\//, "").split("/")[0].replace(/^www\./, "");
+
+  /** 区价实际覆盖多少个国家/地区：数 subsRegions 里出现过的国家码。 */
+  function subsCountryCount() {
+    const codes = new Set();
+    for (const g of state.data?.subsRegions || []) {
+      for (const r of g.rows || []) if (r.c) codes.add(r.c);
+    }
+    return codes.size;
+  }
   /**
    * 外部链接（F46 · INV-14）。
    *
@@ -1594,7 +1604,11 @@ const MOTION = (() => {
     const h = HERO[state.tab] || HERO.free;
     $("#heroKicker").textContent = h.k;
     $("#heroTitle").innerHTML = h.t;
-    $("#heroSub").textContent = h.s;
+    // 文案里的统计数字一律来自数据（INV-5）：把手写的数字换成当前快照的计数
+    const subs = String(h.s || "")
+      .replace("__BENCH_SOURCES__", String(state.data?.meta?.counts?.benchSources ?? "—"))
+      .replace("__BENCH_ROWS__", String(state.data?.meta?.counts?.benchRows ?? "—"));
+    $("#heroSub").textContent = subs;
     $("#stamp").textContent = "更新 " + new Date(state.data.meta.generated_at).toLocaleString("zh-CN", { hour12: false }).slice(5);
     const hero = $("#hero");
     hero.classList.remove("home-hero-skel");
@@ -1823,7 +1837,7 @@ const MOTION = (() => {
       { id: "relays", n: c.relaysLive, u: "站有价目", t: "中转站", d: "接口能读到价才算" },  /* 见 viewRelays 的 chips */
       { id: "events", n: c.eventsOpen, u: "个开放", t: "AI 活动", d: "黑客松 / 会议 / meetup" },
       { id: "tools", n: c.resources || 0, u: "个精选", t: "工具箱", d: "稀缺 skill / CLI" },
-      { id: "bench", n: c.bench, u: "个模型", t: "评测", d: "同一批题目的分数" },
+      { id: "bench", n: c.bench, u: "个榜", t: "评测", d: "同一批题目的分数" },
       { id: "signals", n: (c.news || 0) + c.signals, u: "条信息", t: "情报", d: "要闻 + X 一手" }
     ];
 
@@ -1960,7 +1974,7 @@ const MOTION = (() => {
       ["合租 / 拼车", "多人共享一个 Team 或 Pro 席位，按人头分摊；通常有设备与并发限制。", "隐私与稳定性风险"],
       ["发卡 / 代充", "第三方平台按次卖账号、兑换码或代充，价格最杂，质量参差。", "跑路、封号、售后风险"]
     ];
-    // 官方标价 = 各套餐在美国区的价格（App Store 明码），再并上只有官网价的 Copilot
+    // 官方标价 = 各套餐在美国区的价格（App Store 公开内购页），一档一行
     const planRows = [];
     for (const g of (state.data.subsRegions || [])) {
       const us = (g.rows || []).find(r => r.c === "US");
@@ -3741,9 +3755,9 @@ const MOTION = (() => {
         <li><strong>聚合层</strong>（${c.aggregator} 条）：OpenRouter 实时目录，含缓存读写价。</li>
         <li><strong>官方直连层</strong>（${c.direct} 条 / ${directVendors.length} 家）：官方定价页人工核实，保留原币数字。</li>
         <li><strong>免费层</strong>（${c.offers} 条）：免费额度、免费模型、赠送金，标注门槛与期限。</li>
-        <li><strong>订阅层</strong>（${c.subs} 档官方 / ${c.subsRegions} 组区价 / ${c.subsThird} 条挂单）：官方档位取 App Store 美国区的公开内购明码，一档一行、带购买链接；区价覆盖 49 个国家；挂单来自公开平台，只作行情，不推荐。</li>
+        <li><strong>订阅层</strong>（${c.subs} 档官方 / ${c.subsRegions} 组区价 / ${c.subsThird} 条挂单）：官方档位取 App Store 美国区的公开内购明码，一档一行、带购买链接；区价覆盖 ${subsCountryCount()} 个国家/地区；挂单来自公开平台，只作行情，不推荐。</li>
         <li><strong>中转层</strong>（${c.relays} 站在册 / ${c.relaysLive} 站公开价目）：读取 OneAPI/NewAPI 的价目接口。有 <code>billing_expr</code> 的站点按表达式取真实挂牌价，其余按 <code>model_ratio × 分组倍率</code> 换算，再按固定用量画像折成有效成本。</li>
-        <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.eventsPast} 条已结束 / ${c.events} 条收录）：Devpost 公开接口（分页 5 页）+ Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。状态一律按截止日期判定，不照抄数据源的 status 字段。</li>
+        <li><strong>活动层</strong>（${c.eventsOpen} 个开放中 / ${c.eventsPast} 条已结束 / ${c.events} 条收录）：Devpost 公开接口（按 open / upcoming 分别翻页至收满）+ Devfolio 公开接口 + Luma 公开发现流（AI 关键词过滤）+ 本地 AIOS 活动库。状态一律按截止日期判定，不照抄数据源的 status 字段。</li>
         <li><strong>工具箱</strong>（${c.resources || 0} 个）：人工精选的 skill / MCP / CLI，星数、更新时间、许可每天从 GitHub API 校准；归档的会被标出来。</li>
         <li><strong>评测层</strong>（${c.bench} 个模型）：Vals Index 的公开分数，每次采集存一份用于对比。</li>
         <li><strong>情报层</strong>（${(d.news && d.news.n) || c.news || 0} 条 / ${(d.news && d.news.days) || 0} 天有内容 / 跨度 ${(d.news && d.news.span) || 0} 天，另有 ${c.signals} 条一手信号）：AIHOT 全量流（7 天窗口，按分类翻页去重）+ 官方精选 + 存档回填，按 URL 归档、<strong>只增不删</strong>；条目用短键落盘，摘要只留标题里没有的信息。页面先给密度带，再按日/周/月/季/年下钻，默认只摊开最近 12 段。</li>
@@ -3776,7 +3790,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
       <p><code>model_price > 0</code> 或表达式 <code>fixed(...)</code> 的按次计价不参与每百万 token 比较；与同口径官方价差 2.5 倍以上（便宜模型放宽到 8 倍，避免小模型被绝对差价误判）才标「口径?」。</p>
 
       <h2>订阅与第三方挂单</h2>
-      <p>官方订阅只收官网能直接读到的月费（Go / Plus / Pro、Pro / Max、Copilot 各档）。第三方挂单价是<strong>公开挂单页的当日快照</strong>（来源 aibijia.org），只用来判断行情区间：质保通常 1–3 小时，成品号与镜像站的稳定性差别很大，站点不做推荐、不保证可用。</p>
+      <p>官方订阅只收 App Store 公开内购页能直接读到的月费，按产品分档、一档一行。第三方挂单价是<strong>公开挂单页的当日快照</strong>（来源 aibijia.org），只用来判断行情区间：质保通常 1–3 小时，成品号与镜像站的稳定性差别很大，站点不做推荐、不保证可用。</p>
 
       <h2>活动与评测口径</h2>
       <p>活动只收<strong>公开可报名</strong>的：Devpost 的 open 状态黑客松、Luma 公开发现流里含 AI/LLM/Agent 关键词的场次，按截止日期排。类型（黑客松 / 会议 / Meetup / 工作坊 / 评选）和地区都由标题、主题与场地推断，可交叉筛选；本地 AIOS 项目的活动库全部已结束，单独归档，只作来源对照，不混进「开放中」。</p>

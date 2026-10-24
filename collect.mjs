@@ -2828,6 +2828,8 @@ async function main() {
         eventsPast,
         eventsUnknown,
         bench: bench.stats?.boards || 0,
+        // 「几个榜单源」与「几个榜」是两件事（F22）：前者约 8–9，后者 160+，别再混用
+        benchSources: (bench.sources || []).filter((x) => x.ok).length,
         benchRows: bench.stats?.rows || 0,
         benchModels: bench.stats?.models || 0,
         sources: srcMap.size,
