@@ -19,11 +19,21 @@ import { fetchBenchmarks } from './bench.mjs';
 import {
   parseNewsYaml, mergeArchive, archiveStats, buildIndex, decodeNews,
 } from './lib/news.mjs';
+import { now, nowISO, todayISO, mark, since, sleep } from './lib/clock.js';
 
 const OPENROUTER = 'https://openrouter.ai/api/v1/models';
 const FX_CNY = 7.1; // 2026-10-23 记账汇率，仅用于把人民币价折算成 USD 对比
-const OUT = new URL('./data.json', import.meta.url);
-const BENCH_OUT = new URL('./bench.json', import.meta.url);
+/* ────────────────────────── 运行档位与输出目录 ──────────────────────────
+ * INDEXAI_PROFILE=test 缩小迭代集合，让 golden 能在 30 秒内离线跑完；
+ * 生产不设该变量，所有取值保持原样。
+ * INDEXAI_OUT_DIR 指定输出目录（默认仓库根），golden 用它写到临时目录。 */
+const TEST_PROFILE = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
+const OUT_DIR = process.env.INDEXAI_OUT_DIR ? String(process.env.INDEXAI_OUT_DIR).replace(/\/+$/, '') : null;
+const outUrl = (name) =>
+  OUT_DIR ? new URL(`file://${OUT_DIR}/${name}`) : new URL(`./${name}`, import.meta.url);
+
+const OUT = outUrl('data.json');
+const BENCH_OUT = outUrl('bench.json');
 
 /* ────────────────────────── 1. 厂商显示名 ────────────────────────── */
 const VENDOR = {
@@ -366,7 +376,7 @@ export function normalizeOpenRouter(payload) {
       conf: 'high',
       cm: p.input_cache_read ? `聚合层标价，命中按 $${per1M(p.input_cache_read)}/1M 计` : '该渠道未公布缓存价',
       note: m.description ? String(m.description).slice(0, 220) : '',
-      seen: new Date().toISOString().slice(0, 10),
+      seen: todayISO(),
     };
     seen.add(m.id);
     rows.push(row);
@@ -670,7 +680,7 @@ async function probeRelay(entry) {
     // 不跟随就会把它们误判成 http_404 或 unreachable。
     const res = await fetchRetry(url, {
       signal: ac.signal, redirect: 'follow',
-      headers: { 'User-Agent': 'FreeAI-Radar/2.0', Accept: 'application/json' },
+      headers: { 'User-Agent': 'IndexAI/1.0 (+https://indexai.pages.dev)', Accept: 'application/json' },
     }, { tries: 2, baseMs: 300, label: `relay/${entry.domain}` });
     if (!res.ok) return { ...entry, status: `http_${res.status}`, url };
     const text = await res.text();
@@ -730,7 +740,8 @@ async function probeRelay(entry) {
         return pr && pr.kind === 'per_1m' && nm ? { n: nm, i: pr.input, o: pr.output, c: pr.comp } : null;
       })
       .filter(Boolean)
-      .sort((a, b) => a.i - b.i);
+      // 同价时按模型名排序：否则 samples 顺序随源端返回顺序漂移（INV-7）
+      .sort((a, b) => (a.i - b.i) || (a.n < b.n ? -1 : a.n > b.n ? 1 : 0));
     // 从最便宜到最贵等距取，避免「前 40 条全是小模型」
     const step = Math.max(1, Math.floor(priced.length / 40));
     for (let k = 0; k < priced.length && samples.length < 40; k += step) {
@@ -755,7 +766,7 @@ async function probeRelay(entry) {
         spread: gValues.length > 1 ? Number((gValues[gValues.length - 1] / gValues[0]).toFixed(1)) : 1,
         names: Object.keys(gTable).slice(0, 40),
       } : null,
-      checked_at: new Date().toISOString().slice(0, 10),
+      checked_at: todayISO(),
     };
   } catch (e) {
     return { ...entry, status: e.name === 'AbortError' ? 'timeout' : 'unreachable', url };
@@ -869,9 +880,9 @@ async function fetchFx(prev) {
     const j = await res.json();
     const rate = j?.rates?.CNY;
     if (!rate) throw new Error('no CNY');
-    return { USDCNY: Number(rate.toFixed(4)), as_of: (j.time_last_update_utc || '').slice(0, 16), source: 'open.er-api.com', fetched_at: new Date().toISOString() };
+    return { USDCNY: Number(rate.toFixed(4)), as_of: (j.time_last_update_utc || '').slice(0, 16), source: 'open.er-api.com', fetched_at: nowISO() };
   } catch {
-    return prev ? { ...prev, stale: true } : { USDCNY: 7.1, as_of: 'fallback', source: 'fallback', fetched_at: new Date().toISOString() };
+    return prev ? { ...prev, stale: true } : { USDCNY: 7.1, as_of: 'fallback', source: 'fallback', fetched_at: nowISO() };
   }
 }
 
@@ -1015,7 +1026,7 @@ export function parseDevpostDates(s) {
  * 现在按 EV_DEVPOST_STATUS 逐个 status 翻到 entries 为空或收满 total_count，
  * 页上限 EV_DEVPOST_MAX_PAGES 兜底防失控（服务器分页行为变了也不会无限翻）。 */
 const EV_DEVPOST_STATUS = ['open', 'upcoming'];
-const EV_DEVPOST_MAX_PAGES = 40;
+const EV_DEVPOST_MAX_PAGES = TEST_PROFILE ? 2 : 40;
 
 async function devpostPage(status, page, attempt = 0) {
   const url = `https://devpost.com/api/hackathons?status[]=${status}&limit=24&page=${page}`;
@@ -1026,7 +1037,7 @@ async function devpostPage(status, page, attempt = 0) {
   } catch (e) {
     // 翻到深页偶发 5xx/超时，退避重试一次，别把整页数据丢掉
     if (attempt < 2) {
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      await sleep(400 * (attempt + 1));
       return devpostPage(status, page, attempt + 1);
     }
     throw e;
@@ -1156,6 +1167,12 @@ const EV_LUMA_GEO_QUERIES = ['AI', 'LLM', 'Agent', 'OpenAI', 'hackathon', '大�
 
 const EV_LUMA_CITY_BY_SLUG = new Map(EV_LUMA_CITIES.map((c) => [c.slug, c]));
 
+/* 测试档位的有效集合：生产用全量，test 用缩小切片。
+ * 切片只影响「跑多少」，不影响「怎么算」，所以 golden 仍能覆盖所有分支。 */
+const LUMA_QUERIES = TEST_PROFILE ? EV_LUMA_QUERIES.slice(0, 2) : EV_LUMA_QUERIES;
+const LUMA_CITIES = TEST_PROFILE ? EV_LUMA_CITIES.slice(0, 1) : EV_LUMA_CITIES;
+const LUMA_GEO_QUERIES = TEST_PROFILE ? EV_LUMA_GEO_QUERIES.slice(0, 2) : EV_LUMA_GEO_QUERIES;
+
 /* country_code → region：**第一优先级**的地区判定依据。
  * 实测 2026-10-24：Luma 的 geo_address_info.country_code 确实有值（'US' / 'JP' / 'IN' / 'HK' …），
  * 比拿 location 字符串跑国家正则准得多 —— 后者在「校园名 / 缩写 / 非拉丁文」上大量漏判，
@@ -1235,7 +1252,7 @@ const EV_LUMA_GEO_BUDGET_MS = 480000;   // 8 分钟
  * 我们要能从 meta.collect 里立刻看出来，而不是等条数掉了再回头排查。 */
 const netStat = { requests: 0, blocked: 0, maxCooldownMs: 0 };
 
-const lumaSleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const lumaSleep = (ms) => sleep(ms);
 
 /** 统一出口：计数 + 429 冷却。返回 entries 数组。
  *  @param {object} opt { gap } 请求前是否等一个间隔（geo 队列用，无 geo 的并发池不用） */
@@ -1282,8 +1299,8 @@ async function fetchLuma() {
 
     // 小并发池：一口气发 30 个请求容易被源端 5xx，8 路足够快也不会自我限流
     const worker = async () => {
-      while (cursor < EV_LUMA_QUERIES.length) {
-        const q = EV_LUMA_QUERIES[cursor++];
+      while (cursor < LUMA_QUERIES.length) {
+        const q = LUMA_QUERIES[cursor++];
         const entries = await lumaGet(q);
         if (!entries.length) failedQueries += 1;
         for (const entry of entries) {
@@ -1294,24 +1311,24 @@ async function fetchLuma() {
         }
       }
     };
-    await Promise.all(Array.from({ length: Math.min(EV_LUMA_CONCURRENCY, EV_LUMA_QUERIES.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(EV_LUMA_CONCURRENCY, LUMA_QUERIES.length) }, worker));
     const noGeoCount = byId.size;
 
     /* ── 地理维度：顺序队列 + 间隔 + 总预算 ──
      * 为什么不是并发 8：实测并发会把源端打成有状态封禁（见 EV_LUMA_GAP_MS 上方注释）。
      * 顺序 + 900ms 间隔实测稳定 200，代价是 216 × 0.9 ≈ 195s。
      * 这个站每天只跑一次，3 分钟可以接受；封禁后再解要 3 分钟且期间全部城市失败，更亏。 */
-    const geoStart = Date.now();
+    const geoStart = mark();
     const citiesDone = [];
     const citiesSkipped = [];
     let geoHits = 0;
     let aborted = false;
 
-    for (const city of EV_LUMA_CITIES) {
+    for (const city of LUMA_CITIES) {
       if (aborted) { citiesSkipped.push(city.slug); continue; }
       let cityNew = 0;
-      for (const q of EV_LUMA_GEO_QUERIES) {
-        if (Date.now() - geoStart > EV_LUMA_GEO_BUDGET_MS) { aborted = true; break; }
+      for (const q of LUMA_GEO_QUERIES) {
+        if (since(geoStart) > EV_LUMA_GEO_BUDGET_MS) { aborted = true; break; }
         const entries = await lumaGet(q, city, { gap: EV_LUMA_GAP_MS });
         for (const entry of entries) {
           const ev = entry?.event || entry;
@@ -1329,8 +1346,8 @@ async function fetchLuma() {
       geoHits += cityNew;
       if (cityNew) console.log(`[collect] luma geo ${city.slug} +${cityNew}（累计 ${byId.size}）`);
     }
-    const geoMs = Date.now() - geoStart;
-    console.log(`[collect] luma geo ${citiesDone.length}/${EV_LUMA_CITIES.length} 城完成 · 新增 ${geoHits} 条 · 耗时 ${(geoMs / 1000).toFixed(0)}s${citiesSkipped.length ? ` · 未采完 ${citiesSkipped.length} 城（${citiesSkipped.join(',')}）` : ''}`);
+    const geoMs = since(geoStart);
+    console.log(`[collect] luma geo ${citiesDone.length}/${LUMA_CITIES.length} 城完成 · 新增 ${geoHits} 条 · 耗时 ${(geoMs / 1000).toFixed(0)}s${citiesSkipped.length ? ` · 未采完 ${citiesSkipped.length} 城（${citiesSkipped.join(',')}）` : ''}`);
 
     // 关键词本身已经是 AI 相关，这里只做一次轻过滤把明显无关的挡掉：命中任一 AI 词即收。
     //
@@ -1379,7 +1396,7 @@ async function fetchLuma() {
       row.status = eventStatus(row);   // 按日期判
       out.push(row);
     }
-    console.log(`[collect] luma 无geo ${EV_LUMA_QUERIES.length} 词 → ${noGeoCount} 条 · 加 geo ${EV_LUMA_CITIES.length} 城 → 去重 ${byId.size} 条 → AI 过滤后 ${out.length} 条${failedQueries ? `（${failedQueries} 个查询无结果）` : ''}`);
+    console.log(`[collect] luma 无geo ${LUMA_QUERIES.length} 词 → ${noGeoCount} 条 · 加 geo ${LUMA_CITIES.length} 城 → 去重 ${byId.size} 条 → AI 过滤后 ${out.length} 条${failedQueries ? `（${failedQueries} 个查询无结果）` : ''}`);
     return out;
   } catch (e) {
     console.error(`[collect] luma 失败：${e.message}`);
@@ -1403,7 +1420,7 @@ async function fetchLuma() {
  * 不做 AI 过滤会往站里灌几百条无关活动，比少收 9 条糟得多。宁可少收。
  * ═══════════════════════════════════════════════════════════════════════ */
 const DV_API = 'https://api.devfolio.co/api/hackathons';
-const DV_MAX_PAGES = 45;      // 实测 41 页到底，留 4 页余量防源端多一页时漏
+const DV_MAX_PAGES = TEST_PROFILE ? 2 : 45;      // 实测 41 页到底，留 4 页余量防源端多一页时漏
 const DV_LIMIT = 50;
 
 async function devfolioPage(page, attempt = 0) {
@@ -1415,7 +1432,7 @@ async function devfolioPage(page, attempt = 0) {
     return await res.json();
   } catch (e) {
     if (attempt < 2) {
-      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      await sleep(400 * (attempt + 1));
       return devfolioPage(page, attempt + 1);
     }
     throw e;
@@ -1504,7 +1521,7 @@ export function devfolioPrize(prizes) {
 }
 
 async function fetchDevfolio() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const all = [];
   let total = null;
   let pagesHint = null;
@@ -1600,7 +1617,7 @@ async function fetchDevfolio() {
  *   upcoming —— start 在未来
  *   open     —— 正在进行中
  *   unknown  —— 两个日期都没有，无法判断，宁可标未知也不假装开放 */
-export function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
+export function eventStatus(e, today = todayISO()) {
   const start = e.start || '';
   const end = e.end || '';
   const last = end || start;
@@ -1841,7 +1858,7 @@ function buildSubs(apple) {
  */
 const NEWS_FEED = 'https://data.aibijia.org/news-frontline.yaml';
 const AIHOT_ITEMS = 'https://aihot.news/api/v1/items';
-const ARCHIVE = new URL('./news-archive.json', import.meta.url);
+const ARCHIVE = outUrl('news-archive.json');
 const SEED = new URL('./news-seed.json', import.meta.url);
 
 /* 全量流的分类映射：AIHOT 自己的 category → 本站主题 */
@@ -1881,9 +1898,12 @@ async function fetchAihotBulk(log) {
   const seen = new Map();
   let requests = 0;
 
-  for (const cat of cats) {
+  // 测试档位只翻主分类的第 1 页，够覆盖解析与去重，又不拉整个 7 天窗口
+  const catsToFetch = TEST_PROFILE ? [null] : cats;
+  const maxPages = TEST_PROFILE ? 1 : 40;
+  for (const cat of catsToFetch) {
     let cursor = null;
-    for (let page = 0; page < 40; page += 1) {
+    for (let page = 0; page < maxPages; page += 1) {
       const url = new URL(AIHOT_ITEMS);
       url.searchParams.set('window', '7d');
       url.searchParams.set('mode', 'all');
@@ -1910,9 +1930,9 @@ async function fetchAihotBulk(log) {
       }
       if (!d.page?.hasMore || !d.page.nextCursor) break;
       cursor = d.page.nextCursor;
-      await new Promise((r) => setTimeout(r, 250));
+      await sleep(250);
     }
-    await new Promise((r) => setTimeout(r, 250));
+    await sleep(250);
   }
   log?.(`aihot 全量 ${seen.size} 条 / ${requests} 次请求`);
   return [...seen.values()];
@@ -1947,7 +1967,7 @@ async function fetchNews(log) {
   } catch { /* 首次 */ }
 
   const before = archive.length;
-  const merged = mergeArchive(archive, fresh, { today: new Date().toISOString().slice(0, 10) });
+  const merged = mergeArchive(archive, fresh, { today: todayISO() });
   const stats = archiveStats(merged);
 
   try { await writeFile(ARCHIVE, JSON.stringify(merged), 'utf8'); } catch { /* 只读环境 */ }
@@ -2040,7 +2060,7 @@ async function fetchBench(prev) {
       const o = old.get(r.model);
       r.delta = o == null ? null : Number((r.score - o).toFixed(2));
     }
-    return { as_of: asOf, source: url, rows, fetched_at: new Date().toISOString() };
+    return { as_of: asOf, source: url, rows, fetched_at: nowISO() };
   } catch (e) {
     console.error(`[collect] bench 抓取失败：${e.message}`);
     return prev ? { ...prev, stale: true } : { as_of: null, source: url, rows: [], fetched_at: null, stale: true };
@@ -2125,14 +2145,14 @@ async function fetchRetry(url, opts = {}, { tries = 3, baseMs = 500, label = '' 
       if (i < tries - 1) {
         const wait = baseMs * 2 ** i + Math.random() * 250;
         if (label) console.warn(`[collect] ${label} HTTP ${res.status}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
-        await new Promise((r) => setTimeout(r, wait));
+        await sleep(wait);
       }
     } catch (e) {
       lastErr = e;
       if (i < tries - 1) {
         const wait = baseMs * 2 ** i + Math.random() * 250;
         if (label) console.warn(`[collect] ${label} ${e.message}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
-        await new Promise((r) => setTimeout(r, wait));
+        await sleep(wait);
         continue;
       }
     }
@@ -2146,7 +2166,7 @@ async function fetchResources() {
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const out = [];
-  for (const item of CURATED_RESOURCES) {
+  for (const item of (TEST_PROFILE ? CURATED_RESOURCES.slice(0, 3) : CURATED_RESOURCES)) {
     const row = { ...item, useLabel: USE_LABEL[item.use] || item.use };
     try {
       const res = await fetchRetry(`https://api.github.com/repos/${item.repo}`, { headers }, { label: `github/${item.repo}` });
@@ -2173,7 +2193,7 @@ async function fetchResources() {
       console.error(`[collect] github/${item.repo} 失败：${e.message}`);
       out.push({ ...row, status: 'error' });
     }
-    await new Promise((r) => setTimeout(r, 90));
+    await sleep(90);
   }
   // 按人工排序（谁更值得先看），不按星数
   return out;
@@ -2316,7 +2336,8 @@ const HN_API = 'https://hn.algolia.com/api/v1/search';
 
 async function fetchHNSignal(names) {
   const out = [];
-  for (const name of names) {
+  const list = TEST_PROFILE ? names.slice(0, 2) : names;
+  for (const name of list) {
     if (!name || name.length < 4) continue;   // 太短的词没有区分度
     try {
       // 只搜标题，避免 API/Raspberry Pi 这类词把无关帖算进来
@@ -2338,7 +2359,7 @@ async function fetchHNSignal(names) {
         topComments: top?.num_comments || 0,
         topUrl: top?.url || (top?.objectID ? `https://news.ycombinator.com/item?id=${top.objectID}` : ''),
       });
-      await new Promise((r) => setTimeout(r, 120));  // 对公共接口客气一点
+      await sleep(120);  // 对公共接口客气一点
     } catch { /* 单个失败不影响整体 */ }
   }
   return out.sort((a, b) => b.heat - a.heat);
@@ -2358,7 +2379,7 @@ function makeTracker() {
      *  @param {Function} run 返回 Promise<{value:any, valid?:boolean}>
      *  valid 显式覆盖「非空」判定（值本身是对象、空对象也算空时用） */
     async run(layer, run, prevValue) {
-      const started = Date.now();
+      const started = mark();
       let value = null;
       let error = null;
       let valid = null;
@@ -2384,15 +2405,15 @@ function makeTracker() {
       const prevN = size(prevValue);
 
       if (n > 0) {
-        log.push({ layer, status: 'fresh', n, ms: Date.now() - started });
+        log.push({ layer, status: 'fresh', n, ms: since(started) });
         return value;
       }
       if (prevN > 0) {
-        log.push({ layer, status: 'stale', n: 0, prev: prevN, ms: Date.now() - started, error });
+        log.push({ layer, status: 'stale', n: 0, prev: prevN, ms: since(started), error });
         console.warn(`[collect] ${layer} 本次为空${error ? `（${error}）` : ''}，沿用上一版 ${prevN} 条`);
         return prevValue;
       }
-      log.push({ layer, status: 'failed', n: 0, ms: Date.now() - started, error });
+      log.push({ layer, status: 'failed', n: 0, ms: since(started), error });
       console.error(`[collect] ${layer} 本次为空且无上一版${error ? `（${error}）` : ''}`);
       return value;
     },
@@ -2410,7 +2431,10 @@ async function main() {
   // 并行拉取，每层独立记账；失败不互相拖累
   const [devpost, aios, luma, devfolio, aibijia, resources, openrouter, aaModels] = await Promise.all([
     T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
-    T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
+    // AIOS 读仓库外的本机文件，内容不在版本控制里：测试档位跳过，保证回放输出确定
+    TEST_PROFILE
+      ? Promise.resolve([])
+      : T.run('aios', async () => ({ value: await fetchAios() }), prev?.events?.filter((e) => e.source === 'AIOS')),
     T.run('luma', async () => ({ value: await fetchLuma() }), prev?.events?.filter((e) => e.source === 'Luma')),
     // Devfolio 是补充源，只有 9 条：失败不能拖累整体，同样走 T.run 记账。
     // 注意它没有上一版可比（首次上线），所以首跑 failed 也是合法的 —— health 里设成可选源即可。
@@ -2470,7 +2494,7 @@ async function main() {
     conf: r.conf || 'high',
     cm: r.cm || '官方页未说明',
     note: r.note || '',
-    seen: new Date().toISOString().slice(0, 10),
+    seen: todayISO(),
   }));
 
   const createdByFamily = new Map();
@@ -2492,9 +2516,17 @@ async function main() {
   const signals = [...new Map(SIGNALS.map((s) => [s.url, s])).values()]
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
 
-  const models = modelsDedup.rows.sort((a, b) => (a.input ?? 9e9) - (b.input ?? 9e9));
+  // 主键 input 升序；次级键保证同一价位的行顺序稳定（INV-7：输出必须确定）
+  const models = modelsDedup.rows.slice().sort((a, b) => {
+    const d = (a.input ?? 9e9) - (b.input ?? 9e9);
+    if (d !== 0) return d;
+    const ka = `${a.channelKind}::${a.id}::${a.channel}`;
+    const kb = `${b.channelKind}::${b.id}::${b.channel}`;
+    return ka < kb ? -1 : ka > kb ? 1 : 0;
+  });
 
-  const probed = await probeAll(RELAYS);
+  const relaysToProbe = TEST_PROFILE ? RELAYS.slice(0, 3) : RELAYS;
+  const probed = await probeAll(relaysToProbe);
   const prevRelays = new Map((prev?.relays || []).map((r) => [r.domain, r]));
 
   // 官方参考价（direct 渠道），用来给每一列算「对官方 %」
@@ -2639,7 +2671,7 @@ async function main() {
     requests: netStat.requests,
     blocked: netStat.blocked,
     maxCooldownMs: netStat.maxCooldownMs,
-    lumaCities: EV_LUMA_CITIES.length,
+    lumaCities: LUMA_CITIES.length,
     lumaGeoBudgetMs: EV_LUMA_GEO_BUDGET_MS,
   };
   const eventsOpen = allEvents.filter((e) => e.status === 'open' || e.status === 'upcoming').length;
@@ -2648,12 +2680,13 @@ async function main() {
 
   const data = {
     meta: {
-      generated_at: new Date().toISOString(),
-      date: new Date().toISOString().slice(0, 10),
+      generated_at: nowISO(),
+      date: todayISO(),
       brand: 'IndexAI',
       fx,
       net: netMeta,
-      collect: T.log,
+      // 按层 id 排序：并行采集的完成顺序不稳定，输出必须确定（INV-7）
+      collect: T.log.slice().sort((a, b) => (a.layer < b.layer ? -1 : a.layer > b.layer ? 1 : 0)),
       counts: {
         models: models.length,
         aggregator: models.filter((m) => m.channelKind === 'aggregator').length,
@@ -2703,7 +2736,8 @@ async function main() {
     aaModels,
     hnSignals,
     relays,
-    events: allEvents,
+    // 场次型输出按 id 排序：多源并行的完成顺序不稳定，输出必须确定（INV-7）
+    events: allEvents.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)),
     bench,
     signals,
     sources: [...srcMap.values()].sort((a, b) => b.refs - a.refs),

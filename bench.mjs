@@ -22,7 +22,10 @@ const HF = 'https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset/resol
 
 /* ─────────────── 通用工具 ─────────────── */
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+import { now, nowISO, todayISO, sleep } from './lib/clock.js';
+
+/** 测试档位：缩小迭代集合，生产默认不变（见 UPGRADE_PLAN T0.4）。 */
+const TEST_PROFILE = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
 
 async function fetchText(url, { tries = 3, timeout = 45000, headers = UA } = {}) {
   let lastErr;
@@ -153,7 +156,8 @@ async function fetchArenaBoards() {
   const failed = [];
 
   // 串行下载：24 个文件总计 1.7MB，逐个来最稳，也不给 CDN 添乱
-  for (const b of ARENA_BOARDS) {
+  const boards = TEST_PROFILE ? ARENA_BOARDS.slice(0, 2) : ARENA_BOARDS;
+  for (const b of boards) {
     const url = `${HF}/${b.cfg}/latest-00000-of-00001.parquet`;
     try {
       const buf = await fetchBuffer(url);
@@ -452,7 +456,7 @@ async function fetchTauBench() {
   const slugs = items
     .map((x) => (typeof x === 'string' ? x : x.slug || x.name || x.path))
     .filter(Boolean)
-    .slice(0, 40);
+    .slice(0, TEST_PROFILE ? 3 : 40);
   if (!slugs.length) throw new Error('manifest 结构不明');
 
   const rows = [];
@@ -718,7 +722,7 @@ async function fetchAA() {
 
   const models = JSON.parse(json);
   if (!Array.isArray(models) || !models.length) throw new Error('不是数组');
-  const fetchedAt = new Date().toISOString().slice(0, 10);
+  const fetchedAt = todayISO();
 
   // 同一模型的多档位合并（AA 的 name 里带 "(max with fallback)" 这类尾巴）
   const cleanName = (m) => {
@@ -862,7 +866,7 @@ export async function fetchBenchmarks(prev) {
 
   // 相对采集时间，超过 6 个月没更新的榜标记为「陈旧」，页面上要显式提示，
   // 不然读者会把一年前的分数当成现在的能力。
-  const today = new Date();
+  const today = now();
   const monthsOld = (iso) => {
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
     const d = new Date(iso + 'T00:00:00Z');
@@ -907,7 +911,7 @@ export async function fetchBenchmarks(prev) {
   const updates = boardList.map((b) => b.updated).filter(Boolean).sort();
 
   return {
-    as_of: new Date().toISOString().slice(0, 10),
+    as_of: todayISO(),
     latest: updates[updates.length - 1] || null,
     groups: GROUPS,
     sources,

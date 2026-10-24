@@ -14,14 +14,25 @@
 | `npm run invariants` | 架构适应度检查；R1 已启用 | 可用 |
 | `npm run verify` | lint → typecheck → invariants → test，提交前必须全过 | 可用 |
 | `npm test` | 离线回放的 unit、golden、contract 测试 | 可用 |
-| `npm run record` | 测试档位真实请求一遍，写 `fixtures/http/` | T0.4 起 |
-| `npm run golden:update` | 重写 golden，提交信息写明差异来源 | T0.4 起 |
+| `npm run record` | 测试档位真实请求一遍，写 `fixtures/http/` | 可用 |
+| `npm run golden:update` | 重写 golden，提交信息写明差异来源 | 可用 |
 | `npm run build` | 用 `fixtures/data/` 生成 `dist/`；`-- --data .` 用本机真实数据 | T0.5 起 |
 | `npm run test:e2e` | Playwright（只有 Chromium：`npx playwright install chromium`） | T0.5 起 |
 
 某个命令落地后，把它的「可用于」改成「可用」；M0 结束时删掉这一列。
 
 Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PATH=~/.local/node/node-v24.11.0-darwin-arm64/bin:$PATH`。
+
+## 环境变量（测试与 golden）
+
+| 变量 | 作用 |
+|---|---|
+| `INDEXAI_HTTP` | `replay` 时 fetch 改读 `fixtures/http/`，睡眠立即返回；`record` 时真实请求并落盘 |
+| `INDEXAI_NOW` | 固定当前时刻（ISO 8601），让输出可复现 |
+| `INDEXAI_PROFILE` | `test` 缩小迭代集合（Luma 2 词 1 城、Devpost 2 页、中间站 3 个、HN 2 词、LMArena 2 榜、τ-bench 3 提交） |
+| `INDEXAI_OUT_DIR` | 输出目录，默认仓库根；golden 用它写临时目录 |
+| `ALLOW_DEGRADED` | `1` 时门禁未过也继续写盘（只给测试档位用） |
+| `INDEXAI_FIXTURE_ROOT` | 覆盖回放数据目录（测试用临时目录时设它） |
 
 ## 目录
 

@@ -16,6 +16,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
+import { now, todayISO } from './lib/clock.js';
 
 const DATA = new URL('./data.json', import.meta.url);
 const HISTORY = new URL('./news-history.json', import.meta.url);
@@ -84,7 +85,7 @@ function semanticChecks(d) {
   const warn = (k, msg) => issues.push({ level: 'warn', key: k, msg });
 
   // 1. 活动：status 为 open/upcoming 的，不能已经过了 end 日期
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const ev = Array.isArray(d.events) ? d.events : [];
   const deadOpen = ev.filter((e) => e.status !== 'past' && e.end && e.end < today);
   if (deadOpen.length) red('events', `${deadOpen.length} 个活动标着「开放中」但截止日期已过（最早 ${deadOpen[0].end}：${deadOpen[0].title}）`);
@@ -133,7 +134,7 @@ function semanticChecks(d) {
   const gen = Date.parse(d.meta?.generated_at || '');
   if (!Number.isFinite(gen)) red('meta', 'generated_at 缺失或无法解析');
   else {
-    const ageH = (Date.now() - gen) / 3600000;
+    const ageH = (now().getTime() - gen) / 3600000;
     if (ageH < -1) red('meta', `generated_at 在未来（${d.meta.generated_at}）`);
     else if (ageH > 48) red('meta', `数据已 ${ageH.toFixed(1)} 小时未更新`);
     else if (ageH > 30) issues.push({ level: 'warn', key: 'meta', msg: `数据已 ${ageH.toFixed(1)} 小时未更新，接近日更上限` });

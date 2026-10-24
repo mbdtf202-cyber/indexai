@@ -17,7 +17,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** 各条规则的启用状态。到了任务就打开，之后永远开着。 */
 export const ENABLED = {
   R1: true, // T0.1
-  R9: true, // T0.2 起包含 fixtures/http；T0.4、T0.5 再扩到 golden 与 data
+  R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 再扩到 fixtures/data
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */

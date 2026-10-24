@@ -180,14 +180,16 @@ export function installReplay() {
   globalThis.fetch = replayFetch;
 }
 
-// 只在被显式要求时安装。被其他模块 import 不得改变 globalThis.fetch，
-// 否则测试里的真实请求会被悄悄换成回放（T0.2 踩过）。
-//   node --import ./test/support/http-replay.js ...   → argv[1] 是本文件
-//   INDEXAI_REPLAY=1                                   → 显式打开
-if (process.env.INDEXAI_REPLAY === '1' || isPreload()) {
+/**
+ * 只在「回放模式」下自动安装。
+ *
+ * 判据是 `INDEXAI_HTTP=replay` —— 这与 lib/clock.js 用的是同一个信号，
+ * 也正是不变量 INV-7 要求的「测试强制回放」。不靠 argv 猜预加载，
+ * 因为 `node --import <模块>` 时 argv[1] 是被执行脚本，不是本文件（T0.4 踩过）。
+ *
+ * 被其他模块 import 时也不改变 globalThis.fetch：只有 replay 模式才装，
+ * 否则 T0.2 的往返测试里真实请求会被悄悄换成回放。
+ */
+if (String(process.env.INDEXAI_HTTP || '').toLowerCase() === 'replay') {
   installReplay();
-}
-
-function isPreload() {
-  return Boolean(process.argv[1] && process.argv[1].endsWith('http-replay.js'));
 }
