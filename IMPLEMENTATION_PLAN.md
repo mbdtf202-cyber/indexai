@@ -40,6 +40,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 - [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
 - [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N07（来自 T1.4）：`httpText` 返回的是 `{status, ok, url, text}` 而不是 `Response`，迁移时两处调用点还写着 `await res.text()`，`openrouter` 与 `aa` 两层当场变成 `failed`。这类形状差异在纯 JS 里没有编译期保护，靠 golden 与 R2a 之外还需要 contract 测试（S1.4 已有该档）。去向：T1.6 之后补 contract 用例，或在 T3.1 拆层时让每层只通过 `ctx.http` 取值。
 - [ ] N06（来自 T1.3）：`npm test` 之前在非回放环境下会真的睡眠（Luma 冷却 180s 实测），现在由脚本自己钉死回放信号。任何新增用例都不要再依赖「外面传了环境变量」。去向：已修，AGENTS.md 记一条。
 - [ ] N04（来自 T1.2）：HF 上 LMArena 的 `latest-00000-of-00001.parquet` 在两个回放 fixture 里都解析失败（一层 Thrift 里没读出任何列，一层报 `unsupported value type 15`）。`text` 配置报 `numRows 1`，是覆盖 `model_name` 列的那层。这不是本轮引入的：T0.4 的 golden 里 arena 一直是 0 榜、`ok:false`。导致「LMArena 贡献 137/163 个榜」这件事在离线环境里完全无法验证（F03 的实例数据也因此只能来自线上）。去向：需要重新录制一份能解析的 parquet（`npm run record`）并补 golden，建议并入 T6.8（τ-bench 一并处理）或单开任务。
 - [ ] N05（来自 T1.2）：`INDEXAI_ARENA_BOARDS` 是为测试新增的环境变量，与 S1.3 的「命令随任务落地逐步加入」不冲突，但它是第二套「缩小迭代集合」的机制。M3 拆层时应与 `INDEXAI_PROFILE` 合并成一个 `ctx.profile`。去向：T3.1。
@@ -221,7 +222,7 @@ golden 差异（4 处，全部是新增字段）：`$.meta.net.lumaBlocked / lum
 
 耗时：`npm test` 60s → **1.1s**；`npm run verify` 全流程 **12s**（S1.3 目标是 3 分钟内）。
 
-### [ ] T1.4 统一超时
+### [x] T1.4 统一超时
 
 依据：F05 · 依赖：T0.4
 
@@ -232,6 +233,27 @@ golden 差异（4 处，全部是新增字段）：`$.meta.net.lumaBlocked / lum
 4. 用例：故障注入「永不返回」，把超时调小，验证该层变 stale 而不是挂住。
 
 验收：R2a 通过；用例通过；golden 的差异只在 `meta.net` 新增的记账字段。
+
+结果：新增 `lib/http.js`（`httpGet` / `httpText` / `httpJson` / `httpBuffer` + `httpStats` / `httpTotals` / `resetHttpStats` / `assertHttpUrl`）与 `test/unit/http-client.test.js`（11 项，全绿）。
+
+能力（S2.1 全量）：
+
+- 每个请求必有超时，默认 60 秒；与调用方给的 `deadline` 取更紧的那个，已过截止时间直接抛错不发请求。
+- 重试只对网络错误与 408 / 429 / 5xx，指数退避加抖动、封顶 8 秒，**遵守 `Retry-After`**（秒数或 HTTP 日期都认）。4xx（非 408/429）是终态，原样交回调用方判断——这条把「一行坏数据整站拒发」的可能性从根上去掉了。
+- **手动跟重定向**（最多 5 跳）：不用 `redirect: 'follow'`，因为那样拿不到中间 Location，也就没法拒掉 `ftp://` 之类的跳转目标（INV-14）。每一跳都过 `assertHttpUrl`。
+- 统一 UA：`IndexAI/<version> (+homepage)`，版本与首页地址都从 `package.json` 读（D4、S9.9 的单一来源）。
+- 按主机记账：请求数、字节、状态码分布、重试次数、被限流次数、累计等待。读正文时通过包装过的 `text/json/arrayBuffer` 累加字节，不读内容就不记流量。
+
+迁移与删除：
+
+- `collect.mjs`：`fetchRetry` 整个删掉（重试/退避/记账已并入客户端）；`devpostPage` / `devfolioPage` / `aibijia` / `frontline` / `aihot` / `fx` / `lumaGet` / `probeRelay` 全部改走统一出口；`probeRelay` 的 `AbortController` + `clearTimeout` 也删了（超时由客户端负责），超时判定改为认 `TimeoutError`。
+- `lumaGet` 用 `tries: 1`：429 的退避必须由 T1.3 的冷却闸自己管，客户端再自动重试只会把封禁往后推。
+- `bench.mjs`：`fetchText` / `fetchBuffer` 变成客户端薄封装（签名与各源的 tries/timeout 数值不变），`fetchAA` 的裸 fetch 改走 `httpText`。
+- `meta.net.http` 新增 `httpTotals()`：主机数、请求数、字节、重试、被限流次数、累计等待。
+
+R2a 已启用，并且**立刻抓出 bench.mjs 里还剩下的 3 处 `fetch(`**——规则不是形式主义，这次是真接线。
+
+golden 差异（1 处，新增字段）：`$.meta.net.http`。测试档位下的账目是 21 个主机 / 40 次请求 / 11.3 MB / 0 次重试 / 0 次限流。其它所有字节不变，说明迁移是行为等价的。
 
 ### [ ] T1.5 模型目录纳入记账
 

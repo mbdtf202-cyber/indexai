@@ -49,7 +49,9 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 - 只在 `ralph/work` 分支工作；一轮一个任务；提交信息以任务编号开头
 - 不部署，不运行 wrangler 的发布与登录命令，不读密钥，不写 data 分支
 - 测试一律离线回放；需要真实响应就用录制工具，每个上游每天最多录一次，不跑真实采集
-- 网络只走 `lib/http.js`（T1.4 起），时间与睡眠只走 `lib/clock.js`（T0.4 起）
+- 网络只走 `lib/http.js`，时间与睡眠只走 `lib/clock.js`（两者都由 R2a/R2b 把关）
+- `lib/http.js` 返回的是响应对象：`httpText` 给 `{status, ok, url, text}`，`httpJson` 直接给对象，`httpBuffer` 给 Buffer；
+  要读正文就别再写 `await res.text()`
 - UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:collect.mjs`
 
 ## 已知坑

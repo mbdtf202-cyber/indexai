@@ -16,6 +16,7 @@
  */
 
 import { readParquet } from './lib/parquet.mjs';
+import { httpGet, httpText, httpBuffer } from './lib/http.js';
 
 const UA = { 'User-Agent': 'IndexAI/1.0 (+https://indexai.pages.dev)' };
 const HF = 'https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset/resolve/main';
@@ -38,42 +39,23 @@ import { now, nowISO, todayISO, sleep } from './lib/clock.js';
 /** 测试档位：缩小迭代集合，生产默认不变（见 UPGRADE_PLAN T0.4）。 */
 const TEST_PROFILE = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
 
+/**
+ * 取文本。超时、重试、限速、记账都交给 lib/http.js（S2.1）：
+ * 这里只保留各源原本的 tries / timeout 数值，行为不变但终于有了默认边界。
+ */
 async function fetchText(url, { tries = 3, timeout = 45000, headers = UA } = {}) {
-  let lastErr;
-  for (let i = 0; i < tries; i++) {
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), timeout);
-      const res = await fetch(url, { headers, signal: ctl.signal, redirect: 'follow' });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.text();
-    } catch (e) {
-      lastErr = e;
-      if (i < tries - 1) await sleep(1200 * (i + 1));
-    }
-  }
-  throw new Error(`${url.split('/')[2]}: ${lastErr?.message || 'fetch failed'}`);
+  const res = await httpText(url, { tries, timeoutMs: timeout, headers, label: url.split('/')[2] });
+  if (!res.ok) throw new Error(`${url.split('/')[2]}: HTTP ${res.status}`);
+  return res.text;
 }
 
-/** 供测试直接校验回放路径（T1.2 的 HF fixture 命中）。 */
+/** 取二进制（parquet）。同上，出口统一。 */
 export async function fetchBuffer(url, opt = {}) {
-  let lastErr;
-  const tries = opt.tries ?? 3;
-  for (let i = 0; i < tries; i++) {
-    try {
-      const ctl = new AbortController();
-      const timer = setTimeout(() => ctl.abort(), opt.timeout ?? 90000);
-      const res = await fetch(url, { headers: UA, signal: ctl.signal, redirect: 'follow' });
-      clearTimeout(timer);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return Buffer.from(await res.arrayBuffer());
-    } catch (e) {
-      lastErr = e;
-      if (i < tries - 1) await sleep(1500 * (i + 1));
-    }
-  }
-  throw new Error(`${url.split('/')[2]}: ${lastErr?.message || 'fetch failed'}`);
+  return httpBuffer(url, {
+    tries: opt.tries ?? 3,
+    timeoutMs: opt.timeout ?? 90000,
+    label: url.split('/')[2],
+  });
 }
 
 // 把 "Claude Opus 5.5 (Max)" 拆成 基名 + 推理档位
@@ -745,11 +727,12 @@ const AA_METRICS = [
 
 async function fetchAA() {
   // 加 RSC 头拿到 3 倍小的 flight 负载，且 initialModels 是可直接 parse 的 JSON
-  const res = await fetch('https://artificialanalysis.ai/leaderboards/models?_rsc=indexai', {
+  const res = await httpText('https://artificialanalysis.ai/leaderboards/models?_rsc=indexai', {
     headers: { ...UA, RSC: '1' },
+    label: 'aa-rsc',
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
+  const text = res.text;
 
   const at = text.indexOf('initialModels');
   if (at < 0) throw new Error('RSC 里没有 initialModels');

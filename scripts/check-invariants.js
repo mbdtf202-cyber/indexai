@@ -18,6 +18,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const ENABLED = {
   R1: true, // T0.1
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
+  R2a: true, // T1.4
   R12: true, // T0.6
 };
 
@@ -155,6 +156,53 @@ function checkR9() {
 }
 
 /**
+ * R2a：采集端（collect.mjs / bench.mjs / health.mjs / lib/*.js）的 `fetch(`
+ * 只出现在 `lib/http.js`。
+ *
+ * 理由（S2.1、INV-8）：超时、重试、限速、记账都收在那一个出口里。
+ * 任何一处绕过它，就等于多一个「没有超时」的漏洞 —— F05 就是这么来的。
+ * 浏览器端另有 R2c，规则不同，不要混。
+ */
+function checkR2a() {
+  const targets = ['collect.mjs', 'bench.mjs', 'health.mjs'];
+  const dirs = ['lib', 'pipeline'];
+  const files = [];
+  for (const name of targets) {
+    try {
+      statSync(join(ROOT, name));
+      files.push(name);
+    } catch {
+      // 文件可能已迁移到 pipeline/，不存在就跳过
+    }
+  }
+  for (const dir of dirs) {
+    try {
+      for (const f of collectFiles(join(ROOT, dir))) files.push(relative(ROOT, f));
+    } catch {
+      // 目录还不存在
+    }
+  }
+
+  const violations = [];
+  for (const rel of files) {
+    // 回放/录制层是「替换 fetch」这件事本身，不是调用方
+    if (/^test\//.test(rel) || rel === join('lib', 'http.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 去掉行注释与块注释的粗略处理：够用，误报比漏报便宜
+      const code = line.replace(/\/\/.*$/, '');
+      if (/\bfetch\s*\(/.test(code)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R2a 违反：采集端 fetch( 只能出现在 lib/http.js',
+        });
+      }
+    });
+  }
+  return violations;
+}
+
+/**
  * R12：工作流里的 `uses:` 全部是 40 位 SHA；不出现 `npx --yes`、Node 20。
  * 浮动的主版本标签会静默换实现，`npx --yes` 会从网络拉未锁定版本，
  * Node 20 已于 2026-04-30 停止维护 —— 三者都是供应链与可复现的漏洞。
@@ -208,6 +256,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R2a',
+    description: '采集端 fetch( 只在 lib/http.js',
+    check: checkR2a,
   },
   {
     id: 'R12',

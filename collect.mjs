@@ -13,6 +13,7 @@
  */
 
 import { writeFile, readFile } from 'node:fs/promises';
+import { httpGet, httpJson, httpText, httpTotals } from './lib/http.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
@@ -693,15 +694,10 @@ export function parseJsonLoose(text) {
 
 async function probeRelay(entry) {
   const url = `https://${entry.domain}/api/pricing`;
-  const ac = new AbortController();
-  const t = setTimeout(() => ac.abort(), 9000);
   try {
-    // 部分站 /api/pricing 301 到另一个域（如 aigcbest → api2.aigcbest.top），
-    // 不跟随就会把它们误判成 http_404 或 unreachable。
-    const res = await fetchRetry(url, {
-      signal: ac.signal, redirect: 'follow',
-      headers: { 'User-Agent': 'IndexAI/1.0 (+https://indexai.pages.dev)', Accept: 'application/json' },
-    }, { tries: 2, baseMs: 300, label: `relay/${entry.domain}` });
+    // 部分站 /api/pricing 301 到另一个域（如 aigcbest → api2.aigcbest.top）：
+    // 跟随由 lib/http.js 负责，且每一跳都过协议校验（INV-14）。
+    const res = await httpGet(url, { timeoutMs: 9000, tries: 2, backoffMs: 300, label: `relay/${entry.domain}` });
     if (!res.ok) return { ...entry, status: `http_${res.status}`, url };
     const text = await res.text();
     const j = parseJsonLoose(text);
@@ -789,8 +785,10 @@ async function probeRelay(entry) {
       checked_at: todayISO(),
     };
   } catch (e) {
-    return { ...entry, status: e.name === 'AbortError' ? 'timeout' : 'unreachable', url };
-  } finally { clearTimeout(t); }
+    // 超时由 lib/http.js 统一转换：TimeoutError 直接标 timeout，其余算 unreachable
+    const timedOut = e.name === 'TimeoutError' || e.name === 'AbortError' || /超时/.test(e.message || '');
+    return { ...entry, status: timedOut ? 'timeout' : 'unreachable', url };
+  }
 }
 
 /**
@@ -896,8 +894,7 @@ async function probeAll(entries) {
 /* ────────────────────────── 6. 汇率 ────────────────────────── */
 async function fetchFx(prev) {
   try {
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    const j = await res.json();
+    const j = await httpJson('https://open.er-api.com/v6/latest/USD', { label: 'fx', tries: 2 });
     const rate = j?.rates?.CNY;
     if (!rate) throw new Error('no CNY');
     return { USDCNY: Number(rate.toFixed(4)), as_of: (j.time_last_update_utc || '').slice(0, 16), source: 'open.er-api.com', fetched_at: nowISO() };
@@ -1051,9 +1048,7 @@ const EV_DEVPOST_MAX_PAGES = TEST_PROFILE ? 2 : 40;
 async function devpostPage(status, page, attempt = 0) {
   const url = `https://devpost.com/api/hackathons?status[]=${status}&limit=24&page=${page}`;
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    return await httpJson(url, { label: `devpost/${status}/p${page}` });
   } catch (e) {
     // 翻到深页偶发 5xx/超时，退避重试一次，别把整页数据丢掉
     if (attempt < 2) {
@@ -1326,7 +1321,9 @@ async function lumaGet(q, geo, opt = {}) {
     if (gap) await lumaSleep(gap);           // 请求前睡，保证任意两次之间都有间隔
     try {
       netStat.requests += 1;
-      const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
+      // tries: 1：429 的退避由本函数按 Luma 的实测冷却曲线处理，
+      // 客户端再自动重试只会把封禁时间往后推（见上方限速注释）。
+      const res = await httpGet(url, { tries: 1, deadline: geoStart ? geoStart + EV_LUMA_GEO_BUDGET_MS : undefined, label: `luma/${q}` });
       if (res.status === 429 || res.status === 403) {
         // 429/403 是封禁信号，不是「这个查询没结果」。冷却后重试，不能当空数组吃下去。
         netStat.blocked += 1;
@@ -1510,9 +1507,7 @@ async function devfolioPage(page, attempt = 0) {
   const url = `${DV_API}?page=${page}&limit=${DV_LIMIT}`;
   try {
     netStat.requests += 1;
-    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0', Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return await res.json();
+    return await httpJson(url, { label: `devfolio/p${page}` });
   } catch (e) {
     if (attempt < 2) {
       await sleep(400 * (attempt + 1));
@@ -1849,7 +1844,7 @@ const AIBIJIA_APPLE = 'https://data.aibijia.org/apple_subscriptions.json';
 async function fetchAibijia() {
   const get = async (u) => {
     try {
-      const r = await fetch(u, { headers: { 'User-Agent': 'IndexAI/1.0' } });
+      const r = await httpGet(u, { label: 'aibijia' });
       if (!r.ok) {
         console.error(`[collect] aibijia ${u} → HTTP ${r.status}`);
         return null;
@@ -1960,9 +1955,9 @@ function toRow(x) {
 /** 官方精选：每天约 50 条，摘要最全，优先用它 */
 async function fetchFrontline(log) {
   try {
-    const res = await fetch(NEWS_FEED, { headers: { 'User-Agent': 'IndexAI/1.0' }, signal: AbortSignal.timeout(30000) });
+    const res = await httpText(NEWS_FEED, { label: 'news/frontline' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rows = parseNewsYaml(await res.text());
+    const rows = parseNewsYaml(res.text);
     log?.(`frontline ${rows.length} 条`);
     return rows;
   } catch (e) {
@@ -1994,7 +1989,7 @@ async function fetchAihotBulk(log) {
       if (cursor) url.searchParams.set('cursor', cursor);
       let d;
       try {
-        const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' }, signal: AbortSignal.timeout(30000) });
+        const res = await httpGet(url, { label: `news/aihot${cat ? `/${cat}` : ''}` });
         requests += 1;
         if (!res.ok) break;
         d = await res.json();
@@ -2119,9 +2114,8 @@ async function fetchAios() {
 async function fetchBench(prev) {
   const url = 'https://www.vals.ai/benchmarks/vals_index';
   try {
-    const res = await fetch(url, { headers: { 'User-Agent': 'IndexAI/1.0' } });
-    const html = await res.text();
-    const text = html.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ')
+    const res = await httpText(url, { label: 'vals-index' });
+    const text = res.text.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<style[\s\S]*?<\/style>/g, ' ')
       .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
     const asOf = (text.match(/Updated (\d{2}\/\d{2}\/\d{4})/) || text.match(/As of ([A-Z][a-z]+ \d+, \d{4})/) || [])[1] || null;
     const re = /(\d{1,2})\s+([A-Z][A-Za-z0-9.+\- ]{2,36}?)\s+(\d{2}\.\d{2})%/g;
@@ -2217,31 +2211,6 @@ const KIND_LABEL = { skill: 'Skill', mcp: 'MCP', tool: '工具', list: '清单' 
  * 指数退避 + 抖动，只对「值得重试」的状态码重试（4xx 里除 408/429 之外都是确定性失败，不重试）。
  * 这解决过一个真实问题：fetchResources 串行打 21 个 GitHub 仓库，偶尔限流掉几个就跌破健康红线，
  * 整轮采集白跑。 */
-async function fetchRetry(url, opts = {}, { tries = 3, baseMs = 500, label = '' } = {}) {
-  let lastErr = null;
-  for (let i = 0; i < tries; i++) {
-    try {
-      const res = await fetch(url, opts);
-      const retryable = res.status >= 500 || res.status === 429 || res.status === 408;
-      if (res.ok || !retryable) return res;
-      lastErr = new Error(`HTTP ${res.status}`);
-      if (i < tries - 1) {
-        const wait = baseMs * 2 ** i + Math.random() * 250;
-        if (label) console.warn(`[collect] ${label} HTTP ${res.status}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
-        await sleep(wait);
-      }
-    } catch (e) {
-      lastErr = e;
-      if (i < tries - 1) {
-        const wait = baseMs * 2 ** i + Math.random() * 250;
-        if (label) console.warn(`[collect] ${label} ${e.message}，${Math.round(wait)}ms 后重试（${i + 1}/${tries}）`);
-        await sleep(wait);
-        continue;
-      }
-    }
-  }
-  throw lastErr || new Error('fetch failed');
-}
 
 async function fetchResources() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
@@ -2252,7 +2221,7 @@ async function fetchResources() {
   for (const item of (TEST_PROFILE ? CURATED_RESOURCES.slice(0, 3) : CURATED_RESOURCES)) {
     const row = { ...item, useLabel: USE_LABEL[item.use] || item.use };
     try {
-      const res = await fetchRetry(`https://api.github.com/repos/${item.repo}`, { headers }, { label: `github/${item.repo}` });
+      const res = await httpGet(`https://api.github.com/repos/${item.repo}`, { headers, label: `github/${item.repo}` });
       if (!res.ok) {
         console.error(`[collect] github/${item.repo} → HTTP ${res.status}`);
         out.push({ ...row, status: `http_${res.status}` });
@@ -2335,12 +2304,12 @@ export function parseOpenRouter(html) {
 
 async function fetchOpenRouter() {
   try {
-    const res = await fetchRetry(OPENROUTER_RANKINGS, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'openrouter-rankings' });
+    const res = await httpText(OPENROUTER_RANKINGS, { label: 'openrouter-rankings' });
     if (!res.ok) {
       console.error(`[collect] openrouter rankings HTTP ${res.status}`);
       return { apps: [], models: [] };
     }
-    const html = await res.text();
+    const html = res.text;
     if (html.length < 10000) {
       console.error(`[collect] openrouter rankings 页面过短（${html.length}），可能被拦`);
       return { apps: [], models: [] };
@@ -2394,12 +2363,12 @@ function parseAA(html) {
 
 async function fetchAA() {
   try {
-    const res = await fetchRetry(AA_URL, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'artificialanalysis' });
+    const res = await httpText(AA_URL, { label: 'artificialanalysis' });
     if (!res.ok) {
       console.error(`[collect] artificialanalysis HTTP ${res.status}`);
       return [];
     }
-    const html = await res.text();
+    const html = res.text;
     if (html.length < 50000) {
       console.error(`[collect] artificialanalysis 页面过短（${html.length}），可能被拦`);
       return [];
@@ -2425,7 +2394,7 @@ async function fetchHNSignal(names) {
     try {
       // 只搜标题，避免 API/Raspberry Pi 这类词把无关帖算进来
       const url = `${HN_API}?query=${encodeURIComponent('"' + name + '"')}&tags=story&hitsPerPage=30&restrictSearchableAttributes=title`;
-      const res = await fetchRetry(url, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { tries: 2, label: `hn/${name}` });
+      const res = await httpGet(url, { tries: 2, label: `hn/${name}` });
       if (!res.ok) continue;
       const j = await res.json();
       const hits = j.hits || [];
@@ -2554,7 +2523,7 @@ async function main() {
     return { value: b.stats.boards ? b : (prevBench || b) };
   }, benchPrevMarker);
 
-  const res = await fetchRetry(OPENROUTER, { headers: { 'User-Agent': 'IndexAI/1.0' } }, { label: 'openrouter-models' });
+  const res = await httpGet(OPENROUTER, { label: 'openrouter-models' });
   if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
   const payload = await res.json();
 
@@ -2758,6 +2727,9 @@ async function main() {
   // 从 meta.net.blocked 抬升 + Luma 条数下降就能立刻看出是限速而不是源没数据。
   // 放在 meta 顶层而不是塞进某一个层，因为 Devfolio 也用同一个计数器。
   const netMeta = {
+    // 统一 HTTP 客户端的账目（S2.1）：谁发了多少、多少字节、被限流几次、等多久。
+    // 这些数字回答「这次为什么慢/为什么少了」，是排障的第一现场。
+    http: httpTotals(),
     requests: netStat.requests,
     blocked: netStat.blocked,
     maxCooldownMs: netStat.maxCooldownMs,
