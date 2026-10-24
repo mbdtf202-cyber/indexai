@@ -6,17 +6,22 @@
 
 | 命令 | 作用 | 可用于 |
 |---|---|---|
-| `node collect.mjs` | 真实采集，约 9 分钟，覆盖 data.json、bench.json、news-archive.json。只在 CI 运行，Ralph 不运行 | 现在（T0.1 起为 `npm run collect`） |
-| `node health.mjs` | 体检 data.json，不达标退出码 1 | 现在 |
-| `npm ci` | 安装锁定的开发依赖 | T0.1 起 |
-| `npm run verify` | lint、类型、规则、测试（T0.5 起含构建与 e2e），提交前必须全过 | T0.1 起 |
-| `npm test` | 离线回放的 unit、golden、contract 测试 | T0.1 起 |
+| `npm run collect` | 真实采集，约 9 分钟，覆盖 data.json、bench.json、news-archive.json。只在 CI 运行，Ralph 不运行 | 可用 |
+| `node health.mjs` | 体检 data.json，不达标退出码 1 | 可用 |
+| `npm ci` | 安装锁定的开发依赖 | 可用 |
+| `npm run lint` | Biome 检查 JS / JSON / CSS | 可用 |
+| `npm run typecheck` | `tsc --noEmit`（仅 `lib/**`，JSDoc + `types/`） | 可用 |
+| `npm run invariants` | 架构适应度检查；R1 已启用 | 可用 |
+| `npm run verify` | lint → typecheck → invariants → test，提交前必须全过 | 可用 |
+| `npm test` | 离线回放的 unit、golden、contract 测试 | 可用 |
 | `npm run record` | 测试档位真实请求一遍，写 `fixtures/http/` | T0.4 起 |
 | `npm run golden:update` | 重写 golden，提交信息写明差异来源 | T0.4 起 |
 | `npm run build` | 用 `fixtures/data/` 生成 `dist/`；`-- --data .` 用本机真实数据 | T0.5 起 |
 | `npm run test:e2e` | Playwright（只有 Chromium：`npx playwright install chromium`） | T0.5 起 |
 
 某个命令落地后，把它的「可用于」改成「可用」；M0 结束时删掉这一列。
+
+Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PATH=~/.local/node/node-v24.11.0-darwin-arm64/bin:$PATH`。
 
 ## 目录
 

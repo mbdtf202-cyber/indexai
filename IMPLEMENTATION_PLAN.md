@@ -65,25 +65,16 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 退出条件：`npm run verify` 在本地与 CI 都通过；现有采集与页面行为被单元测试、golden、DOM 快照锁住。M0 期间不修任何缺陷，已知缺陷只写成带编号的 `todo` 用例。
 
-### [ ] T0.1 工具链骨架
+### [x] T0.1 工具链骨架
 
 依据：F54 · S1.1–S1.3 · 依赖：无
-
-步骤：
-1. 新建 `package.json`：`name: indexai`、`private: true`、`type: module`、`license: MIT`、`engines.node: ">=24"`、`homepage: "https://indexai.pages.dev/"`，不写 `dependencies`。
-2. `npm install -D -E typescript @types/node @biomejs/biome`，提交 `package-lock.json`。`.node-version` 写 `24`。
-3. `biome.jsonc`：lint 用 recommended；忽略数据文件（`data.json`、`bench.json`、`news-*.json`）、`fixtures/`、`dist/`、`node_modules/`。格式化只对新目录生效（`lib/`、`test/`、`scripts/`、`site/`、`pipeline/`）；根目录的旧 `.mjs` 与 `index.html` 暂不格式化，免得证据行号漂移。旧文件上报错的 lint 规则在 `overrides` 里只对旧文件关闭，注释写「T3.1e 恢复」。
-4. `tsconfig.json`：`allowJs`、`checkJs`、`noEmit`、`module` 与 `moduleResolution` 为 `nodenext`、`target: es2023`、`types: ["node"]`、`strict: false`，`include` 只含 `lib/**`。出现的类型错误用 JSDoc 修，不改行为。
-5. `scripts/check-invariants.js`：规则框架（每条规则有 id、说明、启用开关、检查函数，违例输出「文件:行 说明」，有违例即退出码 1），本任务启用 R1。
-6. `test/unit/news.test.js`：给 `lib/news.mjs` 的 `classifyNews`、`scoreNews`、`newsImportance` 写第一批用例，让测试命令有真实内容。
-7. 脚本：`lint`、`format`、`typecheck`、`invariants`、`test`（只跑 `test/unit`、`test/golden`、`test/contract` 下的 `*.test.js`）、`verify`（依次 lint → typecheck → invariants → test）、`collect`（`node collect.mjs`）。还没实现的命令不要写空壳。
-8. `.gitignore` 追加 `coverage/`。
-9. 更新 `AGENTS.md` 的命令表：标出已可用的命令。
 
 验收：
 - 干净检出上 `npm ci && npm run verify` 通过。
 - `node -e "process.exit(require('./package.json').dependencies ? 1 : 0)"` 退出码为 0。
 - 本任务的提交不改动 `collect.mjs`、`bench.mjs`、`health.mjs`、`index.html`。
+
+结果：新建 `package.json`（private、ESM、无 dependencies、devDeps 精确锁定 typescript 5.9.3 / @types/node 24.10.1 / @biomejs/biome 2.3.4）、`.node-version`＝24、`biome.jsonc`（旧 `.mjs` 与 `index.html` 的错误规则在 overrides 里关闭，待 T3.1e 恢复）、`tsconfig.json`（allowJs+checkJs，仅 lib/**，0 类型错误）、`scripts/check-invariants.js`（规则框架，启用 R1）、`test/unit/news.test.js`（22 通过 + 1 todo 记录 F26）、`.gitignore` 追加 `coverage/` 与 `.data/`。在 `/tmp` 模拟干净检出执行 `npm ci && npm run verify` 通过；`dependencies` 检查退出码 0；`git diff HEAD -- collect.mjs bench.mjs health.mjs index.html` 为空。本机原本只有 Node 22，已装 Node 24.11.0 到 `~/.local/node/` 用于验证。
 
 ### [ ] T0.2 回放与录制
 
