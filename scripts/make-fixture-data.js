@@ -219,7 +219,7 @@ const bench = load('bench.json');
 const archive = load('news-archive.json');
 let milestones = null;
 try {
-  milestones = load('news-milestones.json');
+  milestones = load('curated/milestones.json');
 } catch {
   milestones = null;
 }

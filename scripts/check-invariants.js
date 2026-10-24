@@ -328,7 +328,6 @@ const ROOT_WHITELIST = new Set([
   // 数据：只有人工维护的种子与归档进仓库
   'news-archive.json',
   'news-seed.json',
-  'news-milestones.json',
   // 本地预览（T3.1d 起迁到 scripts/serve.js）
   'serve.mjs',
   // 目录

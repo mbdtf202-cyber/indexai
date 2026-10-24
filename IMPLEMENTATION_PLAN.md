@@ -824,13 +824,31 @@ T2.1–T2.9 全部完成，**退出条件达成**：去向为 T2.x 的发现（F
 
 golden 与 DOM 快照：**均无变化**（纯重命名与注释，不触碰任何行为）。
 
-### [ ] T3.1b 人工数据外置
+### [x] T3.1b 人工数据外置
 
 依据：F57 · 依赖：T3.1a
 
 步骤：`CURATED_OFFICIAL`、`CURATED_OFFERS`、`SIGNALS`、`RELAYS`、`CURATED_RESOURCES` 原样搬进 `curated/official-prices.json`、`offers.json`、`signals.json`、`relays.json`、`toolkit.json`，`news-milestones.json` 搬到 `curated/milestones.json`；采集端与页面改读新位置。结构化留给 T3.8。
 
 验收：golden 与 DOM 快照不变；`collect.mjs` 里不再有这些常量。
+
+结果：`collect.mjs` **2879 → 2674 行**（-205），五个数组字面量全部消失，改为 `readCurated(name)` 读 `curated/`。
+
+**怎么搬的**：没有手工抄写。用脚本按括号配平定位每个常量的起止行，把那段源码抽成临时模块 `import` 求值，再 `JSON.stringify(data, null, 2)` 写出。这样**精度不可能漂移**——如果手工把 `0.1408` 抄成 `0.14`，比价会实打实错 0.3%，而这种错误在 diff 里几乎看不出来。搬运后专门验过 `0.1408` 与 `0.0028` 原样保留。
+
+条数：official-prices 12 · offers 37 · signals 21 · relays 51 · toolkit 21；`news-milestones.json` → `curated/milestones.json`（44 条，对象结构含 `note` / `epochs` / `events`）。
+
+配套改动：
+- `readCurated()` 读不到就抛——缺文件是部署错误，不是「这条数据不存在」；
+- `scripts/make-fixture-data.js` 改读 `curated/milestones.json`（它用 `join(ROOT, name)`，所以路径是相对仓库根而不是相对脚本目录——第一次我写成 `../curated/` 会解析到仓库外）；
+- R8 白名单移除 `news-milestones.json`（已不在根目录）；
+- 新增 `curated/README.md`：六个文件的用途与条数、四条编辑约定（必须带出处、数字保持原始精度、缺值写 null 不写 0、改完跑 verify），以及为什么要外置；
+- README 的「加东西」一节从「改 `collect.mjs` 的 `CURATED_OFFERS`」改成指向 `curated/` 的具体文件；
+- **biome 排除 `curated/`**：它是人工维护的唯一事实来源，被格式化器悄悄重排会让 diff 噪声掩盖真实改动。
+
+**踩到的坑**：改 `biome.jsonc` 时我的字符串替换把 `includes` 数组的收尾搞坏了（多出缩进、丢了闭合括号），lint 直接报 `biome.jsonc format` 错。这类配置文件改动靠手写替换很脆，正确做法是整段重建——第二次我按首尾锚点重建了整个 `files` 块。
+
+golden 与 DOM 快照：**均无变化**（数据逐字节一致）。新增 2 项测试（294 项）。
 
 ### [ ] T3.1c 采集层拆分
 

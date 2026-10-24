@@ -6,6 +6,7 @@
       "!data.json",
       "!bench.json",
       "!news-*.json",
+      "!curated",
       "!node_modules",
       "!fixtures",
       "!dist",
@@ -14,9 +15,7 @@
       "!.wrangler",
       "!test-results",
       "!playwright-report",
-      "!package-lock.json",
-      "!directions.html",
-      "!logo-preview.html"
+      "!package-lock.json"
     ]
   },
   "formatter": {

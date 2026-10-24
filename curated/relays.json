@@ -1,0 +1,257 @@
+[
+  {
+    "domain": "api.laozhang.ai",
+    "name": "老张 API",
+    "auto": true
+  },
+  {
+    "domain": "api.bltcy.ai",
+    "name": "柏拉图 API",
+    "auto": true
+  },
+  {
+    "domain": "api.right.codes",
+    "name": "Right Code",
+    "auto": true
+  },
+  {
+    "domain": "packycode.com",
+    "name": "Packy Code",
+    "auto": true
+  },
+  {
+    "domain": "cctq.ai",
+    "name": "CCTQ",
+    "auto": true
+  },
+  {
+    "domain": "api.ephone.ai",
+    "name": "Ephone",
+    "auto": true
+  },
+  {
+    "domain": "newapi.dev",
+    "name": "NewAPI 演示站",
+    "auto": true
+  },
+  {
+    "domain": "api.catbeeai.com",
+    "name": "CatBee AI",
+    "auto": true
+  },
+  {
+    "domain": "api.dogbeeai.com",
+    "name": "DogBee AI",
+    "auto": true
+  },
+  {
+    "domain": "micu.ai",
+    "name": "Micu",
+    "auto": true
+  },
+  {
+    "domain": "4router.com",
+    "name": "4Router",
+    "auto": true
+  },
+  {
+    "domain": "api.4router.com",
+    "name": "4Router API",
+    "auto": true
+  },
+  {
+    "domain": "api.aihubmix.com",
+    "name": "AiHubMix",
+    "auto": true
+  },
+  {
+    "domain": "api.openai-hk.com",
+    "name": "OpenAI-HK",
+    "auto": true
+  },
+  {
+    "domain": "api.chatanywhere.tech",
+    "name": "ChatAnywhere",
+    "auto": true
+  },
+  {
+    "domain": "api.gptgod.online",
+    "name": "GPTGOD",
+    "auto": true
+  },
+  {
+    "domain": "api.closeai-asia.com",
+    "name": "CloseAI",
+    "auto": true
+  },
+  {
+    "domain": "api.api2d.com",
+    "name": "API2D",
+    "auto": true
+  },
+  {
+    "domain": "api.deerapi.com",
+    "name": "DeerAPI",
+    "auto": true
+  },
+  {
+    "domain": "api.wokaai.com",
+    "name": "WokaAI",
+    "auto": true
+  },
+  {
+    "domain": "api.poloapi.com",
+    "name": "PoloAPI",
+    "auto": true
+  },
+  {
+    "domain": "api.yunwu.ai",
+    "name": "云雾 API",
+    "auto": true
+  },
+  {
+    "domain": "api.nanoapi.ai",
+    "name": "NanoAPI",
+    "auto": true
+  },
+  {
+    "domain": "api.302.ai",
+    "name": "302.AI",
+    "auto": true
+  },
+  {
+    "domain": "api.aicodemirror.com",
+    "name": "AI Code Mirror",
+    "auto": true
+  },
+  {
+    "domain": "api.duckcoding.com",
+    "name": "DuckCoding",
+    "auto": true
+  },
+  {
+    "domain": "api.apicat.ai",
+    "name": "APICat",
+    "auto": true
+  },
+  {
+    "domain": "api.v3.cm",
+    "name": "V3 API",
+    "auto": true
+  },
+  {
+    "domain": "api.oaipro.com",
+    "name": "OAIPRO",
+    "auto": true
+  },
+  {
+    "domain": "api.gptsapi.net",
+    "name": "GPTS API",
+    "auto": true
+  },
+  {
+    "domain": "api.aiproxy.io",
+    "name": "AIProxy",
+    "auto": true
+  },
+  {
+    "domain": "api.openai-sb.com",
+    "name": "OpenAI-SB",
+    "auto": true
+  },
+  {
+    "domain": "api.gptapi.us",
+    "name": "GPTAPI",
+    "auto": true
+  },
+  {
+    "domain": "api.subapi.cc",
+    "name": "SubAPI",
+    "auto": true
+  },
+  {
+    "domain": "api.oneapi.dev",
+    "name": "OneAPI 演示站",
+    "auto": true
+  },
+  {
+    "domain": "kfcv50.link",
+    "name": "KFC API",
+    "auto": true
+  },
+  {
+    "domain": "35.aigcbest.top",
+    "name": "AIGCBest",
+    "auto": true
+  },
+  {
+    "domain": "www.ggwk1.online",
+    "name": "GGWK",
+    "auto": true
+  },
+  {
+    "domain": "go.sbgpt.site",
+    "name": "SBGPT",
+    "auto": true
+  },
+  {
+    "domain": "api.aabao.top",
+    "name": "AABao",
+    "auto": true
+  },
+  {
+    "domain": "apipro.maynor1024.live",
+    "name": "Maynor",
+    "auto": true
+  },
+  {
+    "domain": "www.openai-labs.com",
+    "name": "OpenAI Labs",
+    "auto": true
+  },
+  {
+    "domain": "cnapi.kksj.org",
+    "name": "KKSJ",
+    "auto": true
+  },
+  {
+    "domain": "us-3.nianhuaapi.com",
+    "name": "年华 API",
+    "auto": true
+  },
+  {
+    "domain": "api.nekoapi.com",
+    "name": "NekoAPI",
+    "auto": true
+  },
+  {
+    "domain": "nova.vcrauo.com",
+    "name": "Nova",
+    "auto": true
+  },
+  {
+    "domain": "api456.me",
+    "name": "API456",
+    "auto": true
+  },
+  {
+    "domain": "xeduapi.com",
+    "name": "XEdu",
+    "auto": true
+  },
+  {
+    "domain": "agentrouter.org",
+    "name": "AgentRouter",
+    "auto": true
+  },
+  {
+    "domain": "ps.air-outer.com",
+    "name": "Air Outer",
+    "auto": true
+  },
+  {
+    "domain": "chuan.sylu.cc",
+    "name": "川流 API",
+    "auto": true
+  }
+]

@@ -1,0 +1,339 @@
+[
+  {
+    "id": "x-001",
+    "handle": "@deepseek_ai",
+    "date": "2026-10-17",
+    "url": "https://x.com/deepseek_ai/status/2111375640717033777",
+    "quote": "DeepSeek-V4.1-Flash-1017 is here! Stronger benchmark performance, faster task completion, and shorter outputs than the previous version—a Pareto improvement in performance and cost.",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "DeepSeek-V4.1-Flash-1017",
+      "deepseek-flash"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "官方账号原话，已打开原帖核对正文"
+  },
+  {
+    "id": "x-002",
+    "handle": "@Alibaba_Qwen",
+    "date": "2026-10-07",
+    "url": "https://x.com/Alibaba_Qwen/status/2107706772815499318",
+    "quote": "We're extending FREE Qwen 3.8 Max + Flash for 7 more days! And we've increased rate limits across all 3 models.",
+    "lang": "en",
+    "topic": "free-tier",
+    "affects": [
+      "Qwen3.8-Max",
+      "Qwen3.8-Flash",
+      "Wan3.0"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "官方账号原话；免费期延长+提额，未写结束绝对日期"
+  },
+  {
+    "id": "x-003",
+    "handle": "@Alibaba_Qwen",
+    "date": "2026-10-06",
+    "url": "https://x.com/Alibaba_Qwen/status/2107510552792854783",
+    "quote": "Qwen 3.8 Max, Qwen 3.8 Flash, and Wan 3.0 are FREE on GMI Cloud for the next 12 hours … Running Qwen at scale? Apply for up to $10K in credits per org",
+    "lang": "en",
+    "topic": "free-tier",
+    "affects": [
+      "Qwen3.8-Max",
+      "Qwen3.8-Flash",
+      "Wan3.0",
+      "GMI Cloud"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "渠道侧限时免费（GMI Cloud），另含最高 $10K 额度申请"
+  },
+  {
+    "id": "x-004",
+    "handle": "@Alibaba_Qwen",
+    "date": "2026-08-26",
+    "url": "https://x.com/Alibaba_Qwen/status/2092591393424515114",
+    "quote": "The production version Qwen3.8-Flash will be available soon via QwenCloud API at just $0.16/1M input tokens and $0.47/1M output tokens.",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "Qwen3.8-Flash",
+      "QwenCloud API"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "官方账号公布 API 定价（发布时点）"
+  },
+  {
+    "id": "x-005",
+    "handle": "@cursor_ai",
+    "date": "2026-10-13",
+    "url": "https://x.com/cursor_ai/status/2110087611763368271",
+    "quote": "Gemini 4 Argon is now available in Cursor! … Priced at $2/M input and $10/M output tokens.",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "Gemini 4 Argon",
+      "Cursor"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "编辑器侧转售定价，可与 Google 官方价对比"
+  },
+  {
+    "id": "x-006",
+    "handle": "@cursor_ai",
+    "date": "2026-10-15",
+    "url": "https://x.com/cursor_ai/status/2110867556693430293",
+    "quote": "Muse Wonder from Meta Superintelligence Labs is now available in Cursor! … Priced at $4/M input and $20/M output tokens.",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "Muse Wonder",
+      "Cursor"
+    ],
+    "source_type": "x",
+    "confidence": "high",
+    "note": "Meta 新模型在 Cursor 的定价，官方账号原话"
+  },
+  {
+    "id": "x-007",
+    "handle": "@OpenAI",
+    "date": "2026-08-06",
+    "url": "https://openai.com/index/improving-gpt-5-6-sol-in-chatgpt",
+    "quote": "For Free users, we're updating the default model to GPT-5.6 Luna and expanding access with unlimited text chats.",
+    "lang": "en",
+    "topic": "free-tier",
+    "affects": [
+      "ChatGPT Free",
+      "GPT-5.6 Luna"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "日期取自 OpenAI 官方 RSS pubDate；正文经代理抓取"
+  },
+  {
+    "id": "x-008",
+    "handle": "@OpenAI",
+    "date": "2026-09-22",
+    "url": "https://openai.com/index/introducing-gpt-6-sol-and-luna",
+    "quote": "GPT-6 Sol: $4 → $2 input, $20 → $10 output (50% cheaper); GPT-6 Luna: $0.20 → $0.10, $1.20 → $0.50. Prices per 1M tokens.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "GPT-6 Sol",
+      "GPT-6 Luna",
+      "OpenAI API"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "官方定价表原文，降价幅度 50%"
+  },
+  {
+    "id": "x-009",
+    "handle": "@OpenAI",
+    "date": "2026-09-22",
+    "url": "https://openai.com/index/better-prompt-caching-for-gpt-6",
+    "quote": "OpenAI caches that shared context … giving developers discounts of up to 90% on cached input tokens. We now give cache discounts for eligible shared prefixes reused within a 30-minute window.",
+    "lang": "en",
+    "topic": "cache-pricing",
+    "affects": [
+      "GPT-6",
+      "OpenAI Prompt Caching"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "缓存折扣最高 90%，新增 30 分钟窗口与命中诊断"
+  },
+  {
+    "id": "x-010",
+    "handle": "@OpenAI",
+    "date": "2026-09-29",
+    "url": "https://openai.com/index/introducing-gpt-6-1-sol",
+    "quote": "…nearly matches GPT-6 Astra's intelligence … at one-fifth of Astra's standard input and output token prices. Cached input costs just $0.10 per million tokens—95% less than standard input pricing",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "GPT-6.1 Sol"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "同时给出缓存价 $0.10/M（比 GPT-6 Sol 缓存价再低 50%）"
+  },
+  {
+    "id": "x-011",
+    "handle": "@AnthropicAI",
+    "date": "2026-09-22",
+    "url": "https://www.anthropic.com/claude-opus-5-5",
+    "quote": "Input and output tokens are $4 and $20 per million, 20% less than Opus 5. Cache reads … $0.20 per million tokens, 60% less than Opus 5 … 40% less than Opus 5 on typical workloads.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "Claude Opus 5.5"
+    ],
+    "source_type": "newsroom",
+    "confidence": "high",
+    "note": "Newsroom 公告页；另称提高 Pro/Max/Team 的五小时用量上限"
+  },
+  {
+    "id": "x-012",
+    "handle": "@AnthropicAI",
+    "date": "2026-09-28",
+    "url": "https://www.anthropic.com/claude-sonnet-5-5",
+    "quote": "…priced the same as Sonnet 5 at $2 per million input tokens and $10 per million output tokens … Cache reads cost $0.10 per million tokens, half of Sonnet 5's $0.20.",
+    "lang": "en",
+    "topic": "new-model",
+    "affects": [
+      "Claude Sonnet 5.5"
+    ],
+    "source_type": "newsroom",
+    "confidence": "high",
+    "note": "单价持平但缓存读减半，官方称每任务成本降约 30%"
+  },
+  {
+    "id": "x-013",
+    "handle": "@AnthropicAI",
+    "date": "2026-10-07",
+    "url": "https://www.anthropic.com/claude-haiku-5-5",
+    "quote": "Haiku 5.5 … costs around 75% less to run [than Haiku 4.5]. Input $0.10/$0.50, output $0.50/$2.50, cache reads $0.01/$0.05 per 1M; new monthly API credit for Claude Max and Team subscribers.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "Claude Haiku 5.5",
+      "Claude Max",
+      "Claude Team"
+    ],
+    "source_type": "newsroom",
+    "confidence": "high",
+    "note": "≤100k / >100k 两档价；同时下调 Sonnet 5.5 缓存读价"
+  },
+  {
+    "id": "x-014",
+    "handle": "@deepseek_ai",
+    "date": "2026-09-10",
+    "url": "https://api-docs.deepseek.com/news/news260910",
+    "quote": "More efficient architecture. Lower API prices… Off-peak rates are 50% of peak rates… New pricing takes effect at 04:00 UTC on Sept 10, 2026.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "DeepSeek-V4.1-Flash",
+      "deepseek-flash"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "同文称 KV cache 仅需前代 1/4 HBM、1/8 SSD，直接压低 cache-hit 成本"
+  },
+  {
+    "id": "x-015",
+    "handle": "@deepseek_ai",
+    "date": "2026-10-17",
+    "url": "https://api-docs.deepseek.com/news/news261017",
+    "quote": "Search & Fetch APIs are now open to everyone! Each endpoint: $0.75 per 1,000 calls… free for DeepSeek API users. Billing starts Oct 31, 2026, at 16:00 UTC.",
+    "lang": "en",
+    "topic": "free-tier",
+    "affects": [
+      "DeepSeek Search API",
+      "DeepSeek Fetch API",
+      "DeepSeek Harness"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "Harness/Claude Code/Codex 内的服务端调用目前免费，10/31 起计费"
+  },
+  {
+    "id": "x-016",
+    "handle": "@deepseek_ai",
+    "date": "2026-10-23",
+    "url": "https://api-docs.deepseek.com/quick_start/pricing",
+    "quote": "deepseek-flash: cache hit $0.003 off-peak / $0.006 peak; cache miss $0.15 / $0.30; output $0.60 / $1.20 per 1M tokens. Off-peak rates are half of the peak rates.",
+    "lang": "en",
+    "topic": "cache-pricing",
+    "affects": [
+      "deepseek-flash",
+      "DeepSeek-V4.1-Flash-1017"
+    ],
+    "source_type": "blog",
+    "confidence": "medium",
+    "note": "价格页当日快照（未标生效日）；V4-Pro 缓存价 $0.022/$0.044"
+  },
+  {
+    "id": "x-017",
+    "handle": "@OpenRouterAI",
+    "date": "2026-09-22",
+    "url": "https://openrouter.ai/blog/announcements/batch-api/",
+    "quote": "…a provider gets to choose when during a 24 hour window they will complete the request, and in exchange they generally charge 50% (and sometimes less) of their normal per-token price.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "OpenRouter Batch API"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "覆盖 70+ 模型；Beta 期 23 万批次中位 7 分钟完成"
+  },
+  {
+    "id": "x-018",
+    "handle": "@MiniMax_AI",
+    "date": "2026-10-19",
+    "url": "https://www.minimax.io/blog/minimax-m31f",
+    "quote": "…reducing usage costs by 70%. Flat pricing per 1M tokens: $0.15 input · $0.60 output · $0.015 cached input.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "MiniMax M3.1 Flash"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "官方 blog，文内明确 70% 降本与三档单价"
+  },
+  {
+    "id": "x-019",
+    "handle": "@xai",
+    "date": "2026-10-14",
+    "url": "https://x.ai/news/grok-voice-3",
+    "quote": "…available today in the API at the same price as its predecessor… costs less than other frontier models.",
+    "lang": "en",
+    "topic": "price-cut",
+    "affects": [
+      "Grok Voice 3.0",
+      "xAI API"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "涨价未发生：新款按前代原价卖，官方称比同类前沿语音模型便宜"
+  },
+  {
+    "id": "x-020",
+    "handle": "Google (Gemini API)",
+    "date": "2026-10-22",
+    "url": "https://ai.google.dev/gemini-api/docs/pricing",
+    "quote": "Gemini 4 Argon: input $2.00 through Nov 30, 2026, $4.00 from Dec 1; output $10.00 → $20.00; context caching $0.10 → $0.20 (implicit caching only). Free tier: not available.",
+    "lang": "en",
+    "topic": "cache-pricing",
+    "affects": [
+      "Gemini 4 Argon"
+    ],
+    "source_type": "blog",
+    "confidence": "high",
+    "note": "文档页标注的发布/更新时间为 2026-10-22；12/1 起价格翻倍，需提前锁量"
+  },
+  {
+    "id": "x-021",
+    "handle": "Z.ai (Zhipu)",
+    "date": "2026-10-23",
+    "url": "https://docs.z.ai/guides/overview/pricing",
+    "quote": "GLM-5.3 $1.4 in / $0.26 cached / $4.4 out; GLM-5.3-Flash $0.15 / $0.03 / $0.50; GLM-4.7-Flash Free (per 1M tokens); cached-input storage 'Limited-time Free'.",
+    "lang": "en",
+    "topic": "cache-pricing",
+    "affects": [
+      "GLM-5.3",
+      "GLM-5.3-Flash",
+      "GLM-4.7-Flash"
+    ],
+    "source_type": "blog",
+    "confidence": "medium",
+    "note": "价格页当日快照；GLM-5.3-Flash 发布日 2026-08-26（官方 release notes）"
+  }
+]

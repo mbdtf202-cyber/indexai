@@ -95,12 +95,16 @@ node scripts/serve.js --port 4311   # 本地预览 http://127.0.0.1:4311/（先 
 
 ## 加东西
 
-| 想加什么 | 改哪里 |
-|---|---|
-| 一个免费额度 | `collect.mjs` 的 `CURATED_OFFERS`，必须带 `source` 与核实过的额度原文 |
-| 一个官方价 | `CURATED_OFFICIAL`，带定价页 URL 与核实日期 |
-| 一个中转站 | `RELAYS`，带 `domain` 与发现渠道 |
-| 一条一手信号 | `SIGNALS`，带原文 URL、日期与引用原话 |
+人工维护的数据都在 [`curated/`](curated/)，改数据只动那里，不用碰代码：
+
+| 想加什么 | 改哪个文件 | 必须带的证据 |
+|---|---|---|
+| 一个免费额度 | `curated/offers.json` | `source` 与核实过的额度原文 |
+| 一个官方价 | `curated/official-prices.json` | 定价页 URL 与核实日期 |
+| 一个中转站 | `curated/relays.json` | `domain` 与发现渠道 |
+| 一条一手信号 | `curated/signals.json` | 原文 URL、日期与引用原话 |
+| 一个工具箱条目 | `curated/toolkit.json` | 官方地址与一句为什么值得收 |
+| 一条超级大事件 | `curated/milestones.json` | 官方公告链接与核验状态 |
 | 一个新数据层 | 先读 `UPGRADE_PLAN.md` 的层契约（§4.4），再在 `IMPLEMENTATION_PLAN.md` 里开任务 |
 
 改人工数据时代码里要带证据（URL + 核实日期），这是 `INV-2` 的要求：
