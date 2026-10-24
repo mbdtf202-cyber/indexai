@@ -270,7 +270,7 @@ const WORKLOAD = { h: 0.7, s: 0.3, w: 0.0, label: 'agent 编程' };
  * 有效成本 = (1−s)·[(1−h−w)·input + h·cache_read + w·cache_write] + s·output
  * 缺缓存价时按「无折扣」处理（cache_read := input），宁可高估不虚构折扣。
  */
-function effectiveCost(p) {
+export function effectiveCost(p) {
   if (!p || p.kind !== 'per_1m') return null;
   const { h, s } = WORKLOAD;
   const cacheRead = p.cacheRead != null ? p.cacheRead : p.input;
@@ -280,7 +280,7 @@ function effectiveCost(p) {
 }
 
 /* ────────────────────────── helpers ────────────────────────── */
-const per1M = (v) => {
+export const per1M = (v) => {
   if (v == null || v === '') return null;
   const n = Number(v);
   if (!Number.isFinite(n) || n < 0) return null; // -1 = 不计价的纯路由产品
@@ -289,7 +289,7 @@ const per1M = (v) => {
 const slugify = (s) => String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/(^-|-$)/g, '');
 
 /** 同模型归一：去掉厂商前缀、日期尾巴、:free 后缀、变体标记 */
-function familyKey(vendorId, id, name) {
+export function familyKey(vendorId, id, name) {
   let base = id.replace(/^[^/]+\//, '').replace(/:free$/, '');
   base = base.replace(/-(?:latest|\d{4}-\d{2}-\d{2}|\d{6}|\d{4})$/, '');
   base = base.replace(/[-_ ]?(preview|exp|experimental|beta|alpha|thinking|reasoning|high|low|mini-beta)$/, '');
@@ -298,7 +298,7 @@ function familyKey(vendorId, id, name) {
   return `${vendorId}::${base}`;
 }
 
-function band(input, free) {
+export function band(input, free) {
   if (free) return 'free';
   if (input == null) return 'unknown';
   if (input < 0.25) return 'budget';
@@ -307,7 +307,7 @@ function band(input, free) {
 }
 
 /** 峰谷价：OpenRouter 用 overrides 表达分时价，取最小/最大 prompt 价做提示 */
-function peakNote(pricing) {
+export function peakNote(pricing) {
   const ov = pricing?.overrides;
   if (!Array.isArray(ov) || !ov.length) return null;
   const vals = ov.map((o) => per1M(o.prompt)).filter((n) => n != null);
@@ -326,7 +326,7 @@ function peakNote(pricing) {
 }
 
 /* ────────────────────────── OpenRouter 归一 ────────────────────────── */
-function normalizeOpenRouter(payload) {
+export function normalizeOpenRouter(payload) {
   const rows = [];
   const seen = new Set();
   let dropped = 0;
@@ -383,7 +383,7 @@ function normalizeOpenRouter(payload) {
  *  R4 白嫖渠道以 product 为唯一键，多入口合并进 entries，冲突额度保留官方来源；
  *  R5 情报以 url 为唯一键。
  */
-function dedupeModels(rows) {
+export function dedupeModels(rows) {
   const byKey = new Map();
   let dropped = 0;
   for (const r of rows) {
@@ -397,7 +397,7 @@ function dedupeModels(rows) {
   return { rows: [...byKey.values()], dropped };
 }
 
-function dedupeOffers(list) {
+export function dedupeOffers(list) {
   const map = new Map();
   let merged = 0;
   for (const o of list) {
@@ -433,7 +433,7 @@ function dedupeOffers(list) {
  */
 
 /** 分组倍率表：OneAPI 顶层 group_ratio 是 {组名: 倍率}，也见过数组形式 */
-function groupRatioTable(j) {
+export function groupRatioTable(j) {
   const raw = j?.group_ratio ?? j?.groupRatio;
   if (!raw) return null;
   if (Array.isArray(raw)) {
@@ -457,7 +457,7 @@ function groupRatioTable(j) {
 }
 
 /** 该行可用的分组倍率（只看 enable_groups 里列出的） */
-function rowGroups(row, table) {
+export function rowGroups(row, table) {
   const names = Array.isArray(row.enable_groups) ? row.enable_groups.map(String) : [];
   const all = table
     ? names.filter((n) => table[n] != null).map((n) => ({ name: n, ratio: table[n] }))
@@ -522,7 +522,7 @@ function rowGroups(row, table) {
 }
 
 /** 从表达式里抠系数：先长后缀再单字母，避免 c 命中 cc / cr 的开头 */
-function exprCoefficients(body) {
+export function exprCoefficients(body) {
   const num = (re) => {
     const m = body.match(re);
     if (!m) return null;
@@ -540,7 +540,7 @@ function exprCoefficients(body) {
 }
 
 /** 切出所有 tier("name", ...)，括号按深度平衡（表达式里有嵌套三元） */
-function tierBranches(expr) {
+export function tierBranches(expr) {
   const out = [];
   const re = /tier\s*\(\s*"([^"]+)"\s*,/g;
   let m;
@@ -564,7 +564,7 @@ const TIER_PRIORITY = ['base', 'standard', 'auto', 'default', 'off_peak', 'peak'
  * 解析 billing_expr。选档 base > standard > 其他，
  * 避免取到 long_context（长上下文档通常直接翻倍）。
  */
-function parseBillingExpr(expr) {
+export function parseBillingExpr(expr) {
   if (!expr || typeof expr !== 'string') return null;
   const branches = tierBranches(expr);
   if (!branches.length) return null;
@@ -613,7 +613,7 @@ function parseBillingExpr(expr) {
  * 有 billing_expr 的站点，其 model_ratio 是废弃占位字段，
  * 拿它算出来的 $75 与挂牌 $2 毫无关系，必须让表达式优先。
  */
-function relayPrice(row, group) {
+export function relayPrice(row, group) {
   const n = (x) => (x == null || x === '' ? null : Number(x));
   const g = group?.ratio == null ? 1 : group.ratio;
 
@@ -653,7 +653,7 @@ function relayPrice(row, group) {
   return out;
 }
 
-function parseJsonLoose(text) {
+export function parseJsonLoose(text) {
   try { return JSON.parse(text); } catch {}
   try { return JSON.parse(text.split('\n')[0]); } catch {}
   const i = text.indexOf('{');
@@ -779,7 +779,7 @@ const DATED_RE = /-\d{6,8}(?:$|-)/;
  */
 const FREE_RE = /(?:^|[-_\/:])(free|gratis|trial|试用|公益|福利)(?:$|[-_\/:])|:free$/i;
 
-function pickFlagship(rows, f, gTable) {
+export function pickFlagship(rows, f, gTable) {
   const named = rows.filter((r) => {
     const nm = String(r.model_name || r.modelName || r.id || '');
     return f.re.test(nm);
@@ -930,11 +930,20 @@ function resolveAiosFile() {
   }
   return globAiosFile(AIOS_HOME);
 }
-const AIOS_FILE = resolveAiosFile();
-if (!AIOS_FILE) {
-  console.warn('[collect] 没找到 AIOS 活动库（可选层），本次活动只收 Devpost + Luma');
-} else {
-  console.log(`[collect] AIOS 活动库：${AIOS_FILE}`);
+/* AIOS 是可选层。探测放到第一次用到时（T0.3），这样 import 本模块不会打日志、不读文件。 */
+let AIOS_FILE = null;
+let AIOS_PROBED = false;
+function aiosFile() {
+  if (!AIOS_PROBED) {
+    AIOS_PROBED = true;
+    AIOS_FILE = resolveAiosFile();
+    if (!AIOS_FILE) {
+      console.warn('[collect] 没找到 AIOS 活动库（可选层），本次活动只收 Devpost + Luma');
+    } else {
+      console.log(`[collect] AIOS 活动库：${AIOS_FILE}`);
+    }
+  }
+  return AIOS_FILE;
 }
 
 /* Devpost 的 submission_period_dates 有三种真实写法，旧实现只认第一种，
@@ -943,7 +952,7 @@ if (!AIOS_FILE) {
  *   "Oct 05 - 27, 2026"          结束月省略（同月）
  *   "Jul 16, 2026 - Jan 15, 2027" 两端各带年份，跨年
  * 统一按「从左到右，缺年份继承上一个」处理，跨年靠月序回退纠正。 */
-function parseDevpostDates(s) {
+export function parseDevpostDates(s) {
   const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
   const str = String(s || '');
   const iso = (y, mo, d) => new Date(Date.UTC(y, mo, d)).toISOString().slice(0, 10);
@@ -1181,7 +1190,7 @@ const EV_COUNTRY_REGION = {
 };
 
 /** 国家码 → region，未知国家返回 null（交给正则兜底，不瞎猜） */
-function regionFromCountryCode(cc) {
+export function regionFromCountryCode(cc) {
   if (!cc) return null;
   return EV_COUNTRY_REGION[String(cc).trim().toUpperCase()] || null;
 }
@@ -1415,7 +1424,7 @@ async function devfolioPage(page, attempt = 0) {
 
 /* 活动 AI 相关性词表：Luma 与 Devfolio 共用同一份，避免两个源口径漂移。
  * 词表的取舍说明见下方 fetchLuma 内的原始注释（哪些泛词被刻意排除）。 */
-const AI_EVENT_RE = new RegExp([
+export const AI_EVENT_RE = new RegExp([
     // 通用 AI 词
     '\\bAI\\b', '\\bA\\.I\\.', '\\bLLMs?\\b', '\\bGPT-?\\d?', '\\bChatGPT\\b', '\\bClaude\\b',
     '\\bGemini\\b', '\\bCopilot\\b', '\\bLlama\\b', '\\bLLaMA\\b', '\\bMistral\\b', '\\bGemma\\b',
@@ -1468,7 +1477,7 @@ const DV_AI_RE = new RegExp([
   '人工智能', '机器学习', '大模型', '智能体', '深度学习',
 ].join('|'), 'i');
 
-function devfolioIsAI(h) {
+export function devfolioIsAI(h) {
   const themes = (h.themes || []).map((t) => (typeof t === 'string' ? t : t?.name)).filter(Boolean);
   if (themes.some((t) => DV_AI_THEME.test(t))) return true;
   // desc 只看前 600 字：Devfolio 的 desc 是完整 markdown 规则书，
@@ -1480,7 +1489,7 @@ function devfolioIsAI(h) {
 /* 奖池：prizes 是对象数组，每项有 currency + amount + name。
  * 不同货币不能直接相加，所以只取「最常见的那一种货币」求和，其余额度不参与，
  * 并在有多个币种时拼一句提示 —— 不把 ₹ 和 $ 加成一个假数字。 */
-function devfolioPrize(prizes) {
+export function devfolioPrize(prizes) {
   const rows = (prizes || [])
     .map((p) => ({ amount: Number(p?.amount), currency: (p?.currency || '').toUpperCase() || null }))
     .filter((p) => Number.isFinite(p.amount) && p.amount > 0);
@@ -1591,7 +1600,7 @@ async function fetchDevfolio() {
  *   upcoming —— start 在未来
  *   open     —— 正在进行中
  *   unknown  —— 两个日期都没有，无法判断，宁可标未知也不假装开放 */
-function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
+export function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
   const start = e.start || '';
   const end = e.end || '';
   const last = end || start;
@@ -1608,7 +1617,7 @@ function eventStatus(e, today = new Date().toISOString().slice(0, 10)) {
  * 原因是 Devpost 的活动名不用 hackathon 这个字，而是 Hacks / HackSprint / -Thon /
  * Datathon / Databowl / Design Jam…，主题里又写着 "Machine Learning/AI"。
  * 这里补上这些真实写法（都是线上数据里实际出现过的后缀，不是猜的）。 */
-function eventKind(e) {
+export function eventKind(e) {
   const b = `${e.title || ''} ${(e.themes || []).join(' ')} ${e.dates || ''} ${e.org || ''} ${e.kindHint || ''}`;
 
   // 竞赛 / 黑客松：hack day、hackweek、-thon、datathon、data bowl、jam、挑战赛都算
@@ -1669,7 +1678,7 @@ const EV_REGION_RULES = [
   ['asia', /菲律宾|印度尼西亚|印尼|越南|泰国|马来西亚|斯里兰卡|尼泊尔|孟加拉|柬埔寨|缅甸|亚美尼亚|Philippines|Manila|Indonesia|Jakarta|Vietnam|Hanoi|Ho Chi Minh|Thailand|Bangkok|Malaysia|Kuala Lumpur|Sri Lanka|Colombo|Nepal|Kathmandu|Bangladesh|Dhaka|Cambodia|Myanmar|Armenia|Yerevan/i],
 ];
 
-function eventRegion(e) {
+export function eventRegion(e) {
   const loc = String(e.location || '');
   // 线上优先：但是「线上 + 线下」混合场次（Luma 常见）按线下判，因为地点更有信息量
   const onlineOnly = /^(线上|online|remote|virtual|anywhere)$/i.test(loc.trim());
@@ -1718,7 +1727,7 @@ const EV_REGION_FOLD_FALLBACK = {
 };
 const EV_REGION_REGIONS = new Set(['online', 'other', 'asia', 'eu', 'latam', 'middle-east', 'africa']);
 
-function foldRegions(events) {
+export function foldRegions(events) {
   const count = events.reduce((a, e) => { a[e.region] = (a[e.region] || 0) + 1; return a; }, {});
   const fold = { ...EV_REGION_FOLD };
   for (const [code, n] of Object.entries(count)) {
@@ -1974,9 +1983,10 @@ function buildSubsRegions(apple) {
 }
 
 async function fetchAios() {
-  if (!AIOS_FILE) return [];   // 可选层，没有就是没有，交给上面的 warn 说明
+  const file = aiosFile();
+  if (!file) return [];   // 可选层，没有就是没有，交给 aiosFile() 的 warn 说明
   try {
-    const raw = JSON.parse(await readFile(AIOS_FILE, 'utf8'));
+    const raw = JSON.parse(await readFile(file, 'utf8'));
     const rows = Array.isArray(raw) ? raw : raw.data || [];
     return rows.map((o) => {
       const row = {
@@ -2173,7 +2183,7 @@ async function fetchResources() {
 /* ────────────────────────── OpenRouter 真实使用量（民间口碑 + 工具采纳） ────────────────────────── */
 const OPENROUTER_RANKINGS = 'https://openrouter.ai/rankings';
 
-function parseOpenRouter(html) {
+export function parseOpenRouter(html) {
   const h = html.replace(/\\+"/g, '"').replace(/\\n/g, ' ');
 
   // 应用（谁在用哪个工具）——只取 day 窗口，跨窗口的 token 不可比
@@ -2733,4 +2743,8 @@ async function main() {
   console.log(JSON.stringify({ ...data.meta, counts: data.meta.counts }, null, 2));
 }
 
-main().catch((e) => { console.error('[collect] failed:', e.message); process.exit(1); });
+/* 只在直接运行本文件时采集；被 import 时（特征测试）不产生任何副作用。 */
+const isDirectRun = process.argv[1] && process.argv[1].endsWith('collect.mjs');
+if (isDirectRun) {
+  main().catch((e) => { console.error('[collect] failed:', e.message); process.exit(1); });
+}

@@ -86,24 +86,16 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 结果：新增 `test/support/http-replay.js`（`sha1('GET '+url)` 键、`fixtures/http/<host>/<sha1>.json`、超 64 KB 走 `gzip+base64`、`finalUrl` 覆盖 `Response.url`、同步读盘后返回已决 Promise 以保证并发顺序确定、未录制请求抛错并带完整 URL）与 `test/support/http-record.js`（只存状态码/最终 URL/content-type/正文，不存请求头，只允许 GET）。故障注入支持 `{status}`、`{networkError}`、`{hang}`、`{body}`，可由 `INDEXAI_FAULTS` 环境变量或进程内 `setFaults()` 配置。`test/unit/http-replay.test.js` 10 个用例覆盖往返一致、gzip 还原、重定向 finalUrl、未录制报错、三种故障注入、`installReplay` 幂等。启用 R9 的 `fixtures/http`（≤5 MB）部分，新建 `fixtures/http/`。踩坑记录：`node --test` 会设置 `NODE_TEST_CONTEXT`，最初的自动安装条件把它当成回放信号，把测试里的真实 `fetch` 悄悄换掉；已收窄为只认 `INDEXAI_REPLAY=1` 或 `--import` 预加载。用 `HTTP_PROXY=http://127.0.0.1:9` 模拟断网，`npm test` 33 项仍全过。
 
-### [ ] T0.3 特征测试
+### [x] T0.3 特征测试
 
 依据：S1.4 · 依赖：T0.1
-
-步骤：
-1. 让 `collect.mjs` 可以被 import 而不触发采集：把 `main()` 调用与模块顶层的 AIOS 路径探测（`resolveAiosFile()` 及其日志）放到「直接运行」判断之后。只改这一点，再给下面要测的函数加 `export`；不移动代码（移动在 T3.1）。`bench.mjs` 同样补 `export`。
-2. 为下列函数写特征测试。用例优先取代码注释里记录的真实事故：Devpost 三种日期写法与单日活动、`tier("base", p * 2 + c * 10 + cr * 0.1)`、`model_ratio=37.5` 被误用、分组名「a全模型综合组-1倍率」、`deepseek-flash` 与 `deepseek-v4-1-flash` 混淆、`:free` 行、Devfolio 主题是对象数组。
-   - `collect.mjs`：`parseDevpostDates`、`eventStatus`、`eventKind`、`eventRegion`、`foldRegions`、`regionFromCountryCode`、`devfolioIsAI`、`devfolioPrize`、`parseBillingExpr`、`exprCoefficients`、`tierBranches`、`relayPrice`、`rowGroups`、`groupRatioTable`、`pickFlagship`、`familyKey`、`band`、`per1M`、`peakNote`、`effectiveCost`、`normalizeOpenRouter`、`dedupeModels`、`dedupeOffers`、`parseOpenRouter`、`parseJsonLoose`
-   - `bench.mjs`：`splitConfig`、`mergeByModel`、`parseAiderYaml`、`sliceBalanced`
-   - `lib/news.mjs`：`parseNewsYaml`、`squeezeSummary`、`encodeNews`、`decodeNews`、`mergeArchive`、`archiveStats`、`buildIndex`、`retentionDays`
-   - `lib/parquet.mjs`：`readParquet`、`snappyDecode`。下载一个 LMArena 的小 `latest` 文件（例如 `agent`，≤ 200 KB）存到 `fixtures/files/`。
-   - `health.mjs`：`checkData`，构造最小数据对象覆盖每一条红线与警告。
-3. 已知缺陷写成期望正确行为的 `todo` 用例并标发现编号，例如 `test('Lahore 不应判为印度', { todo: 'F10' }, …)`。至少覆盖 F07（`encodeNews`）、F10（`eventRegion`、`foldRegions`）、F11（`eventKind`）、F12（导出 `AI_EVENT_RE` 后直接测）。本任务不修。
 
 验收：
 - 列表中每个函数都有典型、边界、事故三类用例。
 - 每个 `todo` 用例都带 F 编号。
 - `node collect.mjs` 直接运行时的行为不变（T0.4 的 golden 会锁定）。
+
+结果：`collect.mjs` 的 AIOS 路径探测改为惰性 `aiosFile()`，`main()` 收进 `isDirectRun` 判断，import 时零副作用；给 25 个目标函数与 `AI_EVENT_RE` 加 `export`，`bench.mjs` 补 `mergeByModel` / `parseAiderYaml` / `sliceBalanced` 导出（`splitConfig` 原本已导出），`health.mjs` 的 `checkData` 与 `LAYERS` 原本已导出，均未移动代码。新增 5 个测试文件：`collect.test.js`（110 项，覆盖 Devpost 三种日期写法与单日活动、tier("base", p*2+c*10+cr*0.1)、model_ratio=37.5 被 billing_expr 压过、分组名「a全模型综合组-1倍率」、deepseek-flash 与 deepseek-v4-1-flash 区分、:free 变体、Devfolio themes 对象数组）、`bench.test.js`（22 项）、`news-archive.test.js`（30 项）、`health.test.js`（9 项）、`parquet.test.js`（15 项，用真实 8 KB LMArena agent parquet）。5 个 `todo` 用例分别标注 F07（标题与 URL 截断）、F09（parseNewsYaml 首条被 split 吞掉）、F10（PK/ISLAMABAD 判成印度）、F11（`con\b` 命中 Silicon Valley）、F24（familyKey 未剥离日期尾巴）。过程中把多处测试从「我以为的行为」校正为代码真实行为：`eventRegion` 返回小写地区码（`jp` / `eu`）、`dedupeModels` / `dedupeOffers` 返回 `{rows, dropped|merged}`、`parseOpenRouter` 吃 HTML 并返回 `{apps, models}`、`parseNewsYaml` 要求 `- date:` 开头、`mergeArchive` 的 fresh 用抓取形态而 history 用存档形态、`snappyDecode` 是 raw block 且 tag 为 `(len-1)<<2`、`makeThrift` 只有 4 个方法。`npm test` 192 项、184 通过、0 失败、5 todo；`node collect.mjs` 仍只在直接运行时采集。
 
 ### [ ] T0.4 采集 golden（测试档位）
 

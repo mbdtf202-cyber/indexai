@@ -81,7 +81,7 @@ const round = (v, d = 2) => (v == null || Number.isNaN(v) ? null : Number(Number
  * @param {Array} rows 已带 score 的行
  * @param {(r)=>string} nameOf 取显示名的函数
  */
-function mergeByModel(rows, nameOf = (r) => r.model) {
+export function mergeByModel(rows, nameOf = (r) => r.model) {
   const best = new Map();
   for (const r of rows) {
     const { base, config } = splitConfig(nameOf(r));
@@ -289,7 +289,7 @@ async function fetchSwebench() {
 
 /* ─────────────── 3. Aider polyglot（官方 YAML，6 语言 225 题） ─────────────── */
 
-function parseAiderYaml(text) {
+export function parseAiderYaml(text) {
   // 该文件是扁平的 list<map>，不引第三方 YAML 库，按缩进手解
   const entries = [];
   let cur = null;
@@ -347,7 +347,7 @@ async function fetchAider() {
 
 /* ─────────────── 4. Terminal-Bench（RSC 水合数据） ─────────────── */
 
-function sliceBalanced(text, startIdx) {
+export function sliceBalanced(text, startIdx) {
   // 从 startIdx 处的 { 或 [ 开始，切出配平的 JSON
   const open = text[startIdx];
   const close = open === '{' ? '}' : ']';
