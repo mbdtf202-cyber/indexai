@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
- * FreeAI Radar — 每日数据采集 / 归一 / 去重
+ * IndexAI 采集入口：抓取 → 归一 → 去重 → 合并 → 门禁 → 写盘。
  *
- * 三个数据层，全部字段都带来源：
- *   1. OpenRouter 实时目录  —— 聚合渠道价，含 cache read / cache write（唯一实时层）
- *   2. CURATED_OFFICIAL     —— 厂商官方直连价（人工从官方定价页核实，带 URL）
- *   3. CURATED_OFFERS       —— 白嫖渠道（免费额度 / 免费模型 / 赠送金，带 URL）
- *   4. SIGNALS              —— X / 官方 blog 一手情报（带 URL 与日期）
+ * 每个数据层都走同一套流程（见 makeTracker 与 T.run）：
+ * 本次抓取失败且上一版有内容时沿用上一版并记 stale，门禁不通过就不写盘。
+ * 层的清单不写在这里——它随任务变化，写在 AGENTS.md 与 IMPLEMENTATION_PLAN.md 里。
  *
- * 输出：data.json（站点唯一数据源）
- * 运行：node collect.mjs
+ * 网络只走 lib/http.js（超时/重试/限速/记账都在那里），
+ * 时间与睡眠只走 lib/clock.js，外链只信 lib/url.js 的 safeUrl。
+ *
+ * 输出：data.json / bench.json / news-archive.json（站点数据源）
+ * 运行：node collect.mjs（CI 每日一次；本地只为排障）
  */
 
 import { writeFile, readFile } from 'node:fs/promises';
@@ -2231,7 +2232,8 @@ const USE_LABEL = { design: '设计', writing: '写作', content: '内容', engi
 
 async function fetchResources() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';
-  const headers = { 'User-Agent': 'IndexAI/1.0', Accept: 'application/vnd.github+json' };
+  // UA 由 lib/http.js 统一注入，这里只补 GitHub 需要的 Accept 与可选鉴权
+  const headers = { Accept: 'application/vnd.github+json' };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const out = [];

@@ -1131,8 +1131,8 @@ html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
 (() => {
   try {
     const h = document.documentElement;
-    if (localStorage.getItem("fr.theme") === "dark") h.dataset.theme = "dark";
-    if (localStorage.getItem("fr.density") === "compact") h.dataset.density = "compact";
+    if (localStorage.getItem("idx.theme") === "dark") h.dataset.theme = "dark";
+    if (localStorage.getItem("idx.density") === "compact") h.dataset.density = "compact";
   } catch {}
 })();
 </script>
@@ -4008,7 +4008,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
         document.documentElement.dataset.theme = light ? "dark" : "light";
         t.setAttribute("aria-pressed", String(!light));
         t.textContent = light ? "LIGHT" : "DARK";
-        localStorage.setItem("fr.theme", light ? "dark" : "light");
+        localStorage.setItem("idx.theme", light ? "dark" : "light");
         // 时间轴的颜色是从令牌读出来的，换主题后要重画一次才跟着变
         if (state.tab === "events") renderTimeline();
         return;
@@ -4017,7 +4017,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
         const compact = document.documentElement.dataset.density === "compact";
         document.documentElement.dataset.density = compact ? "cozy" : "compact";
         t.setAttribute("aria-pressed", String(!compact));
-        localStorage.setItem("fr.density", compact ? "cozy" : "compact");
+        localStorage.setItem("idx.density", compact ? "cozy" : "compact");
         return;
       }
       if (t.dataset.close !== undefined && t.dataset.close === "") { closeDrawer(); return; }
@@ -4088,15 +4088,20 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     // 首页会往地址栏补 #home（见 render），新加载时浏览器会去恢复那个滚动位置，
     // 结果首页一打开就落在价格叙事的中间。这次不做滚动恢复。
     try { history.scrollRestoration = "manual"; } catch {}
+    // 旧品牌时期的键（T2.3）：改名后不再读写，清掉免得一直留在用户机器上
+    try {
+      localStorage.removeItem("fr.theme");
+      localStorage.removeItem("fr.density");
+    } catch {}
     // 旧版浏览器端汇率缓存（F45）：已经不用了，清掉免得留在用户机器上
     try { localStorage.removeItem("idx.fx"); } catch {}
-    const theme = localStorage.getItem("fr.theme");
+    const theme = localStorage.getItem("idx.theme");
     if (theme === "dark") {
       document.documentElement.dataset.theme = "dark";
       $("#themeBtn").setAttribute("aria-pressed", "true");
       $("#themeBtn").textContent = "LIGHT";
     }
-    if (localStorage.getItem("fr.density") === "compact") {
+    if (localStorage.getItem("idx.density") === "compact") {
       document.documentElement.dataset.density = "compact";
       $("#densBtn").setAttribute("aria-pressed", "true");
     }

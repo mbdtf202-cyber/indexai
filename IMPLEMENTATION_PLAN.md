@@ -603,13 +603,23 @@ golden 差异（322 处，全部来自被删字段）：`meta.counts` 少 3 项�
 
 DOM 快照：只有 `events.html` 与 `tools.html` 两页变化（`.pips` 与 `.starmini` 消失），其余 8 页 + 2 张窄屏快照不变。
 
-### [ ] T2.3 命名统一
+### [x] T2.3 命名统一
 
 依据：F32 · 依赖：T1.4
 
 步骤：重写 `collect.mjs` 头注释；UA 只保留 `lib/http.js` 里的一份；localStorage 键 `fr.theme`、`fr.density` 改为 `idx.theme`、`idx.density`（不做迁移，旧偏好丢一次可以接受）。
 
 验收：全仓检索 `FreeAI`、`fr.theme`、`fr.density`、`IndexAI/1.0` 均为 0（两份计划文档除外）。
+
+结果：新增 `test/unit/naming.test.js`（4 项，全绿），把这四条变成可执行检查，而不是一次性 grep。
+
+1. **重写 `collect.mjs` 头注释**：原来写着「FreeAI Radar — 每日数据采集」，并列出「三个数据层」却实际列了四条——而层现在已有十层。改成描述职责与边界的短头（抓取→归一→去重→合并→门禁→写盘；网络只走 `lib/http.js`、时间只走 `lib/clock.js`、外链只信 `lib/url.js`），并明确「层的清单不写在这里」——它随任务变化，应该去 AGENTS.md 与计划里看。
+2. **UA 只留一份**：`bench.mjs` 的 `IndexAI/1.0 (+https://indexai.pages.dev)` 改为引用 `lib/http.js` 的 `USER_AGENT`；`collect.mjs` 的 GitHub 请求头去掉自写的 `User-Agent`（客户端会统一注入），只留 `Accept` 与可选鉴权。
+3. **localStorage 键**：`fr.theme` / `fr.density` → `idx.theme` / `idx.density`，共 6 处。不做迁移（旧偏好丢一次可以接受），但启动时 `removeItem` 清掉旧键，免得它们永远躺在用户机器上。
+
+测试的写法值得说明：它不只查字面量，还锁了一条结构性约束——**UA 只允许在 `lib/http.js` 出现一份**。这比「别写旧名字」更难绕过：以后谁在别处又写一份 UA，测试会直接指出来。唯一放行的是「清理旧键」那两行 `removeItem("fr.…")`，测试按 `removeItem` 排除。
+
+golden 差异：无（UA 内容本来就是 `IndexAI/1.0 (+https://indexai.pages.dev)`，改的是「谁来拼这个字符串」）。253 → 257 项测试。
 
 ### [ ] T2.4 文档与文案对齐
 

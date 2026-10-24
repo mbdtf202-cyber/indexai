@@ -16,9 +16,10 @@
  */
 
 import { readParquet } from './lib/parquet.mjs';
-import { httpGet, httpText, httpBuffer } from './lib/http.js';
+import { httpGet, httpText, httpBuffer, USER_AGENT } from './lib/http.js';
 
-const UA = { 'User-Agent': 'IndexAI/1.0 (+https://indexai.pages.dev)' };
+/** 请求头复用统一客户端的那一份：UA 只在 lib/http.js 定义（T2.3）。 */
+const UA = { 'User-Agent': USER_AGENT };
 const HF = 'https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset/resolve/main';
 
 /**
