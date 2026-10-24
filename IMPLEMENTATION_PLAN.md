@@ -40,6 +40,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 - [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
 - [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N06（来自 T1.3）：`npm test` 之前在非回放环境下会真的睡眠（Luma 冷却 180s 实测），现在由脚本自己钉死回放信号。任何新增用例都不要再依赖「外面传了环境变量」。去向：已修，AGENTS.md 记一条。
 - [ ] N04（来自 T1.2）：HF 上 LMArena 的 `latest-00000-of-00001.parquet` 在两个回放 fixture 里都解析失败（一层 Thrift 里没读出任何列，一层报 `unsupported value type 15`）。`text` 配置报 `numRows 1`，是覆盖 `model_name` 列的那层。这不是本轮引入的：T0.4 的 golden 里 arena 一直是 0 榜、`ok:false`。导致「LMArena 贡献 137/163 个榜」这件事在离线环境里完全无法验证（F03 的实例数据也因此只能来自线上）。去向：需要重新录制一份能解析的 parquet（`npm run record`）并补 golden，建议并入 T6.8（τ-bench 一并处理）或单开任务。
 - [ ] N05（来自 T1.2）：`INDEXAI_ARENA_BOARDS` 是为测试新增的环境变量，与 S1.3 的「命令随任务落地逐步加入」不冲突，但它是第二套「缩小迭代集合」的机制。M3 拆层时应与 `INDEXAI_PROFILE` 合并成一个 `ctx.profile`。去向：T3.1。
 - [ ] N03（来自 T1.1）：`smoke.spec.js` 的「整页可见」断言一直是假绿（见结果 1），Playwright 默认 `reducedMotion: reduce` 会掩盖 `opacity:0` 的缺陷。之后所有可见性断言都必须读计算样式而不是 `toBeVisible`。去向：已写进 AGENTS.md。
@@ -189,7 +190,7 @@ DOM 快照：10 个标签全部重生成，差异只有两类——首屏元素�
 
 golden 差异（两处，同一原因）：`data.json` 的 `$.bench.sources[0].error` 与 `bench.json` 的 `$.sources[0].error` 各新增一项——回放数据里的 HF parquet 解析不了（见 N04），arena 这一源现在会如实带上失败原因。榜数、行数、其它源全部不变。
 
-### [ ] T1.3 Luma 冷却上界
+### [x] T1.3 Luma 冷却上界
 
 依据：F04 · INV-8 · 依赖：T0.4
 
@@ -199,6 +200,26 @@ golden 差异（两处，同一原因）：`data.json` 的 `$.bench.sources[0].e
 3. 用例：故障注入 `api.lu.ma` 全部 429，用 `lib/clock.js` 的睡眠统计断言。
 
 验收：该用例中冷却总时长 ≤ 6 分钟、全部睡眠 ≤ geo 预算（8 分钟）；Luma 层返回已采部分，meta 里能看到受阻原因。
+
+结果：新增 `test/unit/luma-backoff.test.js`（3 项，全绿）。
+
+`collect.mjs`：
+
+1. 新常量 `EV_LUMA_COOLDOWN_CAP_MS = 6 分钟`，以及模块级 `lumaState`（`blocked / reason / cooldownMs / gaveUp`），导出 `getLumaBlockState()` 与 `resetLumaState()`。
+2. `lumaGet` 的 429/403 分支在睡之前过两道闸：**累计冷却 + 本次等待 > 6 分钟**、或**再等会越过 geo 预算**，任一成立就标受阻、立刻返回空，不再睡。旧逻辑按 attempt 递增（180→360→540→720 秒），最后一次睡完还不重试，单请求就能睡掉 12 分钟。
+3. 受阻后 `lumaGet` 直接返回空，不再发起新请求：这个源是有状态封禁，继续试探只会把解封时间往后推。
+4. geo 循环与无 geo 并发池都检查受阻标记，立刻停手；剩余城市照旧计入 skipped，但日志不再打印 240 个城市名（只报数量）。
+5. `meta.net` 新增 `lumaBlocked / lumaBlockReason / lumaCooldownMs / lumaCooldownCapMs`，受阻可被页面与状态页读到（INV-4）。
+
+**同时修掉两个测试基础设施问题**（都是这次才暴露的，不修就做不到「`npm test` 几秒内跑完」）：
+
+- `package.json` 的 `test` 现在自己带 `INDEXAI_HTTP=replay` 与 `--import ./test/support/http-replay.js`。以前靠外部传环境变量，直接跑 `npm test` 时 `lib/clock.js` 会真的睡——Luma 的 180 秒冷却被真实等待，一次 `npm test` 要 60 秒以上。
+- `installReplay()` 现在把原生 fetch 存到 `globalThis.__liveFetch`，「录制 → 回放」往返用例用它打本地 HTTP 服务（否则它会去回放表里找 `http://127.0.0.1:PORT/redirect`）。
+- `bench-fallback.test.js` 对非 HF 主机返回 503 而不是抛网络错误：抛错会走 `bench.mjs` 的指数退避（8 源 × 3 次 × 1.2s），把用例拖到 60 秒。
+
+golden 差异（4 处，全部是新增字段）：`$.meta.net.lumaBlocked / lumaBlockReason / lumaCooldownMs / lumaCooldownCapMs`。榜数、行数、活动数、其它层全部不变。
+
+耗时：`npm test` 60s → **1.1s**；`npm run verify` 全流程 **12s**（S1.3 目标是 3 分钟内）。
 
 ### [ ] T1.4 统一超时
 

@@ -1270,9 +1270,47 @@ const EV_LUMA_GEO_BUDGET_MS = 480000;   // 8 分钟
  * 验收要报「总请求数」，逐次累加而不是事后估算。
  * blocked/最长冷却单独记账：这个源是**有状态封禁**，哪天它把阈值调紧，
  * 我们要能从 meta.collect 里立刻看出来，而不是等条数掉了再回头排查。 */
+/* 单主机冷却总上限（F04、S2.3）。
+ * 实测封禁约 3 分钟解封；但旧逻辑按 attempt 递增（180s→360s→540s→720s），
+ * 一次请求就能睡掉 12 分钟，比整层的 8 分钟预算还长——最后睡完还不重试，纯浪费。
+ * 现在：本次运行累计冷却一旦会超过这个上限，就不再睡、直接标受阻返回，
+ * 让「已采到的部分」照常发布，并把原因写进 meta.net。 */
+const EV_LUMA_COOLDOWN_CAP_MS = 6 * 60 * 1000;   // 6 分钟
+
 const netStat = { requests: 0, blocked: 0, maxCooldownMs: 0 };
 
+/* 本次运行的 Luma 受阻状态。受阻后不再发起新请求：这个源是有状态封禁，
+ * 继续试探只会把解封时间往后推（实测 +180s 才 200）。 */
+const lumaState = { blocked: false, reason: null, cooldownMs: 0, gaveUp: 0 };
+
+/** 供测试与 meta 读取的受阻快照。 */
+export function getLumaBlockState() {
+  return {
+    blocked: lumaState.blocked,
+    reason: lumaState.reason,
+    cooldownMs: lumaState.cooldownMs,
+    requests: netStat.requests,
+    gaveUp: lumaState.gaveUp,
+    capMs: EV_LUMA_COOLDOWN_CAP_MS,
+    geoBudgetMs: EV_LUMA_GEO_BUDGET_MS,
+  };
+}
+
+/** 重置 Luma 的限速状态（测试用；生产一次运行只走一遍）。 */
+export function resetLumaState() {
+  lumaState.blocked = false;
+  lumaState.reason = null;
+  lumaState.cooldownMs = 0;
+  lumaState.gaveUp = 0;
+  netStat.requests = 0;
+  netStat.blocked = 0;
+  netStat.maxCooldownMs = 0;
+}
+
 const lumaSleep = (ms) => sleep(ms);
+
+/** 本次 geo 循环的起点。lumaGet 判断「冷却后会不会越过预算」要用它。 */
+let geoStart = 0;
 
 /** 统一出口：计数 + 429 冷却。返回 entries 数组。
  *  @param {object} opt { gap } 请求前是否等一个间隔（geo 队列用，无 geo 的并发池不用） */
@@ -1281,6 +1319,8 @@ async function lumaGet(q, geo, opt = {}) {
   let params = `limit=50&query=${encodeURIComponent(q)}`;
   if (geo) params += `&latitude=${geo.lat}&longitude=${geo.lng}`;
   const url = `https://api.lu.ma/discover/get-paginated-events?${params}`;
+
+  if (lumaState.blocked) return [];
 
   for (let attempt = 0; attempt <= EV_LUMA_MAX_RETRY; attempt += 1) {
     if (gap) await lumaSleep(gap);           // 请求前睡，保证任意两次之间都有间隔
@@ -1291,6 +1331,23 @@ async function lumaGet(q, geo, opt = {}) {
         // 429/403 是封禁信号，不是「这个查询没结果」。冷却后重试，不能当空数组吃下去。
         netStat.blocked += 1;
         const wait = EV_LUMA_COOLDOWN_MS * (attempt + 1);
+
+        // 冷却必须先过两道闸（F04、INV-8）：
+        // - 本次运行的累计冷却不能超过单主机上限；
+        // - 冷却完也不能越过 geo 预算（预算是给整层的，不是给单请求的）。
+        // 任一不满足就停手，把「部分结果 + 受阻原因」交回上层，而不是继续睡。
+        const overCap = lumaState.cooldownMs + wait > EV_LUMA_COOLDOWN_CAP_MS;
+        const overBudget = since(geoStart) + wait > EV_LUMA_GEO_BUDGET_MS;
+        if (overCap || overBudget) {
+          lumaState.blocked = true;
+          lumaState.reason = overCap
+            ? `单主机冷却已达上限（${Math.round(lumaState.cooldownMs / 1000)}s + ${Math.round(wait / 1000)}s > ${EV_LUMA_COOLDOWN_CAP_MS / 1000}s）`
+            : `再冷却 ${Math.round(wait / 1000)}s 会越过 geo 预算`;
+          console.warn(`[collect] luma ${res.status}，停止采集：${lumaState.reason}`);
+          return [];
+        }
+
+        lumaState.cooldownMs += wait;
         if (wait > netStat.maxCooldownMs) netStat.maxCooldownMs = wait;
         console.warn(`[collect] luma ${res.status}（${geo ? geo.slug : '无geo'} / ${q}），冷却 ${Math.round(wait / 1000)}s 后第 ${attempt + 1} 次重试`);
         await lumaSleep(wait);
@@ -1301,6 +1358,7 @@ async function lumaGet(q, geo, opt = {}) {
       return j.entries || [];
     } catch (e) {
       if (attempt >= EV_LUMA_MAX_RETRY) {
+        lumaState.gaveUp += 1;
         console.warn(`[collect] luma query "${q}"${geo ? `@${geo.slug}` : ''} 放弃：${e.message}`);
         return [];
       }
@@ -1311,7 +1369,8 @@ async function lumaGet(q, geo, opt = {}) {
   return [];
 }
 
-async function fetchLuma() {
+/** Luma 层（导出供 T1.3 的限速用例直接调用）。 */
+export async function fetchLuma() {
   try {
     const byId = new Map();
     let failedQueries = 0;
@@ -1320,6 +1379,7 @@ async function fetchLuma() {
     // 小并发池：一口气发 30 个请求容易被源端 5xx，8 路足够快也不会自我限流
     const worker = async () => {
       while (cursor < LUMA_QUERIES.length) {
+        if (lumaState.blocked) return;
         const q = LUMA_QUERIES[cursor++];
         const entries = await lumaGet(q);
         if (!entries.length) failedQueries += 1;
@@ -1338,7 +1398,7 @@ async function fetchLuma() {
      * 为什么不是并发 8：实测并发会把源端打成有状态封禁（见 EV_LUMA_GAP_MS 上方注释）。
      * 顺序 + 900ms 间隔实测稳定 200，代价是 216 × 0.9 ≈ 195s。
      * 这个站每天只跑一次，3 分钟可以接受；封禁后再解要 3 分钟且期间全部城市失败，更亏。 */
-    const geoStart = mark();
+    geoStart = mark();
     const citiesDone = [];
     const citiesSkipped = [];
     let geoHits = 0;
@@ -1348,7 +1408,9 @@ async function fetchLuma() {
       if (aborted) { citiesSkipped.push(city.slug); continue; }
       let cityNew = 0;
       for (const q of LUMA_GEO_QUERIES) {
+        // 两道刹车：预算用超了，或者源已经把我们挡住了（受阻后继续请求只会延长封禁）
         if (since(geoStart) > EV_LUMA_GEO_BUDGET_MS) { aborted = true; break; }
+        if (lumaState.blocked) { aborted = true; break; }
         const entries = await lumaGet(q, city, { gap: EV_LUMA_GAP_MS });
         for (const entry of entries) {
           const ev = entry?.event || entry;
@@ -1367,7 +1429,8 @@ async function fetchLuma() {
       if (cityNew) console.log(`[collect] luma geo ${city.slug} +${cityNew}（累计 ${byId.size}）`);
     }
     const geoMs = since(geoStart);
-    console.log(`[collect] luma geo ${citiesDone.length}/${LUMA_CITIES.length} 城完成 · 新增 ${geoHits} 条 · 耗时 ${(geoMs / 1000).toFixed(0)}s${citiesSkipped.length ? ` · 未采完 ${citiesSkipped.length} 城（${citiesSkipped.join(',')}）` : ''}`);
+    const stopNote = lumaState.blocked ? ` · 受阻停止：${lumaState.reason}` : '';
+    console.log(`[collect] luma geo ${citiesDone.length}/${LUMA_CITIES.length} 城完成 · 新增 ${geoHits} 条 · 耗时 ${(geoMs / 1000).toFixed(0)}s${citiesSkipped.length ? ` · 未采完 ${citiesSkipped.length} 城` : ''}${stopNote}`);
 
     // 关键词本身已经是 AI 相关，这里只做一次轻过滤把明显无关的挡掉：命中任一 AI 词即收。
     //
@@ -2700,6 +2763,11 @@ async function main() {
     maxCooldownMs: netStat.maxCooldownMs,
     lumaCities: LUMA_CITIES.length,
     lumaGeoBudgetMs: EV_LUMA_GEO_BUDGET_MS,
+    // 受阻要响（INV-4）：页面与状态页据此说「中转/活动这层被限速了」，而不是默默少几条
+    lumaBlocked: lumaState.blocked,
+    lumaBlockReason: lumaState.reason,
+    lumaCooldownMs: lumaState.cooldownMs,
+    lumaCooldownCapMs: EV_LUMA_COOLDOWN_CAP_MS,
   };
   const eventsOpen = allEvents.filter((e) => e.status === 'open' || e.status === 'upcoming').length;
   const eventsPast = allEvents.filter((e) => e.status === 'past').length;

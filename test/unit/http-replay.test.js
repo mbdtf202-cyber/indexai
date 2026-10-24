@@ -69,9 +69,14 @@ describe('http replay/record round trip', () => {
     assert.notEqual(key, requestKey('GET', 'https://example.com/b'));
   });
 
+  // 本文件测的是「录制 → 回放」的往返，必须用真的 fetch 打本地服务。
+  // npm test 会带 INDEXAI_HTTP=replay（让 sleep 不真等），此时全局 fetch 已被替换成回放，
+  // 所以这里显式保存一份原生 fetch 再用。
+  const liveFetch = globalThis.__liveFetch ?? globalThis.fetch;
+
   test('录制后回放，状态码与正文逐字节一致', async () => {
     const url = `${baseUrl}/plain`;
-    const live = await fetch(url);
+    const live = await liveFetch(url);
     const liveBody = await live.text();
 
     // 直接调用录制函数把真实响应写到临时目录
@@ -91,7 +96,7 @@ describe('http replay/record round trip', () => {
 
   test('finalUrl 覆盖 Response.url（照顾中转站 301 判断）', async () => {
     const url = `${baseUrl}/redirect`;
-    const live = await fetch(url);
+    const live = await liveFetch(url);
     const liveBody = await live.text();
     const liveFinal = live.url; // 跟随后指向 /target
 

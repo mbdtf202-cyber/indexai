@@ -59,7 +59,10 @@ function installFetch() {
         headers: { 'content-type': 'application/octet-stream' },
       });
     }
-    throw new Error(`本用例只允许 HuggingFace 请求，收到：${url}`);
+    // 非 HF 的源（SWE-bench / Aider / Vals …）在本用例里一律「暂时不可用」。
+    // 不用抛错：抛网络错误会走 bench.mjs 的指数退避重试，8 个源 × 3 次 × 1.2s
+    // 会把用例拖到 60 秒。返回 5xx 让它们立刻失败、按 stale 处理。
+    return new Response('', { status: 503 });
   };
 }
 

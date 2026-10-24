@@ -14,7 +14,7 @@
     "format": "biome format --write lib test scripts site pipeline",
     "typecheck": "tsc --noEmit",
     "invariants": "node scripts/check-invariants.js",
-    "test": "node --test \"test/unit/**/*.test.js\" \"test/golden/**/*.test.js\" \"test/contract/**/*.test.js\"",
+    "test": "INDEXAI_HTTP=replay node --import ./test/support/http-replay.js --test \"test/unit/**/*.test.js\" \"test/golden/**/*.test.js\" \"test/contract/**/*.test.js\"",
     "verify": "npm run lint && npm run typecheck && npm run invariants && npm test && npm run build && npm run test:e2e",
     "collect": "node collect.mjs",
     "record": "node --import ./test/support/http-record.js",

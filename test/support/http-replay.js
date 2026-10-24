@@ -177,6 +177,8 @@ export function replayFetch(input, init = {}) {
 
 /** 安装回放 fetch。幂等，便于多处调用。 */
 export function installReplay() {
+  // 存一份原生 fetch：录制往返的用例要打本地 HTTP 服务，不能走回放表（T1.3 发现）
+  if (!globalThis.__liveFetch) globalThis.__liveFetch = globalThis.fetch;
   globalThis.fetch = replayFetch;
 }
 
