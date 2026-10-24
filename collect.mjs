@@ -21,6 +21,7 @@ import { subsThirdStats, subsThirdTotal } from './lib/subs-stats.js';
 import fxLayer from './pipeline/layers/fx/index.js';
 import adoptionLayer from './pipeline/layers/adoption/index.js';
 import resourcesLayer from './pipeline/layers/resources/index.js';
+import newsLayer from './pipeline/layers/news/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -746,6 +747,16 @@ async function probeAll(entries) {
 
 
 /* ────────────────────────── 6. 汇率 ────────────────────────── */
+
+/** 存档补回的早期条目（可选文件，CI 里没有也不该失败） */
+async function readSeed() {
+  try {
+    const raw = JSON.parse(await readFile(SEED, 'utf8'));
+    return Array.isArray(raw) ? raw : raw.items || [];
+  } catch {
+    return [];
+  }
+}
 
 /* ────────────────────────── 7. AI 活动 ────────────────────────── */
 /* AIOS 活动库：可选层，**只认环境变量** `AIOS_OPPORTUNITIES`。
@@ -1804,112 +1815,15 @@ function toRow(x) {
 }
 
 /** 官方精选：每天约 50 条，摘要最全，优先用它 */
-async function fetchFrontline(log) {
-  try {
-    const res = await httpText(NEWS_FEED, { label: 'news/frontline' });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const rows = parseNewsYaml(res.text);
-    log?.(`frontline ${rows.length} 条`);
-    return rows;
-  } catch (e) {
-    console.error(`[collect] news 精选源失败：${e.message}`);
-    return [];
-  }
-}
 
 /**
  * 全量流：window 只接受 24h / 7d，游标翻页。
  * mode=all 才给全部；selected 只给人工精选的 50 条。
  * 分类之间不重叠，所以要逐个分类翻，不然会漏掉一大半。
  */
-async function fetchAihotBulk(log) {
-  const cats = [null, 'ai-models', 'ai-products', 'industry', 'paper', 'tip'];
-  const seen = new Map();
-  let requests = 0;
-
-  // 测试档位只翻主分类的第 1 页，够覆盖解析与去重，又不拉整个 7 天窗口
-  const catsToFetch = TEST_PROFILE ? [null] : cats;
-  const maxPages = TEST_PROFILE ? 1 : 40;
-  for (const cat of catsToFetch) {
-    let cursor = null;
-    for (let page = 0; page < maxPages; page += 1) {
-      const url = new URL(AIHOT_ITEMS);
-      url.searchParams.set('window', '7d');
-      url.searchParams.set('mode', 'all');
-      if (cat) url.searchParams.set('category', cat);
-      if (cursor) url.searchParams.set('cursor', cursor);
-      let d;
-      try {
-        const res = await httpGet(url, { label: `news/aihot${cat ? `/${cat}` : ''}` });
-        requests += 1;
-        if (!res.ok) break;
-        d = await res.json();
-      } catch { break; }
-      for (const it of d.items || []) {
-        if (!it.id || !it.title) continue;
-        const pub = it.publishedAt || it.discoveredAt || '';
-        seen.set(it.id, {
-          date: pub.slice(0, 10),
-          time: pub.slice(11, 16),
-          title: it.title,
-          summary: it.summary || '',
-          url: keepSafeUrl(it.link || `https://aihot.news/items/${it.id}`, 'news:aihot') ?? '',
-          cat: it.category || null,
-        });
-      }
-      if (!d.page?.hasMore || !d.page.nextCursor) break;
-      cursor = d.page.nextCursor;
-      await sleep(250);
-    }
-    await sleep(250);
-  }
-  log?.(`aihot 全量 ${seen.size} 条 / ${requests} 次请求`);
-  return [...seen.values()];
-}
 
 /** 存档补回的早期条目（可选文件，CI 里没有也不该失败） */
-async function readSeed() {
-  try {
-    const raw = JSON.parse(await readFile(SEED, 'utf8'));
-    return Array.isArray(raw) ? raw : raw.items || [];
-  } catch { return []; }
-}
 
-async function fetchNews(log) {
-  const [frontline, bulk, seed] = await Promise.all([fetchFrontline(log), fetchAihotBulk(log), readSeed()]);
-
-  // 精选优先，所以后面合并时它的摘要不会被短版覆盖
-  const fresh = [
-    ...frontline.map(toRow),
-    ...bulk.map((x) => ({
-      ...toRow(x),
-      // 全量流的摘要要靠标题去重，分类用源站自己的标签兜底
-      topic: AIHOT_CATEGORY[x.cat] || undefined,
-    })),
-    ...seed.map(toRow),
-  ];
-
-  let archive = [];
-  try {
-    const raw = JSON.parse(await readFile(ARCHIVE, 'utf8'));
-    archive = Array.isArray(raw) ? raw : raw.items || [];
-  } catch { /* 首次 */ }
-
-  // 本次真正新抓到的条数（不含归档里原有的）：上层据此判断情报层是否新鲜。
-  // 三路源全挂时 fresh 可能是空的，但归档照样很大——F09 就是这里被掩盖的。
-  const before = archive.length;
-  const merged = mergeArchive(archive, fresh, { today: todayISO() });
-  const stats = archiveStats(merged);
-  const freshCount = merged.length - before;
-
-  try { await writeFile(ARCHIVE, JSON.stringify(merged), 'utf8'); } catch { /* 只读环境 */ }
-  console.log(`[collect] news 归档 ${before} → ${merged.length} 条（新增 ${freshCount}），跨度 ${stats.spanDays} 天 / ${stats.days} 个有新闻的日子，${(stats.bytes / 1024).toFixed(0)}KB`);
-
-  // 给归档挂一个不可枚举的元信息：既不改 JSON 形态（golden 逐字节不受影响），
-  // 又让 T.run 能看见「本次到底抓到了没有」。
-  Object.defineProperty(merged, '__freshCount', { value: freshCount, enumerable: false });
-  return merged;
-}
 
 function buildSubsRegions(apple) {
   if (!apple) return [];
@@ -2257,11 +2171,41 @@ async function main() {
   const newsArchive = await T.run(
     'news',
     async () => {
-      const archive = await fetchNews((m) => console.log(`[collect] ${m}`));
+      /* news 走层契约（T3.1c4）。层不碰文件系统：归档的读写由这里注入，
+       * 层只负责「抓什么、怎么并、算多新鲜」。 */
+      const ctx = {
+        http: { get: httpGet, text: httpText },
+        sleep,
+        parseYaml: parseNewsYaml,
+        keepSafeUrl,
+        readSeed,
+        mergeArchive,
+        today: todayISO,
+        testProfile: TEST_PROFILE,
+        urls: { frontline: NEWS_FEED, aihot: AIHOT_ITEMS },
+        log: (m, opt) => {
+          if (opt?.level === 'warn') console.warn(`[collect] ${m}`);
+          else console.log(`[collect] ${m}`);
+        },
+      };
+      const raw = await newsLayer.fetch(ctx);
+      const norm = newsLayer.normalize(raw, ctx);
+      const archive = newsLayer.merge(newsArchiveBefore, norm.records, ctx);
+      const fresh = archive?.__freshCount ?? 0;
+
       // 归档只增不删，所以「有内容」不等于「今天拿到了新东西」。
       // 三路源全挂时 freshCount 为 0：这一层必须记 stale 并写明原因（F09）。
-      const fresh = archive?.__freshCount ?? 0;
       if (!fresh) console.warn('[collect] news 三路源本次都没拿到新条目，沿用现有归档');
+
+      // 写回归档（层不写，这里写）
+      try {
+        await writeFile(ARCHIVE, JSON.stringify(archive), 'utf8');
+      } catch { /* 只读环境 */ }
+      const st = archiveStats(archive);
+      console.log(
+        `[collect] news 跨度 ${st.spanDays} 天 / ${st.days} 个有新闻的日子，${(st.bytes / 1024).toFixed(0)}KB`,
+      );
+
       // valid: false → T.run 走「沿用上一版」分支：有归档记 stale，连归档都没有才记 failed
       return { value: archive, valid: fresh > 0 };
     },
