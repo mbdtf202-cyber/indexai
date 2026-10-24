@@ -707,7 +707,7 @@ DOM 快照：`method.html` 与 `compare.html` 两页变化。**验收要求的�
 
 golden 差异（136 处，同一原因）：所有 Luma 活动链接 `lu.ma` → `luma.com`。DOM 快照无变化（链接文本不显示域名）。
 
-### [ ] T2.7 灰色渠道呈现（D3）
+### [x] T2.7 灰色渠道呈现（D3）
 
 依据：F49 · 依赖：T2.2
 
@@ -718,6 +718,28 @@ golden 差异（136 处，同一原因）：所有 Luma 活动链接 `lu.ma` →
 4. 方法页同步口径。
 
 验收：`data.json` 与页面中不再出现发卡平台的商品链接（用 fixture 断言）；中转站的单元测试覆盖排除规则。
+
+结果：新增 `lib/subs-stats.js`、`lib/relay-groups.js` 与 `test/unit/subs-third-stats.test.js`（11 项，全绿）。
+
+1. **挂单只出统计（F49）**。`subsThirdStats(list)` 按产品折成 `{product, listings, inStock, platforms, min, median, max}`；`subsThirdTotal(list)` 给总额。**原始挂单（含 url）只在采集进程内存在**，算完统计就不再进入 `data.json`——「页面上不显示链接」与「数据里没有链接」是同一件事，不靠渲染时隐藏。
+2. **页面改统计表**：按产品给出挂单数 / 在售数 / 平台数 / 最低 / 中位 / 最高，**没有任何外链**。KPI 说明从「带商品直链」改为「只给区间」。数据为空时说明上游没采到，而不是显示空表。
+3. **中转站灰色分组（F49）**：`isGrayGroup()` 认「逆向 / 特价 / reverse / 破解 / 掺水」等；命中的分组**不参与代表价与最低可达价**，但计入分组总数。页面表尾显示「另有 N 个『逆向 / 特价』分组未计入」。
+4. **方法页同步**：订阅层说明改为「只呈现统计量、不给商品页链接」；中转站口径补一段说明灰色分组的排除逻辑。
+
+**过程中修掉三个真问题**：
+
+- `pickFlagship` 只返回了 `groupCount`，灰色计数留在 groups 数组里没带出来，站点级 `grayGroups` 恒为 0。是 golden 差异里「`deepseekflash.floor` 被删但 `grayGroups` 没出现」这个不对称暴露的。
+- 健康门禁还在数 `subsThird.length`——D3 之后那是「产品数」（4），不是「挂单数」（239）。门禁从 8 条红线变 9 条。改为从统计行累加 `listings`，口径不变、取数位置变。
+- 我手工把本机 `data.json` 的 `subsThird` 换成统计格式时，**顺手丢掉了 T1.9 补进去的 `meta.flagships`**，导致 `compare-sort` 的两条 e2e 失败。补回后恢复。这类「为了跑通 fixture 而手改数据」的操作很容易带走别的字段，教训记在 AGENTS.md-worthy 的清单里。
+
+golden 差异（7 处，逐条）：
+- `meta.counts.subsThirdProducts`：新增（产品数，与挂单总数分开）
+- `subsThird.length`：239 → 4（逐条挂单变成按产品统计）
+- `relays[0].prices.deepseekflash.floor`：删除——那个分组叫「**国产特价**」，命中灰色规则被排除，正是 D3 的目标
+- `relays[0].prices.deepseekflash.grayGroups`：新增（=1）
+- `relays[0..2].grayGroups`：新增
+
+DOM 快照：5 页变化（subs、relays、method 及两张窄屏快照），全部来自统计表与表尾说明。
 
 ### [ ] T2.8 站点地址单点（D4 准备）
 

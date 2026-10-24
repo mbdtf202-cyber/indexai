@@ -1547,7 +1547,7 @@ const MOTION = (() => {
       subs: [
         ["官方档位", c.subs, "官网能直接读到的月费"],
         ["区价套餐", c.subsRegions, `${c.subsRegionsRaw} 条国家价`],
-        ["第三方挂单", c.subsThird, "带商品直链"],
+        ["第三方挂单", c.subsThird, "只给区间"],
         ["最低区价", (d.subsRegions || []).length ? "¥" + Math.min(...d.subsRegions.map(g => g.cheapest)) : "—", "App Store 折人民币"],
       ],
       relays: [
@@ -2062,23 +2062,40 @@ const MOTION = (() => {
       <div class="routes">
         ${routes.map(([name, desc, risk]) => `<div class="route"><h4>${esc(name)}</h4><p>${esc(desc)}</p><div class="risk">${esc(risk)}</div></div>`).join("")}
       </div>
-      <div class="shead"><h2>第三方挂单（真实链接）</h2><span class="desc">公开挂单，每条带商品页直链。质保通常只有几小时。</span><span class="right">${state.data.subsThird.length} 条 · 在售 ${state.data.subsThird.filter(x => x.status === "in_stock").length}</span></div>
+      ${renderThirdStats()}`;
+  }
+
+  /**
+   * 第三方挂单只呈现统计（D3 / F49）。
+   *
+   * 页面上不再出现任何发卡平台商品页链接——数据里也没有，
+   * 所以这里没有「藏起来」的环节，是真的没有。
+   * 区间比单条挂单更有用：读者要判断的是「行情在什么位置」，不是「买哪一条」。
+   */
+  function renderThirdStats() {
+    const rows = state.data.subsThird || [];
+    if (!rows.length) {
+      return '<div class="empty"><b>这一版没有第三方挂单</b>上游挂单源本次没采到；官方档位与区价不受影响。</div>';
+    }
+    const totalListings = rows.reduce((n, x) => n + (x.listings || 0), 0);
+    const totalStock = rows.reduce((n, x) => n + (x.inStock || 0), 0);
+    const body = rows.map((x) => `<tr>
+      <td><b>${esc(x.product)}</b></td>
+      <td class="num">${x.listings ?? "—"}</td>
+      <td class="num">${x.inStock ?? "—"}</td>
+      <td class="num hidesm">${x.platforms ?? "—"}</td>
+      <td class="num">${x.min == null ? "—" : "¥" + money(x.min)}</td>
+      <td class="num">${x.median == null ? "—" : "¥" + money(x.median)}</td>
+      <td class="num">${x.max == null ? "—" : "¥" + money(x.max)}</td>
+    </tr>`).join("");
+    return `<div class="shead"><h2>第三方挂单行情</h2><span class="desc">只给区间，不给链接。质保通常只有几小时，站点不推荐、不保证可用。</span><span class="right">${totalListings} 条挂单 · 在售 ${totalStock} · ${rows.length} 个产品</span></div>
       <div class="tablewrap" tabindex="0" role="region" aria-label="数据表，可横向滚动" style="max-height:620px">
-        <table style="min-width:0"><caption class="sr">第三方订阅挂单，带商品直链</caption>
-          <thead><tr><th style="cursor:default">产品</th><th style="cursor:default">平台</th><th style="cursor:default">挂单</th><th class="num" style="cursor:default">价格</th><th class="num hidesm" style="cursor:default">折合 $</th><th style="cursor:default">状态</th></tr></thead>
-          <tbody>
-          ${state.data.subsThird.map(x => `<tr>
-            <td><b>${esc(x.product)}</b></td>
-            <td>${esc(x.platform)}</td>
-            <td class="vend"><a href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.title)}">${esc(x.title || x.route)}</a></td>
-            <td class="num">${x.currency === "CNY" ? "¥" : "$"}${x.price}</td>
-            <td class="num hidesm">${x.currency === "CNY" ? "$" + (x.price / (state.fx?.rate || state.data.meta.fx.USDCNY)).toFixed(2) : "—"}</td>
-            <td>${x.status === "in_stock" ? '<span class="tag new">在售</span>' : '<span class="tag">缺货</span>'}</td>
-          </tr>`).join("")}
-          </tbody>
+        <table style="min-width:0"><caption class="sr">第三方订阅挂单的按产品统计</caption>
+          <thead><tr><th style="cursor:default">产品</th><th class="num" style="cursor:default">挂单</th><th class="num" style="cursor:default">在售</th><th class="num hidesm" style="cursor:default">平台</th><th class="num" style="cursor:default">最低</th><th class="num" style="cursor:default">中位</th><th class="num" style="cursor:default">最高</th></tr></thead>
+          <tbody>${body}</tbody>
         </table>
       </div>
-      <div class="tfoot"><span>来源：data.aibijia.org 公开挂单 JSON · 商品直链指向发卡平台 · 官方价核实于 ${esc(state.data.meta.date)}</span>
+      <div class="tfoot"><span>来源：data.aibijia.org 公开挂单 JSON（只取统计量）· 官方价核实于 ${esc(state.data.meta.date)}</span>
         <span class="spacer"></span><a href="#method" style="color:var(--dim);text-decoration:underline">口径说明 ↗</a></div>`;
   }
 
@@ -2340,7 +2357,11 @@ const MOTION = (() => {
         </details>`).join("")}
 
       <div class="tfoot">
-        <span>有 billing_expr 的站点按表达式计价（真实挂牌价）；其余按 OneAPI 倍率 × 分组换算。均不含充值折扣。</span>
+        <span>有 billing_expr 的站点按表达式计价（真实挂牌价）；其余按 OneAPI 倍率 × 分组换算。均不含充值折扣。
+        ${(() => {
+          const gray = live.reduce((n, r) => n + (r.grayGroups || 0), 0);
+          return gray ? `另有 ${gray} 个「逆向 / 特价」分组未计入代表价与最低可达价——那不是正常渠道能拿到的价。` : "";
+        })()}</span>
         <span class="spacer"></span><a href="#method" style="color:var(--dim);text-decoration:underline">口径说明 ↗</a>
       </div>`;
   }
@@ -3795,11 +3816,12 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
 ${esc(COST_FORMULA)}</div>
       <p><strong>为什么必须表达式优先：</strong>同时给出两种写法的站点里，<code>model_ratio</code> 是废弃占位值——例如某站 <code>model_ratio=37.5</code> 算出 $75，而其 <code>billing_expr</code> 写着 <code>p*2+c*10</code>，真实价是 $2 / $10。只认倍率会把一批正常站点误标成「异常」。</p>
       <p><strong>分组倍率（group_ratio）</strong>才是中转站的定价核心，跨站差 20–220 倍。页面上的价格取<strong>代表分组</strong>（default，或组名里声明倍率最接近 1 的公开组），用于横向比较；另单列<strong>最低可达价</strong>并标出组名，因为那通常要求特定分组权限（会员、Claude Code 专属等）。</p>
+      <p>名称里带「<strong>逆向</strong>」「<strong>特价</strong>」「reverse」的分组<strong>不参与</strong>代表价与最低可达价：那类通道要么破解客户端协议，要么是低于成本的引流价，都不代表正常渠道能拿到的价格。它们仍计入「这家有多个分组」的总数，页面上会写明被排除了几个。</p>
       <p>有效成本按固定画像折算：<code>h=${pct(profileOf("agent").h)}</code> 缓存命中、<code>s=${pct(profileOf("agent").s)}</code> 输出占比（${esc(profileOf("agent").label)}）。<strong>输入价常常各家相同</strong>，差价主要来自输出倍率与缓存折扣，所以排序用有效成本。</p>
       <p><code>model_price > 0</code> 或表达式 <code>fixed(...)</code> 的按次计价不参与每百万 token 比较；与同口径官方价差 2.5 倍以上（便宜模型放宽到 8 倍，避免小模型被绝对差价误判）才标「口径?」。</p>
 
       <h2>订阅与第三方挂单</h2>
-      <p>官方订阅只收 App Store 公开内购页能直接读到的月费，按产品分档、一档一行。第三方挂单价是<strong>公开挂单页的当日快照</strong>（来源 aibijia.org），只用来判断行情区间：质保通常 1–3 小时，成品号与镜像站的稳定性差别很大，站点不做推荐、不保证可用。</p>
+      <p>官方订阅只收 App Store 公开内购页能直接读到的月费，按产品分档、一档一行。第三方挂单只呈现<strong>按产品的统计量</strong>——挂单数、在售数、平台数、价格最低 / 中位 / 最高——<strong>不给任何商品页链接</strong>：质保通常 1–3 小时，成品号与镜像站的稳定性差别很大，站点不做推荐、不保证可用，因此也不提供购买入口。数据源是 data.aibijia.org 的公开挂单 JSON。</p>
 
       <h2>活动与评测口径</h2>
       <p>活动只收<strong>公开可报名</strong>的：Devpost 的 open 状态黑客松、Luma 公开发现流里含 AI/LLM/Agent 关键词的场次，按截止日期排。类型（黑客松 / 会议 / Meetup / 工作坊 / 评选）和地区都由标题、主题与场地推断，可交叉筛选；本地 AIOS 项目的活动库全部已结束，单独归档，只作来源对照，不混进「开放中」。</p>

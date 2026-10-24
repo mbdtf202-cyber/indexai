@@ -33,7 +33,7 @@ export const LAYERS = {
   models:        { min: 350, warnBelow: 400, shrink: 0.75, label: '模型比价' },   // 实测 474
   offers:        { min: 25,  warnBelow: 30,  shrink: 0.80, label: '免费额度' },   // 实测 37
   subsRegions:   { min: 12,  warnBelow: 15,  shrink: 0.70, label: '订阅区价套餐' }, // 实测 18
-  subsThird:     { min: 50,  warnBelow: 80,  shrink: 0.60, label: '第三方挂单' }, // 实测 209
+  subsThird:     { min: 50,  warnBelow: 80,  shrink: 0.60, label: '第三方挂单' }, // 实测 209 条挂单（D3 起按 listings 之和计）
   relays:        { min: 40,  warnBelow: 50,  shrink: 0.80, label: '中转站在册' }, // 实测 54
   relaysLive:    { min: 8,   warnBelow: 12,  shrink: 0.60, label: '中转站有价' }, // 实测 22
   events:        { min: 604, warnBelow: 950, shrink: 0.70, label: 'AI 活动' },    // 实测 1727（Devpost 193 + Luma 1498 + Devfolio 13 + AIOS 23）；红线 35%，警戒 55%
@@ -266,7 +266,10 @@ export function checkData(d, prev) {
 
   const countOf = (k) => {
     const c = d.meta?.counts || {};
-    if (k === 'subsThird') return (d.subsThird || []).length;
+    // D3：subsThird 现在是按产品的统计行，门禁要的是挂单总数（各产品 listings 之和）
+    if (k === 'subsThird') {
+      return (d.subsThird || []).reduce((n, x) => n + (x.listings || 0), 0);
+    }
     if (k === 'relaysLive') return (d.relays || []).filter((r) => r.status === 'ok').length;
     if (k === 'subsRegions') return (d.subsRegions || []).length;
     return c[k] ?? (Array.isArray(d[k]) ? d[k].length : 0);

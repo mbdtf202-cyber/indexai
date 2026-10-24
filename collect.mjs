@@ -17,6 +17,8 @@ import { writeFile, readFile } from 'node:fs/promises';
 import { httpGet, httpJson, httpText, httpTotals } from './lib/http.js';
 import { safeUrl } from './lib/url.js';
 import { effectiveCost as costOf, profileOf } from './lib/cost.js';
+import { subsThirdStats, subsThirdTotal } from './lib/subs-stats.js';
+import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { assertLayers } from './health.mjs';
 import { fetchBenchmarks } from './bench.mjs';
@@ -527,16 +529,26 @@ export function rowGroups(row, table) {
     rep = usable[0] || all[0];
   }
 
-  // 「最低可达价」：排除测试/调试类渠道后的最便宜分组
+  /* 「最低可达价」排除两类分组（F49 / D3）：
+   * 1. 测试/调试类渠道 —— 不是给人用的；
+   * 2. 逆向 / 特价 类渠道 —— 破解协议或低于成本的引流价，不代表真实行情。
+   *
+   * 灰色分组**保留在 count 里**（用户该知道这家有 12 个分组，其中 3 个是灰色的），
+   * 但不出现在 lo / hi 与代表价里。页面会显示被排除的数量。 */
   const USABLE_SKIP = /(测试|调试|probation|dummy|演示)/i;
-  const usableGroups = all.filter((g) => g.ratio != null && g.ratio > 0 && !USABLE_SKIP.test(g.name));
+  const usableGroups = all.filter(
+    (g) => g.ratio != null && g.ratio > 0 && !USABLE_SKIP.test(g.name) && !isGrayGroup(g.name),
+  );
   const lo = usableGroups.length ? usableGroups.reduce((m, g) => (g.ratio < m.ratio ? g : m)) : null;
   const hi = usableGroups.length ? usableGroups.reduce((m, g) => (g.ratio > m.ratio ? g : m)) : null;
+  const grayCount = splitGroups(all).grayCount;
   return [{
     ...rep,
     lo: lo?.ratio ?? null, loName: lo?.name ?? null,
     hi: hi?.ratio ?? null, hiName: hi?.name ?? null,
     count: all.length,
+    // 被排除的灰色分组数（页面据此显示「另有 N 个灰色分组未计入」）
+    grayGroups: grayCount,
   }];
 }
 
@@ -702,7 +714,7 @@ async function probeRelay(entry) {
     for (const f of FLAGSHIP) {
       const picked = pickFlagship(rows, f, gTable);
       if (!picked) continue;
-      const { row, price, candidates, groupCount, tiered, variant, floor } = picked;
+      const { row, price, candidates, groupCount, grayGroups, tiered, variant, floor } = picked;
       /*
        * 异常判定只标「明显贵到不合常理」的情况。
        *
@@ -725,6 +737,7 @@ async function probeRelay(entry) {
         anomaly: !!anomaly,
         variants: candidates,
         groups: groupCount,
+        ...(grayGroups ? { grayGroups } : {}),
         ...(floor ? { floor } : {}),
         // 只有变体可选时如实标注，不假装是基础版
         ...(variant ? { variantOnly: true } : {}),
@@ -859,6 +872,8 @@ export function pickFlagship(rows, f, gTable) {
     price: best.price,
     candidates: scored.length,
     groupCount: best.groups.length,
+    // 被排除的灰色分组数（逆向 / 特价）：页面要说「另有 N 个未计入」
+    grayGroups: best.groups.reduce((n, g) => n + (g.grayGroups || 0), 0),
     tiered: best.tiered,
     variant: best.variant,
     floor,
@@ -2645,6 +2660,8 @@ async function main() {
       prices,
       // 有多少个旗舰能给出可比单价（决定这一行在页面上有多大信息量）
       comparable: effs.length,
+      // 被排除的灰色分组数（逆向 / 特价）：不参与代表价与最低可达价，但要在页面上说出来
+      grayGroups: Object.values(prices).reduce((n, p) => n + (p.grayGroups || 0), 0),
     };
   }).sort((a, b) => (b.models || 0) - (a.models || 0));
 
@@ -2655,7 +2672,11 @@ async function main() {
   const prevSubsRegions = Array.isArray(prev?.subsRegions) ? prev.subsRegions : [];
 
   let subs = buildSubs(aibijia.apple).map((x) => ({ ...x, cny: Number((x.price * fx.USDCNY).toFixed(1)) }));
-  let subsThird = buildSubsThird(aibijia.prod);
+  /* D3：第三方挂单只出统计，不出商品页链接。
+   * 原始挂单（含 url）留在本进程内算区间，写完就不再持有——它不进 data.json。
+   * 这样「页面上不显示链接」和「数据里没有链接」是同一件事，而不是靠渲染时藏。 */
+  const subsThirdRaw = buildSubsThird(aibijia.prod);
+  let subsThird = subsThirdStats(subsThirdRaw);
   let subsRegions = buildSubsRegions(aibijia.apple);
 
   if (!subs.length && prevSubs.length) {
@@ -2664,7 +2685,7 @@ async function main() {
   }
   if (!subsThird.length && prevSubsThird.length) {
     subsThird = prevSubsThird; T.log.push({ layer: 'subsThird', status: 'stale', n: 0, prev: prevSubsThird.length, ms: 0, error: 'products 源为空' });
-    console.warn(`[collect] subsThird 为空，沿用上一版 ${prevSubsThird.length} 条`);
+    console.warn(`[collect] 挂单统计为空，沿用上一版 ${prevSubsThird.length} 个产品`);
   }
   if (!subsRegions.length && prevSubsRegions.length) {
     subsRegions = prevSubsRegions; T.log.push({ layer: 'subsRegions', status: 'stale', n: 0, prev: prevSubsRegions.length, ms: 0, error: 'apple 源为空' });
@@ -2766,7 +2787,8 @@ async function main() {
         offers: offersDedup.rows.length,
         signals: signals.length,
         subs: subs.length,
-        subsThird: subsThird.length,
+        subsThird: subsThirdTotal(subsThirdRaw).listings,
+        subsThirdProducts: subsThird.length,
         subsRegions: subsRegions.length,
         subsRegionsRaw: subsRegions.reduce((n, r) => n + r.total, 0),
         news: newsArchive?.length || 0,
@@ -2817,7 +2839,8 @@ async function main() {
   const prevCounts = prev?.meta?.counts || null;
   const prevOf = (k) => {
     if (!prev) return null;
-    if (k === 'subsThird') return (prev.subsThird || []).length;
+    // subsThird 现在是「按产品的统计行」；门禁比的是挂单总数（meta.counts.subsThird）
+    if (k === 'subsThird') return prev.meta?.counts?.subsThird || 0;
     if (k === 'relaysLive') return (prev.relays || []).filter((r) => r.status === 'ok').length;
     if (k === 'subsRegions') return (prev.subsRegions || []).length;
     return prevCounts?.[k] ?? (Array.isArray(prev[k]) ? prev[k].length : null);
