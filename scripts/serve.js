@@ -28,8 +28,10 @@ function parseArgs(argv) {
   return out;
 }
 
-const { port, root: ROOT } = parseArgs(process.argv.slice(2));
-const PORT = Number.isFinite(port) ? port : 4311;
+const ARGS = parseArgs(process.argv.slice(2));
+/** 站点根目录：默认脚本旁边的 dist/，与从哪启动无关（F50）。 */
+export const ROOT = ARGS.root;
+const PORT = Number.isFinite(ARGS.port) ? ARGS.port : 4311;
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -49,45 +51,68 @@ const TYPES = {
 /** 只允许回环地址访问：Host 头决定服务给谁。 */
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]']);
 
-/** 路径里任何一段以点开头就拒绝，避免 `..` 与 `.git` 之类。 */
-function hasDotSegment(p) {
-  return p.split('/').some((seg) => seg.startsWith('.') && seg !== '');
+/**
+ * 把请求路径映射成磁盘路径；不安全时返回 null。
+ * @param {string} pathname 来自 URL 的 pathname（未解码）
+ * @returns {string|null}
+ */
+export function resolvePath(pathname) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return null;
+  }
+  // 任何一段以点开头都拒绝：点文件、点目录，以及 . 与 ..
+  for (const seg of decoded.split('/')) {
+    if (seg.startsWith('.')) return null;
+  }
+  let p = decoded;
+  if (p === '/' || p.endsWith('/')) p += 'index.html';
+  const file = normalize(join(ROOT, p));
+  if (!file.startsWith(ROOT + sep)) return null;
+  return file;
 }
 
-const server = createServer(async (req, res) => {
-  // Host 校验：DNS rebinding 的第一道闸
-  const host = String(req.headers.host || '').split(':')[0];
-  if (!ALLOWED_HOSTS.has(host)) {
-    res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('forbidden host');
-    return;
-  }
+/**
+ * Host 白名单：只接受本机回环地址，避免 DNS rebinding 把本地文件读走。
+ * @param {string|undefined} host
+ * @returns {boolean}
+ */
+export function hostAllowed(host) {
+  if (!host) return false;
+  const hostname = String(host).split(':')[0];
+  return ALLOWED_HOSTS.has(hostname);
+}
 
-  try {
-    const { pathname } = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
-    let p = decodeURIComponent(pathname);
+/** 只在直接运行时监听；被测试 import 时什么都不做。 */
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
 
-    if (hasDotSegment(p)) throw new Error('dot segment');
-    if (p === '/' || p.endsWith('/')) p += 'index.html';
+if (isMain) {
+  const server = createServer(async (req, res) => {
+    if (!hostAllowed(req.headers.host)) {
+      res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('forbidden host');
+      return;
+    }
+    try {
+      const { pathname } = new URL(req.url, `http://${req.headers.host || '127.0.0.1'}`);
+      const file = resolvePath(pathname);
+      if (!file) throw new Error('rejected');
+      if (!(await stat(file)).isFile()) throw new Error('not a file');
+      const body = await readFile(file);
+      res.writeHead(200, {
+        'content-type': TYPES[extname(file).toLowerCase()] || 'application/octet-stream',
+        'cache-control': 'no-store',
+      });
+      res.end(body);
+    } catch {
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('not found');
+    }
+  });
 
-    const file = normalize(join(ROOT, p));
-    if (!file.startsWith(ROOT + sep)) throw new Error('outside root');
-
-    const st = await stat(file);
-    if (!st.isFile()) throw new Error('not a file');
-
-    const body = await readFile(file);
-    res.writeHead(200, {
-      'content-type': TYPES[extname(file).toLowerCase()] || 'application/octet-stream',
-      'cache-control': 'no-store',
-    });
-    res.end(body);
-  } catch {
-    res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('not found');
-  }
-});
-
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`IndexAI serving ${ROOT} at http://127.0.0.1:${PORT}/`);
-});
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`IndexAI serving ${ROOT} at http://127.0.0.1:${PORT}/`);
+  });
+}

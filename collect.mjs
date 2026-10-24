@@ -892,69 +892,32 @@ async function fetchFx(prev) {
 }
 
 /* ────────────────────────── 7. AI 活动 ────────────────────────── */
-/* AIOS 活动库：可选层，本地有就用、没有就跳过。
- * 以前是一个写死的绝对路径（还重复了一段 Desktop/AIOS），换机器或上 CI 必然读不到，
- * 而且读不到时没有任何提示。现在按候选顺序探测，都不在就明确说一句「跳过」。
+/* AIOS 活动库：可选层，**只认环境变量** `AIOS_OPPORTUNITIES`。
  *
- * 实测（2026-10）：真正有那 23 条的文件是
- *   ~/Desktop/AIOS/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json
- * 而 ~/Desktop/AIOS/.artifacts/... 并不存在。原实现把这一条排在最前，一旦有人
- * 补上这个浅路径就会读到错的文件；同时没有任何递归查找兜底，换个目录就静默丢整层。
- * 现在的顺序：显式 env → 已知实证路径 → 递归 glob 取最新的一份。 */
-const AIOS_HOME = `${process.env.HOME || ''}/Desktop/AIOS`;
-const AIOS_CANDIDATES = [
-  process.env.AIOS_OPPORTUNITIES,
-  `${AIOS_HOME}/Users/raki/Desktop/AIOS/.artifacts/production-receipts/local-current/api-opportunities.json`,
-  `${AIOS_HOME}/.artifacts/production-receipts/local-current/api-opportunities.json`,
-].filter(Boolean);
+ * 旧实现带一串写死的候选路径（含带用户名的 Desktop 绝对路径）外加一个
+ * 最多扫 400 个目录的递归查找，等于把某台机器的目录结构焊进了采集器：
+ * 换机器必定静默丢整层，别人的机器上还要白扫一遍 Desktop（F50）。
+ * 现在只认显式环境变量；没设就跳过这一源，并在日志里说清是「没配置」而不是「读失败」。
+ * CI 本来就没有这个文件，跳过是正常路径。 */
+const AIOS_FILE_ENV = process.env.AIOS_OPPORTUNITIES || null;
 
-/* 递归找 api-opportunities.json，取 mtime 最新的一个。
- * 目录层级很深（.artifacts/production-receipts/local-current/…），只认浅路径迟早再翻车。 */
-function globAiosFile(root, { maxDepth = 8, maxDirs = 400 } = {}) {
-  if (!root || !existsSync(root)) return null;
-  const queue = [{ dir: root, depth: 0 }];
-  let visited = 0;
-  const hits = [];
-  const SKIP = new Set(['node_modules', '.git', 'Corpus', 'caches', 'Cache']);
-  while (queue.length && visited < maxDirs) {
-    const { dir, depth } = queue.shift();
-    visited += 1;
-    let ents;
-    try { ents = readdirSync(dir, { withFileTypes: true }); } catch { continue; }
-    for (const d of ents) {
-      const p = `${dir}/${d.name}`;
-      if (d.isDirectory()) {
-        if (depth + 1 > maxDepth || SKIP.has(d.name)) continue;
-        queue.push({ dir: p, depth: depth + 1 });
-      } else if (d.name === 'api-opportunities.json') {
-        try { hits.push({ p, m: statSync(p).mtimeMs }); } catch { /* 读不到就算了 */ }
-      }
-    }
-    // 一旦在较浅的层级里找到，就不再往深处挖
-    if (hits.length && depth >= 2) break;
-  }
-  if (!hits.length) return null;
-  hits.sort((a, b) => b.m - a.m);
-  return hits[0].p;
-}
-
-function resolveAiosFile() {
-  for (const p of AIOS_CANDIDATES) {
-    try {
-      if (existsSync(p)) return p;
-    } catch { /* 下一个 */ }
-  }
-  return globAiosFile(AIOS_HOME);
-}
-/* AIOS 是可选层。探测放到第一次用到时（T0.3），这样 import 本模块不会打日志、不读文件。 */
+/* AIOS 是可选层。探测放到第一次用到时（T0.3），这样 import 本模块不打日志、不读文件。 */
 let AIOS_FILE = null;
 let AIOS_PROBED = false;
 function aiosFile() {
   if (!AIOS_PROBED) {
     AIOS_PROBED = true;
-    AIOS_FILE = resolveAiosFile();
+    if (!AIOS_FILE_ENV) {
+      console.log('[collect] 未设置 AIOS_OPPORTUNITIES，跳过 AIOS 活动库（可选层）');
+      return null;
+    }
+    try {
+      AIOS_FILE = existsSync(AIOS_FILE_ENV) ? AIOS_FILE_ENV : null;
+    } catch {
+      AIOS_FILE = null;
+    }
     if (!AIOS_FILE) {
-      console.warn('[collect] 没找到 AIOS 活动库（可选层），本次活动只收 Devpost + Luma');
+      console.warn(`[collect] AIOS_OPPORTUNITIES 指向的文件不存在：${AIOS_FILE_ENV}，跳过这一源`);
     } else {
       console.log(`[collect] AIOS 活动库：${AIOS_FILE}`);
     }
@@ -1459,7 +1422,7 @@ export async function fetchLuma() {
       const geo = ev.geo_address_info || {};
       const cityFallback = ev.__geoCity ? EV_LUMA_CITY_BY_SLUG.get(ev.__geoCity) : null;
       const row = {
-        id: `luma-${ev.api_id}`, title: name, url: `https://lu.ma/${ev.url}`,
+        id: `luma-${ev.api_id}`, title: name, url: `https://luma.com/${ev.url}`,
         dates: start, start, end: String(ev.end_at || '').slice(0, 10),
         // 城市 + 国家都留着：eventRegion 要按国家判，只存城市名会让东京/首尔的场次落 other
         location: ev.location_type === 'online'

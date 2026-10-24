@@ -26,7 +26,7 @@ AI 模型价格与情报索引。每天从公开数据源采集一次，出一�
 npm ci                    # 只装开发依赖；运行时零依赖
 npm run collect           # 真实采集一次（约 9 分钟，CI 每日运行）
 npm run verify            # 提交前必须全过：lint → typecheck → invariants → test → build → e2e
-node serve.mjs 4311       # 本地预览 http://127.0.0.1:4311/
+node scripts/serve.js --port 4311   # 本地预览 http://127.0.0.1:4311/（先 npm run build）
 ```
 
 `npm run `${'`'}verify` 里的浏览器测试会拦掉一切非同源请求——页面只要多发一个外部请求，

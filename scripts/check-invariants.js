@@ -22,6 +22,7 @@ export const ENABLED = {
   R8: true, // T2.1（根目录部分）
   R5: true, // T2.2
   R10: true, // T2.5
+  R6: true, // T2.6
   R12: true, // T0.6
 };
 
@@ -154,6 +155,48 @@ function checkR9() {
         message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
       });
     }
+  }
+  return violations;
+}
+
+/**
+ * R6：源码里不出现绝对用户路径（INV-11 · F50）。
+ *
+ * 理由：「`/Users/raki/Desktop/AIOS/...`」这种字符串只在写它那台机器上成立。
+ * 换机器必定静默失效，而且它把私人目录结构留在了公开仓库里。
+ * 需要本机路径时用环境变量（例如 `AIOS_OPPORTUNITIES`），并在文档里说明怎么设。
+ */
+function checkR6() {
+  const violations = [];
+  const files = [
+    'collect.mjs',
+    'bench.mjs',
+    'health.mjs',
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'scripts')).map((f) => relative(ROOT, f)),
+  ].filter((rel) => {
+    try {
+      statSync(join(ROOT, rel));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  // /Users/<名字>/ 与 C:\Users\<名字>\ 这类绝对用户路径
+  const USER_PATH = /(\/Users\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+\\|~\/Desktop\/)/;
+
+  for (const rel of files) {
+    if (rel === join('scripts', 'check-invariants.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      if (!USER_PATH.test(line)) return;
+      violations.push({
+        file: rel,
+        line: i + 1,
+        message: 'R6 违反：出现绝对用户路径，改用环境变量或相对路径',
+      });
+    });
   }
   return violations;
 }
@@ -447,6 +490,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R6',
+    description: '源码里无绝对用户路径',
+    check: checkR6,
   },
   {
     id: 'R10',

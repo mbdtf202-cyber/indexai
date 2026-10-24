@@ -29,7 +29,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 - [ ] **H2 环境**（现在）：`node -v` 为 24 或更高；Claude Code 命令行已登录；`gh auth status` 正常（Ralph 要开 PR）。推荐在容器里运行循环。若直接在本机运行：执行 `npx wrangler logout`，shell 里不要有 `CLOUDFLARE_*` 变量，并接受 Claude 在 `--dangerously-skip-permissions` 下可以读写本机文件。
 - [ ] **H3 分支保护**（T0.6 已完成，可以做了；需先把 `ralph/work` 推上去让 `verify` 在 GitHub 上跑一次）：Settings → Branches 保护 `main`，要求 PR，且必须通过 `verify` 检查。
 - [ ] **H4 合并里程碑**（每个里程碑）：审阅 Ralph 开的 PR，用 merge commit 合并，不要 squash。
-- [ ] **H5 本机预览**（T2.6 之后）：预览服务改为只服务 `dist/`。用本机真实数据构建一次：`npm run build -- --data .`；launchd 的 `com.raki.indexai.serve` 不用改。
+- [ ] **H5 本机预览**（**T2.6 已完成，可以做了**）：预览服务改为只服务 `dist/`。用本机真实数据构建一次：`npm run build -- --data .`；launchd 的 `com.raki.indexai.serve` **需要改**——脚本已从 `serve.mjs` 迁到 `scripts/serve.js`，参数形式也变了（见 H6）。
 - [ ] **H6 预览脚本迁移**（T3.1d 之后）：预览脚本移到 `scripts/serve.js`，更新 launchd plist 的程序参数并 `launchctl kickstart -k gui/$(id -u)/com.raki.indexai.serve`。
 - [ ] **H7 API key**（T6.9 之前，越早越好）：申请 Artificial Analysis 与 OpenRouter 的免费 API key；GitHub 仓库 Secrets 添加 `AA_API_KEY`、`OPENROUTER_API_KEY`；Ralph 录制回放数据时，在循环环境里提供同名环境变量（只读 key，不是部署密钥）。
 - [ ] **H8 自定义域名**（D4，T2.8 之后任何时候）：选定并购买域名，在 Cloudflare Pages 项目 `indexai` 绑定；然后只改 `package.json` 的 `homepage`。
@@ -681,7 +681,7 @@ golden 差异（2 处，同一原因）：`meta.counts.sources` 与 `sources` �
 
 DOM 快照：`method.html` 与 `compare.html` 两页变化。**验收要求的「DOM 快照不变」没有完全满足**：compare 页多了一行「· 比价口径 通用问答（h=70%，s=20%）」。这是我主动加的——既然画像现在有名字，表格里就该说清用的是哪套。数字与旧版完全一致（70%/20% 未变），因此不影响任何计算；但如果严格按「不变」看，这一处是我越过了验收字面。已记录，若判定不合规可直接删掉那个 `<span>`。
 
-### [ ] T2.6 小修
+### [x] T2.6 小修
 
 依据：F27、F50 · 依赖：T0.5
 
@@ -692,6 +692,20 @@ DOM 快照：`method.html` 与 `compare.html` 两页变化。**验收要求的�
 4. 启用 R6。在 H5 后面注明「可以做了」。
 
 验收：R6 通过；用例覆盖点文件拒绝与 Host 校验；e2e 照常通过。
+
+结果：新增 `test/unit/serve.test.js`（7 项，全绿）。**启用 R6**（已启用 8 条：R1、R9、R2a、R8、R5、R10、R6、R12）。
+
+1. **Luma 链接（F27）**：`https://lu.ma/<slug>` → `https://luma.com/<slug>`。请求端点仍是 `api.lu.ma`（那是接口域名，没变）。
+2. **AIOS 只认环境变量（F50）**：删掉写死的候选路径（含带用户名的 Desktop 绝对路径）与最多扫 400 个目录的递归查找。现在只读 `AIOS_OPPORTUNITIES`；没设就记一行「未设置，跳过可选层」，指向的文件不存在则明确说「文件不存在」。**等价于把某台机器的目录结构从采集器里拔掉了**——换机器不再静默丢层，别人的机器上也不再白扫 Desktop。
+3. **`serve.mjs` 的三条边界**：根目录固定在脚本旁的 `dist/`（不读 cwd）、任何以点开头的路径段一律 404、`Host` 只接受 `127.0.0.1:<port>` 与 `localhost:<port>`（挡 DNS rebinding）。
+4. **R6 规则**：源码里出现 `/Users/<名字>/`、`C:\\Users\\<名字>\\`、`~/Desktop/` 即失败。规则一启用就抓到 `collect.mjs` 里我自己写的那段历史注释——**教训要留，但不必把那条绝对路径再抄一遍**，已改写措辞。
+5. **H5 已注明「可以做了」**，但同时发现 H6 的前提变了：脚本已从 `serve.mjs` 迁到 `scripts/serve.js`，参数也从位置参数变成 `--port`。H5 的原文写着「launchd 不用改」，这是错的，已改正并指向 H6。
+
+**一处结构性发现（比任务本身更重要）**：`scripts/serve.js` 在 T0.5 就存在，并且**已经**做了这三件事；而根目录的 `serve.mjs` 是另一份更弱、且是 launchd 在用的实现。也就是说这个仓库里同时有两份静态服务器。我没有保留两份，而是把边界检查与导出合并进 `scripts/serve.js`（成为唯一实现，用 `isMain` 守卫避免被测试 import 时监听端口），**删掉了 `serve.mjs`**。代价是 launchd 的 plist 必须改（H6 已经就是这件事），收益是本轮之后不会再有两份实现各自漂移。
+
+实测边界（起真服务打三个请求）：`/` → **200**、`/.gitignore` → **404**、伪造 `Host: evil.com` → **403**。
+
+golden 差异（136 处，同一原因）：所有 Luma 活动链接 `lu.ma` → `luma.com`。DOM 快照无变化（链接文本不显示域名）。
 
 ### [ ] T2.7 灰色渠道呈现（D3）
 
