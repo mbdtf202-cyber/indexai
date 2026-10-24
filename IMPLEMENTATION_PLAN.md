@@ -1134,6 +1134,38 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 2. 开始模块化拆解 `pipeline/run.js`
 3. 最终验证 golden + e2e
 
+### [~] T3.1d 编排器替代 collect.mjs（进行中）
+
+依据：S3.1 · 依赖：T3.1c
+
+## Round 1 & 2 完成度
+- [x] 完整迁移 `collect.mjs` (2,551 行) → `pipeline/run.js` ✓
+- [x] 删除根目录 `collect.mjs`，更新所有引用（package.json、workflow、README、AGENTS.md）✓
+- [x] Golden 一致性验证（0 处差异）✓
+- [x] TypeCheck 全过 ✓
+- [ ] R3 合规：需模块化拆分（见下方「关键发现」）
+
+## 关键发现：R3 规则冲突
+
+**问题**: `pipeline/run.js` 现有 **2,561 行**，违反 R3（单文件≤400 行）。
+
+**原因**: 完整采集逻辑集中在单一文件中便于维护，但需要后续重构为模块化编排器。
+
+**处理方式**（按规格要求，不擅改 UPGRADE_PLAN.md）:
+1. 本次提交保留完整迁移成果（Golden 一致、测试兼容）
+2. **将 R3 冲突标记为「发现」**，待专门一轮处理：拆分为多个≤400 行的小模块
+3. 拆分方案：fx/adoption/resources/bench/models/offers/subs/news/relays/events 各一层 + 主调度 + 门禁 + 写盘
+
+## 当前状态
+- M3 T3.1c: 10/10 层已落地 ✓
+- M3 T3.1d: Rounds 1-2 完成，Skeleton 就位，等待 R3 合规模块化拆分
+- Golden 一致性：✓ 保持
+- 测试覆盖率：379+ 项全部通过 ✓
+
+## 下一轮任务建议
+选择 A: 立即开始 R3 合规模块化拆分（推荐）
+选择 B: 继续推进 T3.1e 格式化恢复，R3 留待后续
+
 ### [ ] T3.1e 格式化与规则恢复
 
 依据：§S1 · 依赖：T3.1d
