@@ -18,6 +18,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 export const ENABLED = {
   R1: true, // T0.1
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
+  R12: true, // T0.6
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */
@@ -153,10 +154,66 @@ function checkR9() {
   return violations;
 }
 
+/**
+ * R12：工作流里的 `uses:` 全部是 40 位 SHA；不出现 `npx --yes`、Node 20。
+ * 浮动的主版本标签会静默换实现，`npx --yes` 会从网络拉未锁定版本，
+ * Node 20 已于 2026-04-30 停止维护 —— 三者都是供应链与可复现的漏洞。
+ */
+function checkR12() {
+  const dir = join(ROOT, '.github', 'workflows');
+  let files;
+  try {
+    files = readdirSync(dir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+  } catch {
+    return [];
+  }
+
+  const violations = [];
+  for (const name of files) {
+    const rel = `.github/workflows/${name}`;
+    readLines(join(dir, name)).forEach((line, i) => {
+      const n = i + 1;
+      // uses: 必须带 40 位 SHA；注释里可写版本号
+      const uses = line.match(/^\s*(?:-\s*)?uses:\s*(\S+)/);
+      if (uses) {
+        const ref = uses[1];
+        const [, sha] = ref.split('@');
+        if (!sha || !/^[0-9a-f]{40}$/.test(sha)) {
+          violations.push({
+            file: rel,
+            line: n,
+            message: `R12 违反：uses 未固定到 40 位 SHA（${ref}）`,
+          });
+        }
+      }
+      if (/npx\s+--yes/.test(line)) {
+        violations.push({ file: rel, line: n, message: 'R12 违反：出现 npx --yes（未锁定版本）' });
+      }
+      if (/node-version:\s*["']?20["']?\b/.test(line)) {
+        violations.push({
+          file: rel,
+          line: n,
+          message: 'R12 违反：Node 20 已停止维护，改用 .node-version',
+        });
+      }
+    });
+  }
+  return violations;
+}
+
 /** 规则表。每条含 id、说明与检查函数。 */
 export const RULES = [
   { id: 'R1', description: 'package.json 没有 dependencies', check: checkR1 },
-  { id: 'R9', description: 'fixtures 各目录不超过体积上限', check: checkR9 },
+  {
+    id: 'R9',
+    description: 'fixtures 各目录不超过体积上限',
+    check: checkR9,
+  },
+  {
+    id: 'R12',
+    description: 'workflow 的 uses 固定 SHA，无 npx --yes 与 Node 20',
+    check: checkR12,
+  },
 ];
 
 /**

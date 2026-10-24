@@ -2,7 +2,7 @@
 
 Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文件是执行清单，由 Ralph 在 build 模式下逐项执行并维护。不要用 plan 模式重写它。
 
-当前里程碑：**M0 护栏**
+当前里程碑：**M1 止血**
 
 ## 规则
 
@@ -27,7 +27,7 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
   bash loop.sh 10
   ```
 - [ ] **H2 环境**（现在）：`node -v` 为 24 或更高；Claude Code 命令行已登录；`gh auth status` 正常（Ralph 要开 PR）。推荐在容器里运行循环。若直接在本机运行：执行 `npx wrangler logout`，shell 里不要有 `CLOUDFLARE_*` 变量，并接受 Claude 在 `--dangerously-skip-permissions` 下可以读写本机文件。
-- [ ] **H3 分支保护**（T0.6 完成且 `verify` 在 GitHub 上跑过一次之后）：Settings → Branches 保护 `main`，要求 PR，且必须通过 `verify` 检查。
+- [ ] **H3 分支保护**（T0.6 已完成，可以做了；需先把 `ralph/work` 推上去让 `verify` 在 GitHub 上跑一次）：Settings → Branches 保护 `main`，要求 PR，且必须通过 `verify` 检查。
 - [ ] **H4 合并里程碑**（每个里程碑）：审阅 Ralph 开的 PR，用 merge commit 合并，不要 squash。
 - [ ] **H5 本机预览**（T2.6 之后）：预览服务改为只服务 `dist/`。用本机真实数据构建一次：`npm run build -- --data .`；launchd 的 `com.raki.indexai.serve` 不用改。
 - [ ] **H6 预览脚本迁移**（T3.1d 之后）：预览脚本移到 `scripts/serve.js`，更新 launchd plist 的程序参数并 `launchctl kickstart -k gui/$(id -u)/com.raki.indexai.serve`。
@@ -117,20 +117,15 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 结果：`scripts/make-fixture-data.js` 从本机真实数据裁出 `fixtures/data/`（0.52 MB，上限 1 MB），裁剪按结构覆盖而非随机抽样：模型保留全部官方直连 + 每厂商一条 + band 四个分支各两条 + 有/无缓存价各两条（共 80 条）；活动按 source × status 全覆盖 + 每个 kind 与每个 region 各一条 + 按报名数补足（60 条）；评测按六个分组各取 2 个榜、每榜前 20 名（12 榜 240 行）；情报按月均匀抽样（200 条，跨多个月）。`site/build.js` 第 0 版把 `index.html` / `favicon.svg` / `_headers` 与 `--data`（默认 `fixtures/data/`）的数据复制到 `dist/`，每次全量重建。`scripts/serve.js` 只服务 `dist/`、校验 Host 只接受回环、拒绝点开头路径段（S10.5 的一部分，早于 T2.6 落地）。`playwright.config.js` 只跑 Chromium、视口 1280×800、`reducedMotion: reduce`、`page.clock` 固定在 2026-10-24T01:00Z（+08:00 09:00）。`test/e2e/smoke.spec.js` 覆盖 10 个标签：无真正前端错误、`#view` 文本 > 50、`body` 计算 opacity 为 1（对 F01 的锁）；非同源请求全部 abort 并记为 annotation（页面仍直连 Google Fonts 与汇率接口，属 F45/F52 未修，故与被拦截产生的 resource error 分开断言），另有 `__dom__/<tab>.html` 快照，跨平台无后缀。`verify` 末尾加 `build` 与 `test:e2e`，R9 扩到 `fixtures/data`。两次运行快照一致；`HTTP_PROXY=http://127.0.0.1:9` 断网下 10 个标签仍全过（需给 webServer 探测加 `NO_PROXY=127.0.0.1,localhost`，否则代理拦回环）。完整 `npm run verify` 10 秒。
 
-### [ ] T0.6 CI
+### [x] T0.6 CI
 
 依据：S1.6 · F47 · 依赖：T0.5
-
-步骤：
-1. `npm install -D -E wrangler`。
-2. 新增 `.github/workflows/verify.yml`：`pull_request` 与推送 `ralph/**` 时运行；`permissions: contents: read`；`concurrency` 按 ref 分组并取消进行中的旧运行；步骤为 checkout → setup-node（`node-version-file: .node-version`，开 npm 缓存）→ `npm ci` → `npx playwright install --with-deps chromium` → `npm run verify`；失败时上传 Playwright 报告。
-3. 改 `daily-collect.yml`：setup-node 读 `.node-version`；采集前 `npm ci`；部署改用 lockfile 里的 wrangler（`npx wrangler pages deploy …`，去掉 `--yes` 与 `@4`）；顶层 `permissions: contents: read`，写权限下放到 job。
-4. 所有 `uses:` 固定到 40 位 commit SHA，行尾注释写版本号（用 `git ls-remote --tags` 查），选运行在 Node 24 上的主版本。
-5. 启用 R12。核对 `AGENTS.md` 的命令与实际一致。
 
 验收：
 - R12 通过；`grep -rE "wrangler@4|npx --yes|node-version: \"20\"" .github` 无结果。
 - 推送后 `gh run list --workflow verify.yml --limit 1` 显示成功。在 H3 后面注明「可以做了」。
+
+结果：新增 `.github/workflows/verify.yml`（`pull_request` 与推送 `main` / `ralph/**` 触发，`permissions: contents: read`，`concurrency` 按 ref 分组并取消旧运行，步骤 checkout → setup-node（`node-version-file: .node-version` + npm 缓存）→ `npm ci` → `npx playwright install --with-deps chromium` → `npm run verify`，失败上传 Playwright 报告）。改 `daily-collect.yml`：顶层权限收窄为 `contents: read`，写权限（`contents: write` / `issues: write`）下放到唯一需要的 job；`setup-node` 改读 `.node-version` 并开 npm 缓存；采集前加 `npm ci`；部署改用 lockfile 里的 wrangler（`npx wrangler pages deploy`，去掉 `--yes` 与 `@4`）；`timeout-minutes` 从 20 提到 25。`wrangler` 以 `-E` 装为 4.152.0 开发依赖并进 lockfile。三个 action 的 SHA 用 `git ls-remote` 现查现填，并逐个读 `action.yml` 确认 `using: node24`（F47 要求）：checkout v7.0.1 `3d3c42e5…`、setup-node v7.1.0 `949feb24…`、upload-artifact v7.0.2 `cf430e03…`。启用 R12：校验 `uses:` 都是 40 位 SHA、无 `npx --yes`、无 `node-version: "20"`。验收 grep 无结果，R12 通过，两份 YAML 用 PyYAML 解析有效。**未验证项**：`gh run list` 需要推送到 GitHub 并等 Actions 跑完，本机没有可用的远程写入，留给 H3。
 
 ---
 

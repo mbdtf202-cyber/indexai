@@ -13,9 +13,9 @@ on:
     - cron: "0 1 * * *"
   workflow_dispatch:
 
+# 顶层只读（S1.6）：写权限按需下放到具体 job 的 steps 里
 permissions:
-  contents: write      # 提交 news-history.json
-  issues: write        # 失败时开 issue
+  contents: read
 
 concurrency:
   group: daily-collect
@@ -31,14 +31,21 @@ env:
 jobs:
   collect-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 采集 job 需要提交情报归档与开失败 issue，这是唯一需要写权限的 job
+    permissions:
+      contents: write      # 提交 news-archive.json
+      issues: write        # 失败时开 issue
+    timeout-minutes: 25
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "20"
+          node-version-file: .node-version
+          cache: npm
 
       # 拿线上现网数据当 prev：这样「相对上次缩水」的检测、bench 的 delta、
       # 各层失败时的回退，都有真实的上一版可用，而不是仓库里某个旧快照。
@@ -50,7 +57,10 @@ jobs:
             echo "::warning::拿不到线上 data.json，本轮将按首次采集处理（delta 与缩水检测会缺失）"
           fi
 
-      # collect.mjs 只用内置 fetch，没有 npm install
+      # collect.mjs 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
+      - name: 安装锁定依赖
+        run: npm ci
+
       - name: 采集（内含健康门禁）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -119,7 +129,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4 pages deploy dist \
+          npx wrangler pages deploy dist \
             --project-name=indexai \
             --branch=main \
             --commit-dirty=true \
