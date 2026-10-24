@@ -255,13 +255,29 @@ R2a 已启用，并且**立刻抓出 bench.mjs 里还剩下的 3 处 `fetch(`**�
 
 golden 差异（1 处，新增字段）：`$.meta.net.http`。测试档位下的账目是 21 个主机 / 40 次请求 / 11.3 MB / 0 次重试 / 0 次限流。其它所有字节不变，说明迁移是行为等价的。
 
-### [ ] T1.5 模型目录纳入记账
+### [x] T1.5 模型目录纳入记账
 
 依据：F06 · 依赖：T1.4
 
 步骤：OpenRouter 模型目录改走 `T.run('models', …)`，上一版取 `prev.models` 中 `channelKind === 'aggregator'` 的行；失败时沿用并标 stale，后续官方直连合并照常进行。
 
 验收：故障注入 `openrouter.ai/api/v1/models` 返回 503 时采集不中止，模型层 stale，其它层照常输出。
+
+结果：`collect.mjs` 新增 `fetchModelCatalog()`（拿到目录或抛错，不自己吞），主流程改为 `T.run('models', …)`，基线取 `prev.models` 里 `channelKind === 'aggregator'` 的行——官方直连是人工核实的，不该在「目录拉不到」时被一起标成 stale。
+
+故障注入实测（`INDEXAI_FAULTS='{"openrouter.ai":{"status":503}}'`，测试档位 + 上一版基线）：
+
+```
+aa:fresh | aibijia:fresh | bench:fresh | devfolio:fresh | devpost:fresh | hn:fresh
+| luma:fresh | models:stale | news:fresh | openrouter:stale | resources:fresh
+models: 474  aggregator: 462   （与健康采集完全一致）
+```
+
+采集退出码 0，模型数一条不少，其它层照常。改动前这一场景会整次中止。
+
+新增 `test/unit/models-layer.test.js`（3 项）：aggregator 行可原样沿用（除 stale 外一个字段都不许变）、去重后同一 OpenRouter id 不出两行、官方直连与聚合层互不覆盖。
+
+golden 差异（1 处）：`$.meta.collect.length` 10 → 11——`models` 现在是独立记账的层，多了一条记录（`models:fresh`）。所有数据字节未变。
 
 ### [ ] T1.6 情报不截断
 

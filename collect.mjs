@@ -2302,6 +2302,20 @@ export function parseOpenRouter(html) {
   };
 }
 
+/**
+ * OpenRouter 模型目录（F06、INV-1）。
+ *
+ * 以前这里是裸的 `throw`：它一失败，整次采集中止，白嫖额度、活动、评测
+ * 这些跟它无关的层当天全都不更新。现在包成「拿不到就返回空」，
+ * 由 T.run 决定沿用上一版并标 stale，与其它层同一套语义。
+ */
+async function fetchModelCatalog() {
+  const res = await httpGet(OPENROUTER, { label: 'openrouter-models' });
+  if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}`);
+  const payload = await res.json();
+  return normalizeOpenRouter(payload);
+}
+
 async function fetchOpenRouter() {
   try {
     const res = await httpText(OPENROUTER_RANKINGS, { label: 'openrouter-rankings' });
@@ -2523,11 +2537,16 @@ async function main() {
     return { value: b.stats.boards ? b : (prevBench || b) };
   }, benchPrevMarker);
 
-  const res = await httpGet(OPENROUTER, { label: 'openrouter-models' });
-  if (!res.ok) throw new Error(`OpenRouter ${res.status}`);
-  const payload = await res.json();
-
-  const or = normalizeOpenRouter(payload);
+  /*
+   * 模型目录走分层记账（F06）。基线只取上一版里的 aggregator 行：
+   * 官方直连是人工核实的，不该在「目录拉不到」时被一起沿用成 stale。
+   */
+  const prevAggregator = (prev?.models || []).filter((m) => m.channelKind === 'aggregator');
+  const or = await T.run(
+    'models',
+    async () => ({ value: await fetchModelCatalog(), valid: undefined }),
+    prevAggregator.length ? { rows: prevAggregator } : null,
+  );
 
   const curated = CURATED_OFFICIAL.map((r) => ({
     id: r.model,
@@ -2556,8 +2575,11 @@ async function main() {
     seen: todayISO(),
   }));
 
+  // T.run 在「本次为空且无上一版」时会返回 null；下游一律按空目录处理
+  const catalog = or && Array.isArray(or.rows) ? or : { rows: [], dropped: 0, unpriced: 0, stale: false };
+
   const createdByFamily = new Map();
-  for (const m of or.rows) {
+  for (const m of catalog.rows) {
     if (!m.created) continue;
     createdByFamily.set(m.family, Math.max(createdByFamily.get(m.family) || 0, m.created));
   }
@@ -2565,7 +2587,7 @@ async function main() {
     if (!m.created && createdByFamily.has(m.family)) m.created = createdByFamily.get(m.family);
   }
 
-  const modelsDedup = dedupeModels([...or.rows, ...curated]);
+  const modelsDedup = dedupeModels([...catalog.rows, ...curated]);
   const offersDedup = dedupeOffers(CURATED_OFFERS.map((o) => ({
     ...o,
     conf: o.conf || o.confidence || 'med',
@@ -2788,7 +2810,7 @@ async function main() {
         benchModels: bench.stats?.models || 0,
         sources: srcMap.size,
       },
-      dedupe: { aggregator_dropped: or.dropped, unpriced_dropped: or.unpriced, models_dropped: modelsDedup.dropped, offers_merged: offersDedup.merged },
+      dedupe: { aggregator_dropped: catalog.dropped || 0, unpriced_dropped: catalog.unpriced || 0, models_dropped: modelsDedup.dropped, offers_merged: offersDedup.merged },
       bestCacheDiscount: cacheDiscount[0] ? { ...cacheDiscount[0], pct: Math.round(cacheDiscount[0].off * 100) } : null,
       vendors,
     },
