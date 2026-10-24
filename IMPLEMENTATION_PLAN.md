@@ -883,6 +883,30 @@ golden 与 DOM 快照：**均无变化**（数据逐字节一致）。新增 2 �
 
 规则从 8 条增至 **9 条**（新增 R3）。新增 `test/unit/pipeline-contract.test.js`（16 项），其中一条直接对**真实的层目录**跑校验，而不只是测校验器本身。
 
+### [x] T3.1c2 采集层拆分（adoption）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c1
+
+结果：`pipeline/layers/adoption/index.js`（约 120 行）+ `test/unit/adoption-layer.test.js`（10 项）。
+
+比 fx 复杂的地方：一个源、两条记录流。层本身不 import `collect.mjs`（会成循环依赖），
+解析函数经 `ctx.parse` 注入——**搬迁结构时不动解析逻辑**，避免一步同时改两件事。
+
+**挖出一个「计数说谎」的问题，golden 差异（1 处）来自修它**：
+
+```diff
+- $.meta.collect[8].n: 44 -> 24
+```
+
+`meta.collect[].n` 由编排器按「对象里数组长度之和」计算。原来这层返回
+`{apps: 24, models: 20}`，于是 n=44——看起来交付了 44 条数据。但页面只读 `apps`，
+而 `models` 在 **T2.2 就已经被删掉**（`orModels` 页面从不读取）。那 20 条从来没到过
+任何地方，纯粹是计数口径的副产品。
+
+现在层只交付 `apps`，n 如实等于 24。**这不是数据变少，是数字终于诚实了。**
+
+验收：golden 差异仅上述 1 处（已说明）；R3 对 `pipeline/` 与 `lib/` 通过（新增文件均在 400 行内）。
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c

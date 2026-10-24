@@ -19,6 +19,7 @@ import { safeUrl } from './lib/url.js';
 import { effectiveCost as costOf, profileOf } from './lib/cost.js';
 import { subsThirdStats, subsThirdTotal } from './lib/subs-stats.js';
 import fxLayer from './pipeline/layers/fx/index.js';
+import adoptionLayer from './pipeline/layers/adoption/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -2247,7 +2248,17 @@ async function main() {
       return { value: v, valid: v.valid };
     }, null),
     T.run('resources', async () => ({ value: await fetchResources() }), prev?.resources),
-    T.run('openrouter', async () => ({ value: await fetchOpenRouter() }), prev ? { apps: prev.orApps } : null),
+    T.run(
+      'openrouter',
+      async () => {
+        const ctx = { http: { text: httpText }, parse: parseOpenRouter };
+        const raw = await adoptionLayer.fetch(ctx);
+        const norm = adoptionLayer.normalize(raw, ctx);
+        const merged = adoptionLayer.merge(prev ? { apps: prev.orApps } : null, norm.records);
+        return { value: merged };
+      },
+      prev ? { apps: prev.orApps } : null,
+    ),
   ]);
 
   // 情报层：归档文件是唯一存储，data.json 里只留极简索引（计数 / 跨度 / 逐日条数）
