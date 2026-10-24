@@ -443,6 +443,8 @@ golden 差异（4 处）：
 
 DOM 快照：`compare.html` 与 `relays.html` 变化（缓存读列换了排序键、旗舰清单改为读数据），其余 8 页不变。
 
+补充（M1 收尾时补做）：**F20 的前端部分之前漏了**。采集端已经会给沿用旧价的站标 `stale` 并保留 `checked_at`，但页面 `live` 仍只收 `status === 'ok'`，这些站依然整体消失。现已改为「探测成功 **或** 沿用旧价且仍有价目」都进主列表，标题显示「上次成功 MM-DD」。新增 e2e：注入一个 `timeout + stale` 的站，断言它出现在列表里且带上次成功日期。
+
 fixture 重生：本机 `data.json` 是旧版采集产物（没有 `meta.flagships`），先把新产出的字段补进去再跑 `npm run fixture:data`，否则 relays 页只会显示兜底文案。
 
 ### [x] T1.10 样式硬伤

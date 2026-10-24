@@ -2120,7 +2120,15 @@ const MOTION = (() => {
       officialEff: f.officialEff,
     }));
 
-  const relayStatus = (st) =>
+  /** 状态文案。沿用旧价的站额外带上「上次成功 MM-DD」（F20）。 */
+  const relayStatus = (st, r) => {
+    if (r?.stale && r?.checked_at) {
+      return ["上次成功 " + String(r.checked_at).slice(5), "stale"];
+    }
+    return relayStatusRaw(st);
+  };
+
+  const relayStatusRaw = (st) =>
     st === "ok" ? ["公开", "ok"]
     : st === "no_pricing" ? ["无价目", "stale"]
     : (st === "http_403" || st === "http_401") ? ["需登录", "stale"]
@@ -2131,7 +2139,11 @@ const MOTION = (() => {
 
   function viewRelays() {
     const rs = state.data.relays || [];
-    const live = rs.filter(r => r.status === "ok");
+    /* 有可比价格的站（F20）：探测成功，或者探测失败但仍在 14 天 TTL 内沿用旧价。
+     * 旧实现只收 status === 'ok'，于是今天探测失败、昨天还有价的站从页面整体消失——
+     * 读者看到的是「这家站没了」，而实际只是今天没连上。 */
+    const hasPrices = (r) => r.prices && Object.keys(r.prices).length > 0;
+    const live = rs.filter(r => r.status === "ok" || (r.stale && hasPrices(r)));
     // 旧快照可能没有 meta.flagships（换数据源的第一天）：这时不画图，直说缺什么
     const RELAY_FLAGS = relayFlags();
     if (!RELAY_FLAGS.length) {
@@ -2204,7 +2216,7 @@ const MOTION = (() => {
     const notLive = rs.filter(r => r.status !== "ok" && !r.models);
     const byStatus = {};
     for (const r of notLive) {
-      const [label] = relayStatus(r.status);
+      const [label] = relayStatus(r.status, r);
       (byStatus[label] = byStatus[label] || []).push(r);
     }
 
@@ -2286,7 +2298,7 @@ const MOTION = (() => {
                 <td class="num">${p?.floor ? `<span class="mono">${cents(p.floor.input)}</span> <span class="grp">${esc(p.floor.group)}</span>` : `<span class="dim">—</span>`}</td>
                 <td class="num">${eff != null ? `<span class="mono">$${cents(eff)}</span>${vs != null && (vs < 0.97 || vs > 1.05) ? `<span class="vs ${vs < 0.97 ? "low" : "high"}">${vs < 0.97 ? `${Math.round((1 - vs) * 100)}%↓` : `${Math.round((vs - 1) * 100)}%↑`}</span>` : ""}` : `<span class="dim">—</span>`}</td>
                 <td>${(() => {
-                  const [l, c] = relayStatus(r.status);
+                  const [l, c] = relayStatus(r.status, r);
                   // 「公开价目」但这一列没有该模型 → 不是坏了，是这家没卖这个模型
                   const empty = r.status === "ok" && !r.prices?.[flag.key];
                   return `<span class="status ${c}">${empty ? "无该模型" : l}</span>`;
@@ -2320,7 +2332,7 @@ const MOTION = (() => {
               <span>${(r.models || 0).toLocaleString()} 模型</span>
               ${p?.cacheRead != null ? `<span>缓存 ${cents(p.cacheRead)}</span>` : ""}
               ${p?.anomaly ? `<span class="tag warn">口径?</span>` : ""}
-              ${(() => { const [l, c] = relayStatus(r.status); return `<span class="status ${c}">${l}</span>`;
+              ${(() => { const [l, c] = relayStatus(r.status, r); return `<span class="status ${c}">${l}</span>`;
               })()}
             </div>
           </a>`;

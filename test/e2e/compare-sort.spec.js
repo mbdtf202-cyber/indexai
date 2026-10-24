@@ -122,3 +122,51 @@ test('每个旗舰都有官方参考价，DeepSeek 也不例外', async ({ page 
   const ds = flagships.find((f) => f.key === 'deepseekflash');
   expect(ds, 'DeepSeek 必须在旗舰清单里').toBeTruthy();
 });
+
+test('沿用旧价的中转站留在主列表里，并标出上次成功日期（F20）', async ({ page }) => {
+  await page.route('**/*', async (route) => {
+    const url = route.request().url();
+    if (url.startsWith('http://127.0.0.1:') || url.startsWith('http://localhost:')) {
+      return route.continue();
+    }
+    return route.abort();
+  });
+
+  // 在数据到达前注入一个「今天探测失败、但 3 天前还有价」的站
+  await page.addInitScript(() => {
+    const original = window.fetch;
+    window.fetch = async (...args) => {
+      const res = await original(...args);
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      if (!url.includes('data.json')) return res;
+      const data = await res.json();
+      data.relays = data.relays || [];
+      data.relays.push({
+        name: 'Stale Relay Co',
+        domain: 'stale-relay.example',
+        status: 'timeout',
+        stale: true,
+        staleDays: 3,
+        checked_at: '2026-10-21',
+        models: 40,
+        prices: {
+          sonnet55: { kind: 'per_1m', input: 1.8, output: 9, eff: 3.96 },
+        },
+      });
+      return new Response(JSON.stringify(data), {
+        headers: { 'content-type': 'application/json' },
+      });
+    };
+  });
+
+  await page.clock.install({ time: new Date('2026-10-24T01:00:00.000Z') });
+  await page.goto('/#relays');
+  await page.waitForFunction(
+    () => (document.querySelector('#view')?.textContent || '').trim().length > 50,
+  );
+
+  // 旧实现里这个站会整体消失（live 只收 status==='ok'）
+  expect(await page.getByText('Stale Relay Co').count()).toBeGreaterThan(0);
+  // 并且要说清「上次成功」是哪天，不能把沿用说成今天采集的
+  expect(await page.getByText(/上次成功 10-21/).count()).toBeGreaterThan(0);
+});
