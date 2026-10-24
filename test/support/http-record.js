@@ -111,7 +111,7 @@ export function installRecorder() {
  * 作为 `node --import ./test/support/http-record.js <脚本>` 预加载时安装录制，
  * 随后由 `<脚本>` 发起请求。单独运行（argv[1] 是本文件）时给出用法提示。
  */
-if (process.argv[1] && process.argv[1].endsWith('http-record.js')) {
+if (process.argv[1]?.endsWith('http-record.js')) {
   console.error(
     [
       '录制需要指定跑哪个脚本，例如：',

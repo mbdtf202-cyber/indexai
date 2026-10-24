@@ -17,7 +17,7 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 /** 各条规则的启用状态。到了任务就打开，之后永远开着。 */
 export const ENABLED = {
   R1: true, // T0.1
-  R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 再扩到 fixtures/data
+  R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */
@@ -97,7 +97,7 @@ function checkR1() {
  * fixtures 各目录的体积上限（S1.4，单位字节）：
  *   http   ≤ 5 MB   回放数据必须小而真实
  *   golden ≤ 3 MB   采集输出的逐字节基线
- *   data   ≤ 1 MB   页面测试用的裁剪快照
+ *   data   ≤ 1 MB   页面测试用的裁剪快照（T0.5）
  */
 export const FIXTURE_LIMITS = {
   http: 5 * 1024 * 1024,

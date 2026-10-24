@@ -12,6 +12,8 @@
       "!coverage",
       "!.ralph",
       "!.wrangler",
+      "!test-results",
+      "!playwright-report",
       "!package-lock.json",
       "!directions.html",
       "!logo-preview.html"

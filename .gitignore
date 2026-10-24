@@ -11,6 +11,8 @@ dist/
 
 # 测试覆盖率报告
 coverage/
+test-results/
+playwright-report/
 
 # 本地拉取的 data 分支快照（npm run data:pull）
 .data/

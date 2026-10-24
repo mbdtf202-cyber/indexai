@@ -12,12 +12,12 @@
 | `npm run lint` | Biome 检查 JS / JSON / CSS | 可用 |
 | `npm run typecheck` | `tsc --noEmit`（仅 `lib/**`，JSDoc + `types/`） | 可用 |
 | `npm run invariants` | 架构适应度检查；R1 已启用 | 可用 |
-| `npm run verify` | lint → typecheck → invariants → test，提交前必须全过 | 可用 |
+| `npm run verify` | lint → typecheck → invariants → test → build → e2e，提交前必须全过 | 可用 |
 | `npm test` | 离线回放的 unit、golden、contract 测试 | 可用 |
 | `npm run record` | 测试档位真实请求一遍，写 `fixtures/http/` | 可用 |
 | `npm run golden:update` | 重写 golden，提交信息写明差异来源 | 可用 |
-| `npm run build` | 用 `fixtures/data/` 生成 `dist/`；`-- --data .` 用本机真实数据 | T0.5 起 |
-| `npm run test:e2e` | Playwright（只有 Chromium：`npx playwright install chromium`） | T0.5 起 |
+| `npm run build` | 用 `fixtures/data/` 生成 `dist/`；`-- --data .` 用本机真实数据 | 可用 |
+| `npm run test:e2e` | Playwright（只有 Chromium：`npx playwright install chromium`） | 可用 |
 
 某个命令落地后，把它的「可用于」改成「可用」；M0 结束时删掉这一列。
 
@@ -33,13 +33,16 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 | `INDEXAI_OUT_DIR` | 输出目录，默认仓库根；golden 用它写临时目录 |
 | `ALLOW_DEGRADED` | `1` 时门禁未过也继续写盘（只给测试档位用） |
 | `INDEXAI_FIXTURE_ROOT` | 覆盖回放数据目录（测试用临时目录时设它） |
+| `UPDATE_DOM_SNAPSHOTS` | `1` 时 e2e 重写 `test/e2e/__dom__/`；只在界面改动是任务目标时用 |
 
 ## 目录
 
 - `collect.mjs`、`bench.mjs`、`health.mjs`：采集、评测、门禁（T3.1 起拆进 `pipeline/`）
 - `index.html`：整个站点（M5 起拆进 `site/`）；`lib/`：共享的纯函数模块
 - `fixtures/`：回放数据、golden、页面测试数据；`test/`：unit、golden、contract、e2e
-- 生成物，不手改、不提交：`data.json`、`bench.json`、`dist/`、`.ralph/`、`coverage/`
+- 生成物，不手改、不提交：`data.json`、`bench.json`、`dist/`、`.ralph/`、`coverage/`、`test-results/`
+- `fixtures/data/`：`npm run fixture:data` 从真实数据裁出，≤ 1 MB；页面 e2e 用它
+- `scripts/serve.js`：只服务 `dist/`，校验 Host、拒绝点文件
 
 ## 规则
 
@@ -60,6 +63,9 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 - AIHOT：分类之间不重叠，要逐个分类翻页
 - macOS launchd 下 `/bin/bash` 读不到 `~/Desktop`，本机常驻任务直接执行 node
 - Playwright 的 `toBeVisible` 把 `opacity:0` 当作可见，判断真可见要看计算样式
+- e2e 要拦非同源请求：页面仍直连 Google Fonts 与汇率接口（F45、F52 未修），
+  被拦后会产生 `Failed to load resource` 的 console.error —— 这类与前端错误分开断言
+- 断网跑 e2e 要给 webServer 的探测加 `NO_PROXY=127.0.0.1,localhost`，否则代理会拦回环
 
 ## 前端原则
 

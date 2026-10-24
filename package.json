@@ -15,13 +15,17 @@
     "typecheck": "tsc --noEmit",
     "invariants": "node scripts/check-invariants.js",
     "test": "node --test \"test/unit/**/*.test.js\" \"test/golden/**/*.test.js\" \"test/contract/**/*.test.js\"",
-    "verify": "npm run lint && npm run typecheck && npm run invariants && npm test",
+    "verify": "npm run lint && npm run typecheck && npm run invariants && npm test && npm run build && npm run test:e2e",
     "collect": "node collect.mjs",
     "record": "node --import ./test/support/http-record.js",
-    "golden:update": "node scripts/update-golden.js"
+    "golden:update": "node scripts/update-golden.js",
+    "build": "node site/build.js",
+    "fixture:data": "node scripts/make-fixture-data.js",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.4",
+    "@playwright/test": "1.64.1",
     "@types/node": "24.10.1",
     "typescript": "5.9.3"
   }

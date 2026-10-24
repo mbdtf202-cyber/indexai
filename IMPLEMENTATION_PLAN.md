@@ -97,22 +97,15 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 结果：`collect.mjs` 的 AIOS 路径探测改为惰性 `aiosFile()`，`main()` 收进 `isDirectRun` 判断，import 时零副作用；给 25 个目标函数与 `AI_EVENT_RE` 加 `export`，`bench.mjs` 补 `mergeByModel` / `parseAiderYaml` / `sliceBalanced` 导出（`splitConfig` 原本已导出），`health.mjs` 的 `checkData` 与 `LAYERS` 原本已导出，均未移动代码。新增 5 个测试文件：`collect.test.js`（110 项，覆盖 Devpost 三种日期写法与单日活动、tier("base", p*2+c*10+cr*0.1)、model_ratio=37.5 被 billing_expr 压过、分组名「a全模型综合组-1倍率」、deepseek-flash 与 deepseek-v4-1-flash 区分、:free 变体、Devfolio themes 对象数组）、`bench.test.js`（22 项）、`news-archive.test.js`（30 项）、`health.test.js`（9 项）、`parquet.test.js`（15 项，用真实 8 KB LMArena agent parquet）。5 个 `todo` 用例分别标注 F07（标题与 URL 截断）、F09（parseNewsYaml 首条被 split 吞掉）、F10（PK/ISLAMABAD 判成印度）、F11（`con\b` 命中 Silicon Valley）、F24（familyKey 未剥离日期尾巴）。过程中把多处测试从「我以为的行为」校正为代码真实行为：`eventRegion` 返回小写地区码（`jp` / `eu`）、`dedupeModels` / `dedupeOffers` 返回 `{rows, dropped|merged}`、`parseOpenRouter` 吃 HTML 并返回 `{apps, models}`、`parseNewsYaml` 要求 `- date:` 开头、`mergeArchive` 的 fresh 用抓取形态而 history 用存档形态、`snappyDecode` 是 raw block 且 tag 为 `(len-1)<<2`、`makeThrift` 只有 4 个方法。`npm test` 192 项、184 通过、0 失败、5 todo；`node collect.mjs` 仍只在直接运行时采集。
 
-### [ ] T0.4 采集 golden（测试档位）
+### [x] T0.4 采集 golden（测试档位）
 
 依据：S1.4 · INV-7 · 依赖：T0.2、T0.3
-
-步骤：
-1. `lib/clock.js`：`now()`、`todayISO()`、`sleep(ms)`。设置 `INDEXAI_NOW` 时 `now()` 固定；`INDEXAI_HTTP=replay` 时 `sleep` 立即返回，并累计「被请求的睡眠总时长」供测试断言（T1.3 要用）。把 `collect.mjs`、`bench.mjs`、`lib/news.mjs` 里所有取当前时间、`setTimeout` 睡眠与耗时统计的地方换成它；固定时钟下耗时为 0，输出才确定。
-2. 测试档位 `INDEXAI_PROFILE=test` 缩小迭代集合，生产默认值不变。建议：Luma 无 geo 取前 2 个词、geo 取 1 城 × 2 词；Devpost 每个 status 最多 2 页；Devfolio 最多 2 页；中转站 3 个（分别覆盖 billing_expr、model_ratio、分组倍率，可从 `newapi.dev`、`api.bltcy.ai`、`www.ggwk1.online` 中挑）；工具箱 3 个仓库；HN 2 个词；AIHOT 全量只翻第 1 页；LMArena 2 个小榜；τ-bench 3 个提交。以满足 R9 的体积上限为准调整。
-3. 输出目录 `INDEXAI_OUT_DIR`（默认仓库根目录，生产行为不变）：`data.json`、`bench.json`、`news-archive.json` 都写到这里，上一版也从这里读。
-4. `npm run record`：测试档位 + 录制模式完整跑一遍，产出 `fixtures/http/`。
-5. `test/golden/collect.test.js`：子进程运行 `node --import ./test/support/http-replay.js collect.mjs`，环境 `INDEXAI_HTTP=replay`、`INDEXAI_NOW=2026-10-24T01:00:00.000Z`、`INDEXAI_PROFILE=test`、`INDEXAI_OUT_DIR=<临时目录>`、`ALLOW_DEGRADED=1`（测试档位的数量必然低于生产门禁）。三份输出与 `fixtures/golden/` 逐字节比较，不一致时打印第一个不同的 JSON 路径。
-6. `npm run golden:update` 重写 golden。启用 R9 的 `fixtures/golden` 部分（≤ 3 MB）。
-7. `AGENTS.md` 写明这些环境变量。
 
 验收：
 - 连续两次回放运行，三份输出逐字节相同；golden 测试单次 ≤ 30 秒。
 - 不设任何 `INDEXAI_*` 变量时，所有常量的默认值与改动前一致（逐项核对，写进「结果」）。
+
+结果：新增 `lib/clock.js`（`now` / `nowISO` / `todayISO` / `mark` / `since` / `sleep`，`INDEXAI_NOW` 固定时钟，回放时 `sleep` 立即返回并累计 `takeRequestedSleepMs()` 供 T1.3 断言上界）；`collect.mjs`、`bench.mjs`、`lib/news.mjs`、`health.mjs` 里所有取当前时间、睡眠与耗时统计全部改走它。新增 `INDEXAI_PROFILE=test`（用派生切片而非改常量，生产默认不变）与 `INDEXAI_OUT_DIR`（三份输出统一重定向）。`scripts/update-golden.js` + `npm run golden:update`。`test/golden/collect.test.js` 三个用例：30 秒内跑通、与 golden 逐字节一致、两次运行互相一致；失败时打印第一个不同的 JSON 路径。生产默认值逐项核对：Luma 30 词 / 27 城 / 8 geo 词、Devpost 40 页、Devfolio 45 页、`TEST_PROFILE` 默认 false、`OUT_DIR` 默认 null（写仓库根）—— 与改动前完全一致。体积：`fixtures/http` 3.2 MB、`fixtures/golden` 1.1 MB，均在 R9 上限内，R9 已扩到 golden。golden 实测 1.1 秒，`npm test` 195 项全过。过程中发现并修掉五处不确定性：`collect` 日志顺序随并行完成顺序漂移（按层 id 排序）、`models` 同价行顺序不稳（加 `channelKind::id::channel` 次级键）、`events` 未排序（按 id 排序）、中转站 `samples` 同价顺序不稳（加模型名次级键）、AIOS 读仓库外本机文件（测试档位跳过）。另修掉 `collect.mjs` 里残留的旧 UA `FreeAI-Radar/2.0`（F32 的一部分）与回放自动安装判据——`node --import` 下 `argv[1]` 是被执行脚本而非本文件，故改为认 `INDEXAI_HTTP=replay`。
 
 ### [ ] T0.5 页面冒烟与 DOM 快照
 
