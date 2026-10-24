@@ -26,6 +26,9 @@ const STATIC_FILES = ['index.html', 'favicon.svg', '_headers'];
 /** 页面用 import 共享的模块（S9.1：构建期与浏览器共用同一份视图代码的基础）。 */
 const SHARED_MODULES = ['lib/url.js'];
 
+/** 静态资源目录：整目录复制（自托管字体在这里，S9.6）。 */
+const ASSET_DIRS = ['assets'];
+
 /** 数据文件名：从 --data 指定的目录复制。 */
 const DATA_FILES = ['data.json', 'bench.json', 'news-archive.json', 'news-milestones.json'];
 
@@ -58,6 +61,16 @@ for (const name of STATIC_FILES) {
   }
   cpSync(src, join(DIST, name));
   copied.push(name);
+}
+
+for (const dir of ASSET_DIRS) {
+  const src = join(ROOT, dir);
+  if (!existsSync(src)) {
+    console.error(`[build] 缺少资源目录：${dir}`);
+    process.exit(1);
+  }
+  cpSync(src, join(DIST, dir), { recursive: true });
+  copied.push(`${dir}/`);
 }
 
 for (const rel of SHARED_MODULES) {

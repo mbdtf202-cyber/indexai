@@ -475,7 +475,7 @@ golden 差异：无（纯前端与样式改动，数据字节不变）。
 - 深色用 `?theme=dark` 这种查询参数不起作用——页面读的是 localStorage。用例必须点真实的切换按钮，才走得到「重画时间轴」这条路径。
 - Playwright 的 `getComputedStyle(i).backgroundColor` 在 `@media` 内的 `.tllegend i` 上返回的是 `rgb(...)`，不是十六进制；对比度计算要先统一解析格式。
 
-### [ ] T1.11 去掉第三方运行时请求
+### [x] T1.11 去掉第三方运行时请求
 
 依据：F45、F52 · INV-13 · 依赖：T0.5
 
@@ -485,6 +485,23 @@ golden 差异：无（纯前端与样式改动，数据字节不变）。
 3. e2e：把「拦截非同源请求」改为「出现任何非同源请求即失败」。
 
 验收：e2e 通过；字体文件合计 ≤ 150 KB；启动后整页渲染只发生一次（给 `render` 计数断言）。
+
+结果：
+
+1. **字体自托管。** 从 Google Fonts 取 **latin 子集**的静态字重：Inter 400/500/600/700、IBM Plex Mono 400/500/600，共 7 个 woff2，**合计 148 KB**（上限 150 KB）。OFL 许可随文件放在 `assets/fonts/LICENSE-*.txt`。全部 `font-display: swap`，正文 400 预加载。删掉 3 处 Google Fonts 引用（2 个 preconnect + 1 个阻塞样式表）。
+   第一版用可变字重 Inter（单文件 85 KB），7 个文件 156 KB **超预算**；换静态字重后压到 148 KB。
+2. **删除浏览器端汇率请求。** `syncFx()` 整段删掉（含 `idx.fx` 缓存键读写），汇率只读 `data.meta.fx`；启动时 `localStorage.removeItem("idx.fx")` 清理老用户残留。
+3. **e2e 从「记录」升级为「出现即失败」**：`expect(external).toEqual([])`，删掉旧的「已知缺陷只记录」断言。
+4. **两条渲染计数断言**：埋点 `#view.innerHTML` 的 setter。compare 页必须恰好 1 次；首页允许 2 次（首屏 + 归档到达的原地重绘，T1.1 为保滚动位置刻意做的），第 3 次即失败。
+5. `site/build.js` 新增 `ASSET_DIRS`，`assets/` 整目录复制进 `dist/`（17 个文件，0.88 MB）。
+
+**一个隐蔽的坑**：`@font-face` 第一次插错了位置——`<head>` 里那段 F01 内联脚本的注释含「`<style`」字样，HTML 解析器在那里提前结束 `<script>`，CSS 落进脚本导致整页 `Invalid or unexpected token`。注释已改写并写明原因。
+
+DOM 快照无变化（字体替换不改结构）。golden 无差异。e2e 由 25 增到 27。
+
+
+
+---
 
 ### [x] T1.12 外链白名单
 

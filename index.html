@@ -4,14 +4,15 @@
 <meta charset="utf-8">
 <script>
 /* 首帧就要定下「有没有 JS」：淡入动画只在 html.js 下生效（F01）。
-   这段必须内联、且必须在 <style> 之前执行，否则 body 会先透明再被 .nojs 救回来。 */
+   这段必须内联、且必须在样式表之前执行，否则 body 会先透明再被 .nojs 救回来。
+   注意：注释里不能出现 '<' 加 'style' 这种字样，HTML 解析器会在那里提前结束脚本。 */
 document.documentElement.classList.add("js");
 </script>
 <noscript><style>html.js body{opacity:1!important}</style></noscript>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>IndexAI · 免费额度、模型价格、中转站与评测索引</title>
 <meta name="description" content="每天跟踪：能免费用的 AI 额度、各家 token 挂牌价（含缓存命中）、官方订阅价与第三方中转站报价。">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preload" href="assets/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="favicon.svg?v=3" type="image/svg+xml">
 <link rel="apple-touch-icon" href="favicon.svg?v=3">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -21,9 +22,17 @@ document.documentElement.classList.add("js");
 <meta property="og:title" content="IndexAI · AI 的价、量、场，一个入口看完">
 <meta property="og:description" content="免费额度、token 单价、订阅区价、中转站报价、AI 活动、精选工具箱、评测与要闻——八层数据每天自动采集。">
 <meta name="twitter:card" content="summary">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+
+/* 自托管字体（S9.6 · INV-13）：Inter 与 IBM Plex Mono 的拉丁子集，
+ * 均为 OFL 许可（见 assets/fonts/LICENSE-*）。只放 latin，中文走系统字体。 */
+@font-face{font-family:"Inter";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/inter-400.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/inter-500.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:600;font-display:swap;src:url("assets/fonts/inter-600.woff2") format("woff2")}
+@font-face{font-family:"Inter";font-style:normal;font-weight:700;font-display:swap;src:url("assets/fonts/inter-700.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("assets/fonts/ibmplexmono-400.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/ibmplexmono-500.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url("assets/fonts/ibmplexmono-600.woff2") format("woff2")}
 :root{
   --bg:#ffffff; --panel:#ffffff; --panel2:#fafafa; --panel3:#f2f2f2;
   --ink:#0a0a0a; --dim:#4f4f4f; --faint:#6d6d6d;
@@ -4121,24 +4130,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     $("#fxStamp").title = `USD/CNY ${f.rate} · ${f.asof || ""} · 每 8 小时刷新`;
   }
 
-  async function syncFx() {
-    const KEY = "idx.fx";
-    const now = Date.now();
-    let cache = null;
-    try { cache = JSON.parse(localStorage.getItem(KEY) || "null"); } catch {}
-    if (cache && now - cache.ts < 8 * 3600 * 1000) { state.fx = cache; return false; }
-    try {
-      const r = await fetch("https://open.er-api.com/v6/latest/USD", { cache: "no-store" });
-      const j = await r.json();
-      if (j?.rates?.CNY) {
-        state.fx = { rate: Number(j.rates.CNY), ts: now, asof: (j.time_last_update_utc || "").slice(0, 16) };
-        localStorage.setItem(KEY, JSON.stringify(state.fx));
-        return true;
-      }
-    } catch {}
-    if (!state.fx && cache) state.fx = cache;
-    return false;
-  }
+
 
   /* ── boot ── */
   /* 数据健康横幅：只在「数据旧了 / 某层缺了」时出现。
@@ -4177,6 +4169,8 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     // 首页会往地址栏补 #home（见 render），新加载时浏览器会去恢复那个滚动位置，
     // 结果首页一打开就落在价格叙事的中间。这次不做滚动恢复。
     try { history.scrollRestoration = "manual"; } catch {}
+    // 旧版浏览器端汇率缓存（F45）：已经不用了，清掉免得留在用户机器上
+    try { localStorage.removeItem("idx.fx"); } catch {}
     const theme = localStorage.getItem("fr.theme");
     if (theme === "dark") {
       document.documentElement.dataset.theme = "dark";
@@ -4203,7 +4197,6 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
     renderKpis(); bind(); render(); renderFxStamp();
     MOTION.progress();
     requestAnimationFrame(() => { document.body.classList.add("ready"); MOTION.arm(); });
-    syncFx().then((changed) => { if (changed) { renderFxStamp(); render(); } });
     // 大事件清单很小（~8KB），开机就取，避免情报页先闪一下「正在加载」
     loadMilestones().then(() => { if (state.tab === "signals") render(); })
       .catch(() => { if (state.tab === "signals") render(); });

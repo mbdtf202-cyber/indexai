@@ -97,24 +97,16 @@ for (const tab of TABS) {
       { timeout: 15_000 },
     );
 
-    // 已知缺陷（F45 汇率直连、F52 Google Fonts）会让被拦截的外链产生 console.error。
-    // T0.5 只锁定现状，不修缺陷：把这类错误与真正的前端异常分开统计。
-    // 修好之后（T1.11 / T5.6）应把下面的 external 断言改成「必须为空」。
-    const resourceErrors = failures.filter((f) => f.includes('Failed to load resource'));
+    // T1.11 之后页面不再请求任何第三方域名（字体与汇率都已自托管/构建期取）。
+    // 因此这里从「记录」升级为「出现即失败」（INV-13）。
     const realErrors = failures.filter((f) => !f.includes('Failed to load resource'));
 
     expect(realErrors, `标签 ${tab} 出现前端错误：\n${realErrors.join('\n')}`).toEqual([]);
-    // 被拦截的外链只记录，不判失败（对应 F45、F52 的 todo 用例）
-    test.info().annotations.push({
-      type: 'external-requests',
-      description: external.length ? external.join(', ') : 'none',
-    });
-    // 拦截生效的前提：外链没有真的出去
+    expect(external, `标签 ${tab} 请求了第三方域名：${external.join(', ')}`).toEqual([]);
     expect(
       external.every((u) => !u.startsWith('http://127.0.0.1:')),
       '同源请求不应被拦截',
     ).toBe(true);
-    expect(resourceErrors.length).toBeGreaterThanOrEqual(0);
 
     // F01：body 初始 opacity:0，只有启动成功才加 .ready
     const opacity = await page.evaluate(() => getComputedStyle(document.body).opacity);

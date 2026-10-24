@@ -314,3 +314,81 @@ test('页面上不存在非 http(s) 的外链，恶意地址降级为纯文本',
   // 恶意标题仍然可见（数据没被吞掉），但它的地址不是链接
   expect(await page.getByText('Malicious Meetup').count()).toBeGreaterThan(0);
 });
+
+/**
+ * 启动后整页只渲染一次（T1.11 步骤 3 的验收）。
+ *
+ * 旧实现里 syncFx 拿到汇率后会整页重绘一次：首屏闪动、焦点丢失（F45）。
+ * 现在汇率只来自 data.meta.fx，启动路径里不该再有任何「因为异步结果而全量重绘」。
+ */
+test('启动后整页只渲染一次', async ({ page }) => {
+  await blockExternal(page);
+  await page.clock.install({ time: new Date('2026-10-24T01:00:00.000Z') });
+
+  // 在页面脚本之前埋点：数 #view 的 innerHTML 被整体替换的次数
+  await page.addInitScript(() => {
+    window.__renders = 0;
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    Object.defineProperty(Element.prototype, 'innerHTML', {
+      configurable: true,
+      get() {
+        return desc.get.call(this);
+      },
+      set(v) {
+        if (this.id === 'view') window.__renders += 1;
+        return desc.set.call(this, v);
+      },
+    });
+  });
+
+  // 用 compare 页而不是首页：首页在归档到达时会做一次「原地重绘」保住滚动位置
+  // （T1.1 的 F21 行为，是刻意的）。这里要验的是「没有数据之外的异步结果触发全量重绘」。
+  await page.goto('/#compare');
+  await page.waitForFunction(
+    () => (document.querySelector('#view')?.textContent || '').trim().length > 50,
+  );
+  await page.waitForTimeout(600);
+
+  const renders = await page.evaluate(() => window.__renders);
+  expect(renders, `启动期间 #view 被整体替换了 ${renders} 次，应当只有 1 次`).toBe(1);
+});
+
+test('首页的第二次重绘是为了保住滚动位置（不是汇率）', async ({ page }) => {
+  await blockExternal(page);
+  await page.clock.install({ time: new Date('2026-10-24T01:00:00.000Z') });
+
+  await page.addInitScript(() => {
+    window.__renders = 0;
+    window.__scrollAtRender = [];
+    const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+    Object.defineProperty(Element.prototype, 'innerHTML', {
+      configurable: true,
+      get() {
+        return desc.get.call(this);
+      },
+      set(v) {
+        if (this.id === 'view') {
+          window.__renders += 1;
+          window.__scrollAtRender.push(Math.round(scrollY));
+        }
+        return desc.set.call(this, v);
+      },
+    });
+  });
+
+  await page.goto('/#home');
+  await page.waitForFunction(
+    () => (document.querySelector('#view')?.textContent || '').trim().length > 50,
+  );
+  await page.waitForTimeout(700);
+
+  const { renders, scrollAtRender } = await page.evaluate(() => ({
+    renders: window.__renders,
+    scrollAtRender: window.__scrollAtRender,
+  }));
+  // 首页允许两次：首屏 + 归档到达。若出现第三次，说明又有别的异步源在重绘。
+  expect(renders, `首页启动重绘 ${renders} 次（允许 2 次：首屏 + 归档到达）`).toBeLessThanOrEqual(
+    2,
+  );
+  expect(scrollAtRender[0], '首屏渲染发生在页面顶部').toBe(0);
+});
