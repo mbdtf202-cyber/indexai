@@ -1,0 +1,92 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!data.json",
+      "!bench.json",
+      "!news-*.json",
+      "!node_modules",
+      "!fixtures",
+      "!dist",
+      "!coverage",
+      "!.ralph",
+      "!.wrangler",
+      "!package-lock.json",
+      "!directions.html",
+      "!logo-preview.html"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "assist": {
+    "enabled": false
+  },
+  "overrides": [
+    {
+      "includes": [
+        "collect.mjs",
+        "bench.mjs",
+        "health.mjs",
+        "deploy.mjs",
+        "serve.mjs",
+        "lib/**",
+        "index.html"
+      ],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedFunctionParameters": "off",
+            "noUnusedImports": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noAssignInExpressions": "off",
+            "noDoubleEquals": "off",
+            "noArrayIndexKey": "off",
+            "noShorthandPropertyOverrides": "off",
+            "noDuplicateProperties": "off",
+            "useIterableCallbackReturn": "off"
+          },
+          "style": {
+            "useConst": "off",
+            "noNonNullAssertion": "off",
+            "useTemplate": "off",
+            "noParameterAssign": "off",
+            "noDescendingSpecificity": "off",
+            "useExponentiationOperator": "off"
+          },
+          "complexity": {
+            "noForEach": "off",
+            "noBannedTypes": "off",
+            "useOptionalChain": "off",
+            "noUselessEscapeInRegex": "off",
+            "noUselessContinue": "off",
+            "noImportantStyles": "off"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -9,6 +9,12 @@ dist/
 # Ralph 循环的日志与完成标记
 .ralph/
 
+# 测试覆盖率报告
+coverage/
+
+# 本地拉取的 data 分支快照（npm run data:pull）
+.data/
+
 # 采集的中间产物（data.json 每天 700KB，提交会撑爆仓库；只上传到 Pages）
 # 注意：data.json 当前仍在版本控制里作为「基线快照」，如需彻底停止跟踪，
 # 执行 git rm --cached data.json 后取消下面这行注释。
