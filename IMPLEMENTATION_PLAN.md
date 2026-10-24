@@ -975,6 +975,34 @@ golden 差异：**无**（修好 `readSeed` 后逐字节一致）。
 
 golden 差异：**无**。
 
+### [x] T3.1c6 采集层拆分（subs）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c5
+
+结果：`pipeline/layers/subs/index.js` + `test/unit/subs-layer.test.js`（8 项）。`collect.mjs` 净减 76 行（三个 builder 全部搬走）。
+
+这一层从两个上游 JSON 派生**三种形状完全不同的产物**：官方档位、区价对比、挂单统计。三者共用一个源，但语义上互不依赖——所以 `merge` 必须**逐产物判断**：订阅拉到了但挂单没拉到，不该让挂单跟着用旧值。
+
+**两处依赖被留在编排器侧**，因为它们都是跨层顺序依赖，塞进层会造成隐性耦合：
+
+1. **`cny` 折算**：需要先有 `fx.USDCNY`。层不碰时钟也不碰别的层，折算在拿到 fx 之后由编排器补。
+2. **aibijia 的源级记账**：原来由 `T.run('aibijia')` 记一行，源抓取搬进层之后那一行会消失。
+
+**这里做了一处有意的行为变化，golden 差异（1 处）来自它**：
+
+```diff
+- $.meta.collect[0].n: 8 -> 22
+```
+
+我查清了旧值 8 的来源：`size({prod, apple, valid})` 数的是**顶层键数**——`products.json` 2 个键 + `apple_subscriptions.json` 5 个键 + `valid` 1 个。那个数字描述的是「JSON 长什么样」，不是「拿到多少条数据」，排障时没有信息量。
+
+既然这次要显式补记这一行，就让它数有意义的量：4 个产品 + 18 个套餐 = **22**。这是行为变化，不是回归。
+
+**过程中的两个坑**：
+
+- 删掉 `T.run('aibijia')` 后忘了同步 `Promise.all` 的解构，7 个名字对 6 个 promise——会把 `resources` / `openrouter` 全部左移一位。golden 报 `Cannot read properties of undefined (reading 'apps')` 才发现。
+- 删 `fetchAibijia` 后 HTTP 请求数从 39 涨到 41：层自己抓一次、旧的 `T.run` 又抓一次。**「搬走」和「删掉」是两步，只做第一步就会重复发请求。**
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c

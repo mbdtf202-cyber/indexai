@@ -23,6 +23,7 @@ import adoptionLayer from './pipeline/layers/adoption/index.js';
 import resourcesLayer from './pipeline/layers/resources/index.js';
 import newsLayer from './pipeline/layers/news/index.js';
 import benchLayer from './pipeline/layers/bench/index.js';
+import subsLayer from './pipeline/layers/subs/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -1704,43 +1705,7 @@ export function foldRegions(events) {
 const AIBIJIA_PRODUCTS = 'https://data.aibijia.org/products.json';
 const AIBIJIA_APPLE = 'https://data.aibijia.org/apple_subscriptions.json';
 
-async function fetchAibijia() {
-  const get = async (u) => {
-    try {
-      const r = await httpGet(u, { label: 'aibijia' });
-      if (!r.ok) {
-        console.error(`[collect] aibijia ${u} → HTTP ${r.status}`);
-        return null;
-      }
-      return await r.json();
-    } catch (e) {
-      console.error(`[collect] aibijia ${u} 失败：${e.message}`);
-      return null;
-    }
-  };
-  const [prod, apple] = await Promise.all([get(AIBIJIA_PRODUCTS), get(AIBIJIA_APPLE)]);
-  // 两个源都挂 = 这一层真的没了；只挂一个仍然算有值（订阅和挂单可以分别降级）
-  return { prod, apple, valid: !!(prod || apple) };
-}
 
-function buildSubsThird(prod) {
-  if (!prod) return [];
-  const rows = [];
-  for (const p of prod.products || []) {
-    for (const o of p.offers || []) {
-      if (!o.url || o.price == null) continue;
-      rows.push({
-        product: p.name, productSlug: p.slug,
-        title: o.source_title || '', platform: o.platform_name || '', route: o.source_store_name || '',
-        price: Number(o.price), currency: o.currency || 'CNY',
-        status: o.status || 'unknown', url: o.url, tags: o.display_tags || [],
-      });
-    }
-  }
-  return rows.sort(
-    (a, b) => (a.status === 'in_stock' ? 0 : 1) - (b.status === 'in_stock' ? 0 : 1) || a.price - b.price,
-  );
-}
 
 /* 官方订阅档位：从苹果区价里取美国区价格，一档一行。
  * 这是「官网写多少就是多少」里唯一能自动化且可复核的口径——App Store 商品页是公开明码。
@@ -1753,36 +1718,6 @@ const SUB_NOTE = {
   grok: 'X Premium+ 内的 Grok 档位，美国区定价',
 };
 
-function buildSubs(apple) {
-  if (!apple) return [];
-  const out = [];
-  for (const app of apple.apps || []) {
-    const vendor = SUB_VENDOR[app.slug] || '';
-    for (const plan of app.plans || []) {
-      const us = (plan.regions || []).find((r) => r.country_code === 'US');
-      if (!us || !(Number(us.price_value) > 0)) continue;   // 没有美国区明码就不进这一层
-      const tier = String(plan.label || plan.slug || '')
-        .replace(new RegExp(`^${app.display_name}\\s*`, 'i'), '')
-        .trim() || plan.label;
-      out.push({
-        id: `${app.slug}-${plan.slug}`,
-        product: app.display_name,
-        productSlug: app.slug,
-        vendor,
-        tier,
-        price: Number(us.price_value),
-        currency: us.currency_code || 'USD',
-        period: plan.duration_label || '1月',
-        buy: us.app_store_url || '',
-        quota: '',
-        note: SUB_NOTE[app.slug] || '',
-        source: 'apple',
-        checked: (us.fetched_at || '').slice(0, 10) || null,
-      });
-    }
-  }
-  return out.sort((a, b) => a.product.localeCompare(b.product) || a.price - b.price);
-}
 
 /* ────────────────────────── 情报层（news） ──────────────────────────
  * 唯一原则：**跨度换信息量时，只能加不能减。**
@@ -1826,31 +1761,6 @@ function toRow(x) {
 /** 存档补回的早期条目（可选文件，CI 里没有也不该失败） */
 
 
-function buildSubsRegions(apple) {
-  if (!apple) return [];
-  const out = [];
-  for (const app of apple.apps || []) {
-    for (const plan of app.plans || []) {
-      const rs = (plan.regions || []).filter((r) => Number(r.cny_price) > 0).sort((a, b) => a.cny_price - b.cny_price);
-      if (!rs.length) continue;
-      const keep = rs.slice(0, 10);
-      const us = rs.find((r) => r.country_code === 'US');
-      if (us && !keep.includes(us)) keep.push(us);
-      out.push({
-        app: app.display_name, appSlug: app.slug,
-        plan: plan.label, planSlug: plan.slug, duration: plan.duration_label || '',
-        total: rs.length,
-        cheapest: Number(Number(rs[0].cny_price).toFixed(2)),
-        priciest: Number(Number(rs[rs.length - 1].cny_price).toFixed(2)),
-        rows: keep.map((r) => ({
-          c: r.country_code, n: r.country_label, cur: r.currency_code,
-          p: r.price_text, cny: Number(Number(r.cny_price).toFixed(2)), url: r.app_store_url,
-        })),
-      });
-    }
-  }
-  return out;
-}
 
 async function fetchAios() {
   const file = aiosFile();
@@ -2110,7 +2020,8 @@ async function main() {
   const T = makeTracker();
 
   // 并行拉取，每层独立记账；失败不互相拖累
-  const [devpost, aios, luma, devfolio, aibijia, resources, openrouter] = await Promise.all([
+  // 顺序必须与下面的 Promise.all 一一对应：aibijia 已交给 subs 层自己抓（T3.1c6）
+  const [devpost, aios, luma, devfolio, resources, openrouter] = await Promise.all([
     T.run('devpost', async () => ({ value: await fetchDevpost() }), prev?.events?.filter((e) => e.source === 'Devpost')),
     // AIOS 读仓库外的本机文件，内容不在版本控制里：测试档位跳过，保证回放输出确定
     TEST_PROFILE
@@ -2120,10 +2031,6 @@ async function main() {
     // Devfolio 是补充源，只有 9 条：失败不能拖累整体，同样走 T.run 记账。
     // 注意它没有上一版可比（首次上线），所以首跑 failed 也是合法的 —— health 里设成可选源即可。
     T.run('devfolio', async () => ({ value: await fetchDevfolio() }), prev?.events?.filter((e) => e.source === 'Devfolio')),
-    T.run('aibijia', async () => {
-      const v = await fetchAibijia();
-      return { value: v, valid: v.valid };
-    }, null),
     T.run(
       'resources',
       async () => {
@@ -2424,24 +2331,56 @@ async function main() {
   const prevSubsThird = Array.isArray(prev?.subsThird) ? prev.subsThird : [];
   const prevSubsRegions = Array.isArray(prev?.subsRegions) ? prev.subsRegions : [];
 
-  let subs = buildSubs(aibijia.apple).map((x) => ({ ...x, cny: Number((x.price * fx.USDCNY).toFixed(1)) }));
-  /* D3：第三方挂单只出统计，不出商品页链接。
-   * 原始挂单（含 url）留在本进程内算区间，写完就不再持有——它不进 data.json。
-   * 这样「页面上不显示链接」和「数据里没有链接」是同一件事，而不是靠渲染时藏。 */
-  const subsThirdRaw = buildSubsThird(aibijia.prod);
-  let subsThird = subsThirdStats(subsThirdRaw);
-  let subsRegions = buildSubsRegions(aibijia.apple);
+  /* 订阅层走契约（T3.1c6）：层负责派生三种产物与各自的沿用。
+   * 汇率折算是跨层顺序依赖（subs 依赖 fx 先算出），留在编排器这一侧补。 */
+  const subsCtx = {
+    http: { get: httpGet },
+    urls: { prod: AIBIJIA_PRODUCTS, apple: AIBIJIA_APPLE },
+    subsThirdStats,
+    log: (m, opt) => {
+      if (opt?.level === 'warn') console.warn(`[collect] ${m}`);
+      else console.log(`[collect] ${m}`);
+    },
+  };
+  const subsRaw = await subsLayer.fetch(subsCtx);
+  // 源级记账：aibijia 的两个 JSON 是否拿到。原来这一行由 T.run('aibijia') 负责，
+  // 源抓取搬进层之后要显式补记，否则 meta.collect 会少一层、排障时看不出是源挂了。
+  T.log.push({
+    layer: 'aibijia',
+    status: subsRaw.prod || subsRaw.apple ? 'fresh' : 'failed',
+    // 新口径：这两个源真正的记录条数（products 的条目 + apple 的套餐数）。
+    // 旧值 8 是 size({prod, apple, valid}) 数顶层键数得来的——它描述 JSON 的形状，
+    // 不描述拿到多少数据，排障时没有信息量。改成有意义的量（见提交信息说明）。
+    n:
+      (subsRaw.prod?.products || []).length + (subsRaw.apple?.apps || []).reduce((n, a) => n + (a.plans || []).length, 0),
+    ms: 0,
+    ...(subsRaw.prod || subsRaw.apple ? {} : { error: '两个源都没拿到' }),
+  });
+  const subsNorm = subsLayer.normalize(subsRaw, subsCtx);
+  const subsMerged = subsLayer.merge(
+    { subs: prevSubs, subsRegions: prevSubsRegions, subsThird: prevSubsThird },
+    subsNorm.records,
+  );
 
-  if (!subs.length && prevSubs.length) {
-    subs = prevSubs; T.log.push({ layer: 'subs', status: 'stale', n: 0, prev: prevSubs.length, ms: 0, error: 'apple 源为空' });
+  // cny 折算依赖 fx，是跨层顺序依赖，不属于层的职责
+  const subs = subsMerged.subs.map((x) => ({
+    ...x,
+    cny: Number((x.price * fx.USDCNY).toFixed(1)),
+  }));
+  const subsThird = subsMerged.subsThird;
+  const subsRegions = subsMerged.subsRegions;
+
+  // 三种产物分别记账（沿用与否各自独立）
+  if (!subsNorm.records.subs.length && prevSubs.length) {
+    T.log.push({ layer: 'subs', status: 'stale', n: 0, prev: prevSubs.length, ms: 0, error: 'apple 源为空' });
     console.warn(`[collect] subs 派生为空，沿用上一版 ${prevSubs.length} 档`);
   }
-  if (!subsThird.length && prevSubsThird.length) {
-    subsThird = prevSubsThird; T.log.push({ layer: 'subsThird', status: 'stale', n: 0, prev: prevSubsThird.length, ms: 0, error: 'products 源为空' });
+  if (!subsNorm.records.subsThird.length && prevSubsThird.length) {
+    T.log.push({ layer: 'subsThird', status: 'stale', n: 0, prev: prevSubsThird.length, ms: 0, error: 'products 源为空' });
     console.warn(`[collect] 挂单统计为空，沿用上一版 ${prevSubsThird.length} 个产品`);
   }
-  if (!subsRegions.length && prevSubsRegions.length) {
-    subsRegions = prevSubsRegions; T.log.push({ layer: 'subsRegions', status: 'stale', n: 0, prev: prevSubsRegions.length, ms: 0, error: 'apple 源为空' });
+  if (!subsNorm.records.subsRegions.length && prevSubsRegions.length) {
+    T.log.push({ layer: 'subsRegions', status: 'stale', n: 0, prev: prevSubsRegions.length, ms: 0, error: 'apple 源为空' });
     console.warn(`[collect] subsRegions 为空，沿用上一版 ${prevSubsRegions.length} 组`);
   }
 
@@ -2540,7 +2479,8 @@ async function main() {
         offers: offersDedup.rows.length,
         signals: signals.length,
         subs: subs.length,
-        subsThird: subsThirdTotal(subsThirdRaw).listings,
+        // 挂单总数从统计行累加（原始挂单只在层内部存在，D3）
+        subsThird: subsThird.reduce((n, x) => n + (x.listings || 0), 0),
         subsThirdProducts: subsThird.length,
         subsRegions: subsRegions.length,
         subsRegionsRaw: subsRegions.reduce((n, r) => n + r.total, 0),
