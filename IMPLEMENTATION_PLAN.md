@@ -1043,6 +1043,30 @@ golden 差异：**无**。
 而 `dedupeModels` 只返回 `{rows, dropped}`。golden 没报错（多余字段不进输出），
 是自查返回形状时发现的——**这类「读到 undefined 但不影响结果」的错误最容易被忽略**。
 
+### [x] T3.1c9 采集层拆分（relays）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c8
+
+结果：`pipeline/layers/relays/index.js` + `test/unit/relays-layer.test.js`（10 项）。golden 零差异。
+
+唯一有并发的层（5 个 worker 消费同一队列），也是唯一**逐站沿用**的层：
+51 个站里今天挂了 3 个，不该让另外 48 个也用旧值。
+
+沿用规则同时管两件事，都已在层里：
+1. 失败但在 14 天 TTL 内 → 用旧价、标 stale、**保留「上次真的成功」的日期**；
+2. 失败且超过 TTL → 清空。宁可少一条，也不展示两周前的价还装作今天的。
+
+价格加工（`eff` / `vsOfficial` / `comparable` / `grayGroups`）作为 `enrich` 注入，
+留在编排器侧——它依赖 `officialRef` 与 `lib/cost.js`，属于跨层知识。
+`pickFlagship` / `groupRatioTable` / `relayPrice` / `FLAGSHIP` 同理（有独立测试且互相引用）。
+
+**踩到一个与上次同类的坑**：接层时漏了 `TEST_PROFILE ? RELAYS.slice(0, 3) : RELAYS` 这个截断，
+于是回放档位也去探 51 个站——回放数据里没有它们，全部失败，打出 48 次重试。
+golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 → 48`。
+
+这已经是第二次在「搬迁」时丢掉调用点的**条件分支**（上次是 `T.run('aibijia')` 的重复抓取）。
+教训：搬一段代码时，真正的风险不在函数体，而**在调用点的参数与分支**。
+
 ### [ ] T3.1d 编排器替代 collect.mjs
 
 依据：S3.1 · 依赖：T3.1c

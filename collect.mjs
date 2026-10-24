@@ -26,6 +26,7 @@ import benchLayer from './pipeline/layers/bench/index.js';
 import subsLayer from './pipeline/layers/subs/index.js';
 import offersLayer from './pipeline/layers/offers/index.js';
 import modelsLayer from './pipeline/layers/models/index.js';
+import relaysLayer from './pipeline/layers/relays/index.js';
 import { isGrayGroup, splitGroups } from './lib/relay-groups.js';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -736,18 +737,6 @@ export function pickFlagship(rows, f, gTable) {
   };
 }
 
-async function probeAll(entries) {
-  const out = new Map();
-  const queue = [...entries];
-  const workers = Array.from({ length: 5 }, async () => {
-    while (queue.length) {
-      const item = queue.shift();
-      out.set(item.domain, await probeRelay(item));
-    }
-  });
-  await Promise.all(workers);
-  return out;
-}
 
 
 /* ────────────────────────── 6. 汇率 ────────────────────────── */
@@ -2198,9 +2187,7 @@ async function main() {
     return ka < kb ? -1 : ka > kb ? 1 : 0;
   });
 
-  const relaysToProbe = TEST_PROFILE ? RELAYS.slice(0, 3) : RELAYS;
-  const probed = await probeAll(relaysToProbe);
-  const prevRelays = new Map((prev?.relays || []).map((r) => [r.domain, r]));
+  // 探测交给 relays 层（T3.1c9）：并发度与超时都在层里定
 
   // 官方参考价（direct 渠道），用来给每一列算「对官方 %」
   const officialRef = {};
@@ -2246,38 +2233,20 @@ async function main() {
     };
   });
 
-  const relays = [...probed.values()].map((r) => {
-    const old = prevRelays.get(r.domain);
+  /* 中转站走契约（T3.1c9）：探测在层内做（有并发与超时），
+   * 逐站沿用也在层内做；价格加工（eff / vsOfficial）作为 enrich 注入——
+   * 它依赖 officialRef 与 lib/cost.js，属于编排器侧的知识。 */
+  const relayCtx = {
+    // 测试档位只探前 3 个站：回放数据只覆盖这几个，全探会打出上百次失败请求
+    entries: TEST_PROFILE ? RELAYS.slice(0, 3) : RELAYS,
+    probe: probeRelay,
+    concurrency: 5,
+  };
+  const relaysRaw = await relaysLayer.fetch(relayCtx);
+  const relaysNorm = relaysLayer.normalize(relaysRaw);
 
-    /* 三种来源，统一走同一段后处理（eff / vsOfficial 等）：
-     * 1. 本次探测成功     —— 用新价，stale=false
-     * 2. 失败但在 TTL 内  —— 沿用旧价，stale=true 并带 staleDays
-     * 3. 失败且已过 TTL   —— 清空价目，不展示两周前的价格（S3.3 的 14 天 TTL）
-     * 旧实现在「失败但有旧价」时无条件沿用，停更的站可以永远挂着昨天的数字。 */
-    let base;
-    if (r.status === 'ok') {
-      base = { ...r, stale: false, checked_at: r.checked_at || null };
-    } else {
-      const age = daysSince(old?.checked_at);
-      const hasPrices = old && old.prices && Object.keys(old.prices).length > 0;
-      if (hasPrices && age <= RELAY_STALE_TTL_DAYS) {
-        base = {
-          ...r,
-          stale: true,
-          staleDays: age,
-          prices: old.prices || {},
-          models: old.models || 0,
-          groups: old.groups || null,
-          // 保留「上次真的成功」的那一天：页面据此显示「上次成功 MM-DD」，
-          // 而不是把沿用说成今天采集的（F20）
-          checked_at: old.checked_at || null,
-        };
-      } else {
-        base = { ...r, stale: false, staleDays: null, prices: {}, models: 0, groups: null, checked_at: null };
-      }
-    }
-
-    // 给每个旗舰价补上「有效成本」与「对官方比」，缺值留 null 而不是 0
+  /** 给每个旗舰价补上「有效成本」与「对官方比」，缺值留 null 而不是 0。 */
+  const enrichRelay = (base) => {
     const prices = {};
     for (const [k, p] of Object.entries(base.prices || {})) {
       if (!p) continue;
@@ -2286,26 +2255,26 @@ async function main() {
       if (p.kind === 'per_1m') {
         row.eff = costOf(p, profileOf('agent'));
         row.vsOfficial = ref && ref.input > 0 ? Number((p.input / ref.input).toFixed(3)) : null;
-        const officialEff = ref ? costOf({ kind: 'per_1m', input: ref.input, output: ref.output, cacheRead: ref.cache_read }, profileOf('agent')) : null;
       }
       // 按次计价不参与每百万 token 的比较，只留原值
       prices[k] = row;
     }
-
-    // 站点级画像：只留「有可比单价的旗舰数」，页面用它决定这一行有没有信息量。
-    // effSpread / groupSpread 曾一并写出但页面从不读取，已删（F17）。
-    const effs = Object.entries(prices)
-      .filter(([, p]) => p.kind === 'per_1m' && p.eff != null && !p.anomaly);
-
+    const effs = Object.entries(prices).filter(([, p]) => p.kind === 'per_1m' && p.eff != null && !p.anomaly);
     return {
       ...base,
       prices,
-      // 有多少个旗舰能给出可比单价（决定这一行在页面上有多大信息量）
       comparable: effs.length,
-      // 被排除的灰色分组数（逆向 / 特价）：不参与代表价与最低可达价，但要在页面上说出来
       grayGroups: Object.values(prices).reduce((n, p) => n + (p.grayGroups || 0), 0),
     };
-  }).sort((a, b) => (b.models || 0) - (a.models || 0));
+  };
+
+  const relays = relaysLayer
+    .merge(prev?.relays, relaysNorm.records, {
+      ttlDays: RELAY_STALE_TTL_DAYS,
+      today: todayISO(),
+      enrich: enrichRelay,
+    })
+    .sort((a, b) => (b.models || 0) - (a.models || 0));
 
   // 订阅层：官方月费从苹果区价派生；第三方挂单只认 aibijia 的实时挂单，没有就是没有。
   // aibijia 整体挂掉时沿用上一版的派生结果（而不是让订阅页空掉）。
