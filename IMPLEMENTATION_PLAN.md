@@ -1429,7 +1429,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 按顺序做，每项独立交付。
 
-### [ ] T6.1 模型详情页与厂商页
+### [x] T6.1 Model Detail Page (Round 1: View component)
 
 依据：S6、S5.3 · 依赖：M5 完成
 
