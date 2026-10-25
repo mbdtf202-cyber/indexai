@@ -1473,7 +1473,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：每个证据 URL 都有监测状态；用例中正文变化触发待复核与 issue，未变化时 `checked_at` 前进。
 
-### [ ] T6.6 活动质量
+### [x] T6.6 Event Quality Scoring Complete
 
 依据：F10、F12 · S8.5 · D11 · 依赖：T3.4
 
