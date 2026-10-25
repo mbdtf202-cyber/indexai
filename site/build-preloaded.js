@@ -1,130 +1,55 @@
 /**
- * Pre-rendering Builder for Multi-page Site (T5.2 Round 1)
- *
- * Generates pre-rendered HTML for all views + lazy loading infrastructure
+ * Pre-rendering Builder for Multi-page Site (T5.2 Round 2)
  */
 
-import { existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const OUTPUT_DIR = join(ROOT, 'dist', 'pre-rendered');
+const GOLDEN_DIR = join(ROOT, 'fixtures', 'golden');
 
-// View modules to pre-render
-const VIEWS_TO_RENDER = [
-  { name: 'home', path: 'site/views/home.mjs', route: '/' },
-  { name: 'models', path: 'site/views/models.mjs', route: '/models' },
-  { name: 'bench', path: 'site/views/bench.mjs', route: '/benchmarks' },
-  { name: 'subs', path: 'site/views/subs.mjs', route: '/subscriptions' },
-  { name: 'free', path: 'site/views/free.mjs', route: '/free' },
-  { name: 'relays', path: 'site/views/relays.mjs', route: '/relays' },
-  { name: 'events', path: 'site/views/events.mjs', route: '/events' },
-  { name: 'tools', path: 'site/views/tools.mjs', route: '/tools' },
-  { name: 'vendors', path: 'site/views/vendors.mjs', route: '/vendors' },
-  { name: 'signals', path: 'site/views/signals.mjs', route: '/signals' },
-  { name: 'method', path: 'site/views/method.mjs', route: '/methodology' },
+// Import view rendering functions
+const viewsToRender = [
+  { name: 'Home', module: './views/home.mjs', route: '/' },
+  { name: 'Models', module: './views/models.mjs', route: '/models' },
+  { name: 'Bench', module: './views/bench.mjs', route: '/benchmarks' },
+  { name: 'Subs', module: './views/subs.mjs', route: '/subscriptions' },
+  { name: 'Free', module: './views/free.mjs', route: '/free' },
+  { name: 'Relays', module: './views/relays.mjs', route: '/relays' },
+  { name: 'Events', module: './views/events.mjs', route: '/events' },
+  { name: 'Tools', module: './views/tools.mjs', route: '/tools' },
+  { name: 'Vendors', module: './views/vendors.mjs', route: '/vendors' },
+  { name: 'Signals', module: './views/signals.mjs', route: '/signals' },
+  { name: 'Method', module: './views/method.mjs', route: '/methodology' },
 ];
 
-/**
- * Mock data generators for each view type
- */
-export function getMockData(viewName) {
-  const now = new Date().toISOString();
-
-  switch (viewName) {
-    case 'home':
-      return {
-        stats: { modelsCount: 150, gateways: 51, lastUpdated: now },
-        latestNews: [],
-        recentChanges: [],
-        topModels: [],
-        benchmarks: [],
-      };
-
-    case 'models':
-      return {
-        models: Array.from({ length: 20 }, (_, i) => ({
-          id: `model-${i}`,
-          name: `Model ${String.fromCharCode(65 + i)}`,
-          vendor: i % 3 === 0 ? 'openai' : i % 3 === 1 ? 'anthropic' : 'google',
-          input: 0.5 + Math.random(),
-          output: 1.5 + Math.random() * 2,
-          free: i < 5 ? Math.floor(Math.random() * 1000) : null,
-        })),
-        filters: {},
-        sortBy: 'input',
-        sortOrder: 'asc',
-      };
-
-    // Add more mock data generators for other views...
-    default:
-      return { data: true };
-  }
-}
-
-/**
- * Render view to static HTML
- */
-export async function renderViewToHTML(viewName) {
-  try {
-    const module = await import(`../${VIEWS_TO_RENDER.find((v) => v.name === viewName).path}`);
-    const renderFunc = module[`render${viewName.charAt(0).toUpperCase() + viewName.slice(1)}`];
-
-    if (!renderFunc) {
-      console.warn(`No render function found for ${viewName}`);
-      return '';
-    }
-
-    const mockData = getMockData(viewName);
-    const htmlContent = renderFunc(mockData);
-
-    // Wrap in full HTML structure
-    return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>${viewName.charAt(0).toUpperCase() + viewName.slice(1)} | IndexAI</title>
-  <meta name="description" content="${viewName} page for AI pricing comparison">
-  <link rel="stylesheet" href="/styles/main.css">
-</head>
-<body>
-  <div id="app">${htmlContent}</div>
-  <script defer src="/scripts/lazy-load.js"></script>
-</body>
-</html>`;
-  } catch (e) {
-    console.error(`Failed to render ${viewName}:`, e.message);
-    return '';
-  }
-}
-
-/**
- * Generate all pre-rendered pages
- */
 export async function buildPreRenderedSite() {
   console.log('[build] Starting pre-rendering build...\n');
 
-  // Create output directory
+  // Create output directories
   if (!existsSync(OUTPUT_DIR)) {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  let successCount = 0;
-  let failCount = 0;
+  const results = {
+    success: 0,
+    failed: 0,
+    pages: [],
+  };
 
-  // Render each view
-  for (const { name, route } of VIEWS_TO_RENDER) {
+  for (const view of viewsToRender) {
     try {
-      console.log(`[build] Rendering ${name} page...`);
+      console.log(`[build] Rendering ${view.name} (${view.route})...`);
 
-      const html = await renderViewToHTML(name);
+      const html = await renderView(view);
 
       if (html) {
         const filePath = join(
           OUTPUT_DIR,
-          `${route.replace(/^\//, '') || 'index'}${route.includes('.') ? '' : '.html'}`,
+          `${view.route.replace(/^\//, '') || 'index'}${view.route.includes('.') ? '' : '.html'}`,
         );
 
         // Ensure directory exists
@@ -134,52 +59,117 @@ export async function buildPreRenderedSite() {
         }
 
         writeFileSync(filePath, html);
-        successCount++;
+        results.success++;
+        results.pages.push({ name: view.name, route: view.route, path: filePath });
         console.log(`[build] ✓ Written: ${filePath}`);
       } else {
-        failCount++;
-        console.log(`[build] ✗ Failed: ${name}`);
+        results.failed++;
+        console.log(`[build] ✗ Failed: ${view.name}`);
       }
     } catch (e) {
-      failCount++;
-      console.error(`[build] Error rendering ${name}:`, e.message);
+      results.failed++;
+      console.error(`[build] Error rendering ${view.name}:`, e.message);
     }
   }
 
-  // Generate lazy load manifest
-  generateLazyLoadManifest(VIEWS_TO_RENDER.map((v) => v.route));
+  // Generate lazy loading manifest
+  generateLazyManifest(results.pages);
 
-  console.log(
-    `\n[build] Complete! ${successCount}/${VIEWS_TO_RENDER.length} views rendered successfully.`,
-  );
-  if (failCount > 0) {
-    console.warn(`⚠️  ${failCount} views failed to render`);
+  console.log(`\n[build] Complete! ${results.success}/${viewsToRender.length} pages rendered`);
+  if (results.failed > 0) {
+    console.warn(`⚠️  ${results.failed} pages failed to render`);
   }
 
-  return { successCount, failCount, total: VIEWS_TO_RENDER.length };
+  return results;
 }
 
-/**
- * Generate lazy loading configuration manifest
- */
-function generateLazyLoadManifest(routes) {
+async function renderView(viewSpec) {
+  const modulePath = `./site/${viewSpec.module}`;
+
+  try {
+    const module = await import(modulePath);
+    const renderFunc = module[`render${viewSpec.name}`];
+
+    if (!renderFunc) {
+      console.warn(`No render function found for ${viewSpec.name}`);
+      return '';
+    }
+
+    // Use mock data or load from fixtures
+    const mockData = generateMockData(viewSpec.name);
+    const htmlContent = renderFunc(mockData);
+
+    return wrapInPageStructure(htmlContent, viewSpec.name, viewSpec.route);
+  } catch (e) {
+    console.error(`Failed to import view ${viewSpec.name}:`, e.message);
+    return '';
+  }
+}
+
+function generateMockData(viewName) {
+  switch (viewName) {
+    case 'Home':
+      return {
+        stats: { modelsCount: 150, gateways: 51, lastUpdated: new Date().toISOString() },
+        latestNews: [],
+        recentChanges: [],
+        topModels: [],
+        benchmarks: [],
+      };
+    case 'Models':
+      return {
+        models: Array.from({ length: 10 }, (_, i) => ({
+          id: `model-${i}`,
+          name: `Model ${String.fromCharCode(65 + i)}`,
+          vendor: ['openai', 'anthropic', 'google'][i % 3],
+          input: 0.5 + Math.random(),
+          output: 1.5 + Math.random() * 2,
+          free: null,
+        })),
+        filters: {},
+        sortBy: 'input',
+        sortOrder: 'asc',
+      };
+    case 'Bench':
+      return {
+        boards: [{ id: 'swe-bench-lite', name: 'SWE-bench Lite', avgScore: 0.8 }],
+        rankings: {},
+      };
+    default:
+      return { test: true };
+  }
+}
+
+function wrapInPageStructure(content, pageName, route) {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>${pageName} | IndexAI</title>
+  <meta name="description" content="${pageName} comparison page">
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+<body>
+  <div id="app">${content}</div>
+  <script defer src="/scripts/lazy-load.js"></script>
+</body>
+</html>`;
+}
+
+function generateLazyManifest(pages) {
   const manifest = {
     version: '1.0',
     generated_at: new Date().toISOString(),
-    lazy_loaded_routes: routes.filter((r) => !['/', '/home'].includes(r)),
-    preload_strategy: 'intersection_observer',
-    priority_threshold: 200,
-    deferrable_scripts: ['scripts/lazy-load.js'],
+    pages: pages.map((p) => ({ route: p.route, name: p.name })),
+    lazy_load_enabled: true,
   };
 
-  const manifestPath = join(OUTPUT_DIR, 'lazy-manifest.json');
-  writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
-  console.log(`[build] Generated lazy loading manifest: ${manifestPath}`);
+  writeFileSync(join(OUTPUT_DIR, 'lazy-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  console.log('[build] Generated lazy loading manifest');
 }
 
-// CLI entry point
 if (process.argv[1]?.endsWith('build-preloaded.js')) {
   buildPreRenderedSite().catch(console.error);
 }
 
-export default { buildPreRenderedSite, renderViewToHTML };
+export default { buildPreRenderedSite, renderView };
