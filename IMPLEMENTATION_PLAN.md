@@ -1486,7 +1486,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：S8.5 的质量线全部在测试里断言；跨源重复率 < 1%；ics 文件通过 iCalendar 结构校验。
 
-### [ ] T6.7 中转站历史与可用率
+### [x] T6.7 Relay History [ ] T6.7 中转站历史与可用率 Availability Complete
 
 依据：S8.4 · 依赖：T4.8
 
