@@ -13,7 +13,8 @@
 
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, dirname, fileURLToPath } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -36,16 +37,16 @@ import {
   fetchNews,
   fetchRelays,
   fetchEvents,
-} from './fetchers.js';
-import { writeData, writeBench, writeNewsArchive } from './writers.js';
+} from './fetchers.mjs';
+import { writeData, writeBench, writeNewsArchive } from './writers.mjs';
 import {
   dedupeModels,
   dedupeOffers,
   mergeNewsArchive,
   subsThirdStats,
   subsThirdTotal,
-} from './processors.js';
-import { resetLumaState, getLumaBlockState, assertLayers } from './health.js';
+} from './processors.mjs';
+import { resetLumaState, getLumaBlockState, assertLayers } from './health.mjs';
 
 /* ==================== 配置常量 ==================== */
 

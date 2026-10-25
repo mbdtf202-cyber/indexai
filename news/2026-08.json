@@ -1,0 +1,160 @@
+{
+  "month": "2026-08",
+  "generated_at": "2026-10-25T02:46:38.689Z",
+  "items": [
+    {
+      "date": "2026-08-31",
+      "time": "16:00",
+      "title": "Anthropic 发布 Claude Fable 5.1 与 Claude Mythos 5.1",
+      "summary": "Anthropic 发布 Claude Fable 5.1 和 Claude Mythos 5.1，两者为同一模型但安全防护级别不同，Mythos 5.1 仅通过可信访问计划提供给网络安全和生命科学领域的受审机构。",
+      "url": "https://aihot.news/items/cmtjjkmd800r4roe4wpq221bc"
+    },
+    {
+      "date": "2026-08-28",
+      "time": "06:03",
+      "title": "腾讯混元发布 Hy4 preview：770B 总参数、1M 上下文，开源上线",
+      "summary": "腾讯混元发布新一代旗舰模型 Hy4 preview，总参数 770B、激活参数 49B、上下文长度 1M，现已开源并在腾讯云 TokenHub 和 OpenRouter 上线。",
+      "url": "https://aihot.news/items/cmtcjzlxy03f8rodbxqdotbhg"
+    },
+    {
+      "date": "2026-08-28",
+      "time": "11:20",
+      "title": "Beatport 全面封禁纯 AI 生成音乐",
+      "summary": "DJ 市场 Beatport 开始禁止完全或大部分由 AI 生成的音乐，人类主导、仅使用 AI 辅助的曲目仍可上架但会被标记。平台借助合作伙伴 Beatdapp 的检测工具在上传时过滤 AI 曲目，被拒曲目权利人将收到通知。调查显示 60% 用户不会在演出中播放 AI 音乐，77% 更偏爱人类创作的音乐。",
+      "url": "https://aihot.news/items/cmtcv8im904xoroq5ifc0tcne"
+    },
+    {
+      "date": "2026-08-28",
+      "time": "06:00",
+      "title": "OpenAI 决定终止向 Cursor 提供模型，因 SpaceX 收购后合规风险",
+      "summary": "OpenAI 已通知 SpaceX，将终止向 Cursor 提供 OpenAI 模型的合同，拟定关停日期为 2026 年 11 月 12 日，并给予合同允许的最长通知期。OpenAI 称此举源于无法确信 SpaceX 会遵守服务条款，并援引马斯克旗下公司此前违反合同及 xAI 违反 OpenAI 服务条款的先例。OpenAI 表示将尽力支持受影响的开发者过渡。",
+      "url": "https://aihot.news/items/cmtdqc5oj03wzro2mgyc5a49x"
+    },
+    {
+      "date": "2026-08-27",
+      "time": "16:11",
+      "title": "Gemini Omni 1.1 Flash 发布，为开发者提供更强生成式视频控制",
+      "summary": "Google 推出 Gemini Omni 1.1 Flash，为开发者提供更强的生成式视频控制能力。新模型支持场景扩展（可分析最多 10 秒先前上下文，以 10 秒为增量累计延长至 40 秒）、指定首尾帧生成平滑过渡，以及 4K 高清输出。",
+      "url": "https://aihot.news/items/cmtbq1hfq156croamzzo9gno2"
+    },
+    {
+      "date": "2026-08-27",
+      "time": "20:52",
+      "title": "诉讼指控 xAI 使用儿童性虐待材料训练 Grok 模型",
+      "summary": "一项新诉讼指控 xAI 使用儿童性虐待材料（CSAM）训练 Grok 模型，这是首个此类指控。原告 Jane Doe 称其幼年遭虐待所生成的 CSAM 图像及 AI 生成的衍生图像被用于训练 Grok，且 Grok 默认将公开的 X 帖子和自身输出作为训练数据。诉讼要求 xAI 销毁所有 Grok 生成的 CSAM 并阻止模型再生成此类内容。",
+      "url": "https://aihot.news/items/cmtc05bnj015srome8fm42xy8"
+    },
+    {
+      "date": "2026-08-26",
+      "time": "12:30",
+      "title": "Qwen3.8-Flash-Next 开源：Qwen4 架构早期预览",
+      "summary": "通义千问开源 Qwen3.8-Flash-Next，一款多模态 MoE 模型，也是 Qwen4 架构的早期预览。该模型采用 GDN + QSA 混合注意力等四项升级，总参数 125B，每 token 激活 6B，训练成本约为 Qwen3.7-Plus 的 1/9，编码与办公任务能力更强。",
+      "url": "https://aihot.news/items/cmta2veap03nmrolwxllvp4ay"
+    },
+    {
+      "date": "2026-08-26",
+      "time": "16:00",
+      "title": "MiniMax-H3 在 8×H200 上基准测试：无损加速 1.95×，最高 6.24×（SSIM 0.76–0.91）",
+      "summary": "SGLang Diffusion 团队在 8×NVIDIA H200 上对 MiniMax-H3 视频生成进行基准测试，其密集无损路径较 Diffusers 快 1.85–1.95×，无近似损失。",
+      "url": "https://aihot.news/items/cmtbtrn8j0222ro2kb7opgppz"
+    },
+    {
+      "date": "2026-08-24",
+      "time": "17:58",
+      "title": "丰田北美如何用 Deep Agents 和 LangSmith 规模化企业 AI",
+      "summary": "丰田北美借助 Deep Agents 和 LangSmith 运行 50 多个生产环境 AI 智能体，将交付周期从 6 个月缩短至 4 天。文章展示了其如何通过 LangSmith 追踪 AI 投资回报率（ROI），并以此支撑企业级 AI 的规模化落地。",
+      "url": "https://aihot.news/items/cmt7kxoay29laro73gn4kt0gy"
+    },
+    {
+      "date": "2026-08-18",
+      "time": "11:00",
+      "title": "OpenAI 在“关键网络能力”时代放缓模型开发节奏",
+      "summary": "OpenAI 因 OpenAI-Hugging Face 事件及即将推出的 Astra 模型可能达到《预备框架》下的“关键网络安全能力”阈值，暂时放缓了模型扩展速度，包括暂停最新部署模型的强化学习训练两周，并搁置最大规模前沿 RL 运行。公司已加强研究环境安全，要求对 Astra 及网络相关负载实施最严格防护，并扩展思维链监控，采用多阶段激活分类器检测机制。",
+      "url": "https://aihot.news/items/cmsz0hbsg05l0ro204080cotv"
+    },
+    {
+      "date": "2026-08-17",
+      "time": "12:34",
+      "title": "NVIDIA 与 SB Energy 合作锁定俄亥俄州 PORTS-Pike 园区电力容量，OpenAI 将入驻",
+      "summary": "NVIDIA 宣布与 SB Energy 合作，锁定俄亥俄州 PORTS-Pike 科技园区的电力容量（LPS）以独家部署 NVIDIA 算力，OpenAI 将成为租户。",
+      "url": "https://aihot.news/items/cmsx9jvre05y6romms3bo1umb"
+    },
+    {
+      "date": "2026-08-17",
+      "time": "22:14",
+      "title": "Cursor 推出 Origin 代码托管服务，作为 GitHub 的替代方案",
+      "summary": "Cursor 今日起向所有付费计划用户开放 Origin 代码托管的早期测试版，提供仓库、拉取请求、代码浏览及 GitHub 同步功能。用户可创建以 cursor.com/codebase/ 为前缀的仓库，或将 GitH",
+      "url": "https://aihot.news/items/cmsxsvb5s0a4troz0z2q2nu3h"
+    },
+    {
+      "date": "2026-08-15",
+      "time": "11:00",
+      "title": "AI生成书籍正淹没亚马逊，并拉低人类作者的单书收入",
+      "summary": "一项对14,419本自出版电子书的分析显示，AI生成书籍正以数量而非质量挤占人类作者市场，即便未检测到AI文本的书籍，单书收入也在下滑。2023年Q1至2026年Q1，书目总量增长38.3倍，而季度收入仅增长8.9倍；在",
+      "url": "https://aihot.news/items/cmsuaf2hr05zgroe0y1e7275v"
+    },
+    {
+      "date": "2026-08-14",
+      "time": "05:31",
+      "title": "GLM-5.3 发布：编程能力开源第一，并涌现网络安全能力",
+      "summary": "智谱发布GLM-5.3，基于与GLM-5.2相同的基座，通过极致的后训练Scaling提升智能上界，编程能力较前代提升50%，在Terminal Bench 3.0等公开基准中取得开源第一，并接近Claude Fable",
+      "url": "https://aihot.news/items/cmssir12d047oroffnpn5pcx1"
+    },
+    {
+      "date": "2026-08-14",
+      "time": "11:25",
+      "title": "dots3-note Preview 开源：280B 参数轻量模型，主打长程智能体与多模态推理",
+      "summary": "小红书技术开源 dots3-note Preview，这是 dots3 系列最轻量模型，总参数 280B、激活参数 16B，支持 512K 上下文及文本、视觉、语音多模态理解，并针对复杂推理和长程 Agent 任务优化。",
+      "url": "https://aihot.news/items/cmssv94cg0h4mroffsb9e7a88"
+    },
+    {
+      "date": "2026-08-13",
+      "time": "04:32",
+      "title": "WorkBuddy上线远程控制，国内也有了最丝滑的Agent工作方式",
+      "summary": "WorkBuddy更新上线远程控制功能，将PC、App和小程序打通，手机端可实时同步电脑端的任务、对话、工作空间和产物，支持一台手机连接多台电脑并随时切换。App需升级至1.2.0及以上，电脑端需升级至5.3.8及以上，",
+      "url": "https://aihot.news/items/cmsr160kg0dk0roz2mb20yxwk"
+    },
+    {
+      "date": "2026-08-13",
+      "time": "17:04",
+      "title": "Google DeepMind 推出 Gemini 3.7 Flash：面向编程与智能体的最强工作模型",
+      "summary": "Google DeepMind 发布 Gemini 3.7 Flash，距 3.6 Flash 仅三周，主打编程与智能体任务，输入/输出价格分别为每百万 token $0.75 和 $3.75，为原 3.6 Flash 的一半。",
+      "url": "https://aihot.news/items/cmsrscwfn03f7ro0n7qijclds"
+    },
+    {
+      "date": "2026-08-12",
+      "time": "00:38",
+      "title": "NVIDIA 携手 Apollo、BlackRock 等成立融资平台，AI 工厂算力成为可投资资产类别",
+      "summary": "NVIDIA 宣布与 Apollo、BlackRock、Blackstone、Brookfield、Goldman Sachs 和 KKR 合作，建立独立融资平台，旨在长期动员超过 5000 亿美元第三方资本，支持 AI 基础设施建设。",
+      "url": "https://aihot.news/items/cmspeby640gglrorthm2cj8os"
+    },
+    {
+      "date": "2026-08-11",
+      "time": "19:38",
+      "title": "Gemini月活10亿，Gemma下载破10亿",
+      "summary": "Gemini 应用每月 10 亿用户\n\nGemma 模型家族下载量达 10 亿次\n\n继续前进！",
+      "url": "https://aihot.news/items/cmsp2ogsx044frorth62oy70c"
+    },
+    {
+      "date": "2026-08-07",
+      "time": "09:59",
+      "title": "小红书联合浙大、复旦提出 CULTURE-MT：首个面向社媒翻译的「文化有效性」评测基准，入选 ICML 2026",
+      "summary": "小红书联合浙江大学、复旦大学提出 CULTURE-MT，这是首个面向中英社媒笔记翻译、兼顾文化符号传递与情感共鸣的评测基准，并首次提出「文化有效性」评估标准与自动评估模型 JUDGER（准确率 86.03%）。",
+      "url": "https://aihot.news/items/cmsiry2eo1r4tronkt9qv2twu"
+    },
+    {
+      "date": "2026-08-07",
+      "time": "09:56",
+      "title": "OpenAI 联合多厂商发布 Agent Plugins 开放标准",
+      "summary": "OpenAI 联合 Cursor、Vercel、GitHub 等推出 Agent Plugins 开放标准，打包 Agent Skills 并支持共享格式的 MCP 服务器配置，实现一次构建、跨兼容智能体客户端使用。Google 已宣布加入维护者行列，Gemini Enterprise 近期进展显示其计划集成该标准；Anthropic 则沿用自家 Claude 专属标准。",
+      "url": "https://aihot.news/items/cmsisexul1rhuronkqbco4rt8"
+    },
+    {
+      "date": "2026-08-01",
+      "time": "10:40",
+      "title": "德国法院裁定AI音乐生成器Suno侵犯版权，驳回合理使用抗辩",
+      "summary": "慕尼黑法院裁定，AI音乐生成器Suno在训练过程及输出结果中均侵犯版权，并驳回其合理使用抗辩。法院认定Suno 3.5和4版本模型可复现六首知名歌曲的原创元素，构成“记忆化”侵权，且责任归于Suno而非用户。该判决还认定",
+      "url": "https://aihot.news/items/cmsa9czys01chrojdrdvterw0"
+    }
+  ]
+}

@@ -10,7 +10,8 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
-import { join, dirname, fileURLToPath } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));

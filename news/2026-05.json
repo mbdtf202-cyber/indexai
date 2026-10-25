@@ -1,0 +1,20 @@
+{
+  "month": "2026-05",
+  "generated_at": "2026-10-25T02:46:38.688Z",
+  "items": [
+    {
+      "date": "2026-05-27",
+      "time": "14:09",
+      "title": "Runway 推出 Model Context Protocol 服务器",
+      "summary": "Runway 正式推出 Runway MCP 服务器，允许任何兼容 MCP 的 AI 智能体（如 Claude、ChatGPT、Cursor）在对话界面中直接生成图像与视频，无需切换工作流。该服务器接入了 Runway 最新的多款 SOTA 模型，包括 Gen-4.5、Seedance 2.0、GPT Image 2、Kling 3.0 及 Nano Banana Pro。其应用场景涵盖为产品制作营销视频、批量生成网站视觉素材、创作角色广告以及在应用开发中集成视觉内容。用户设置简便，通过 runwayml.com/mcp 添加服务器并登录现有 Runway 账户即可使用，无需单独申请 API 密钥。",
+      "url": "https://aihot.news/items/cmpo55l4u030yslv4mwofhkbw"
+    },
+    {
+      "date": "2026-05-27",
+      "time": "17:58",
+      "title": "开源FastVideo Dreamverse实时视频生成工具",
+      "summary": "🚀仅需7秒即可生成30秒1080p视频！\n\n我们开源了FastVideo Dreamverse：基于单张NVIDIA B200 GPU和LTX-2模型，实现实时视频生成的氛围引导工具。  \n\nRepo: https:/",
+      "url": "https://aihot.news/items/cmpoddncn053yslv428au39s3"
+    }
+  ]
+}

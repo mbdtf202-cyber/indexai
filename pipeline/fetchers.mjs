@@ -17,7 +17,8 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { join, dirname, fileURLToPath } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import { isGrayGroup, splitGroups } from '../lib/relay-groups.js';
 import { parseNewsYaml, mergeArchive, archiveStats, buildIndex } from '../lib/news.js';
