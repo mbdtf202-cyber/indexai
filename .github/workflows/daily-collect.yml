@@ -70,7 +70,23 @@ jobs:
           fi
 
       # pipeline/run.js 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
-      - name: 安装锁定依赖
+      
+      - name: 初始化 data 分支 (T4.1)
+        if: steps.data-check.outputs.existed == 'false'
+        run: |
+          echo "::group::Data branch check"
+          git ls-remote --heads origin data >/dev/null 2>&1 && echo "existed=true" >> $GITHUB_OUTPUT || echo "existed=false" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+        id: data-check
+
+      - name: 创建 orphan data 分支 (首次运行)
+        if: steps.data-check.outputs.existed == 'false' && github.ref == 'refs/heads/main'
+        run: |
+          echo "::group::Creating data branch"
+          bash scripts/init-data-branch.sh
+          echo "::endgroup::"
+
+- name: 安装锁定依赖
         run: npm ci
 
       - name: 采集（内含健康门禁）
