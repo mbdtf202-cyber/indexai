@@ -101,7 +101,9 @@
       'signals',
       'method',
     ];
-    routes.forEach((route) => loadScriptForRoute('/' + route));
+    routes.forEach((route) => {
+      loadScriptForRoute('/' + route);
+    });
   }
 
   const api = {

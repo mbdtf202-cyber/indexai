@@ -1,3 +1,5 @@
+import { SITE } from './config.js';
+
 /**
  * Generate Atom Feed from changes (T4.3 Round 3)
  */
@@ -33,8 +35,8 @@ export function generateAtomFeed(events, options = {}) {
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${escapeXml(title)}</title>
   <subtitle>${escapeXml(subtitle)}</subtitle>
-  <link href="https://indexai.pages.dev/feeds/changes.xml" rel="self" />
-  <link href="https://indexai.pages.dev/" />
+  <link href="${SITE.BASE_URL}/feeds/changes.xml" rel="self" />
+  <link href="${SITE.BASE_URL}/" />
   <updated>${new Date().toISOString()}</updated>
   <id>tag:indexai.pages.dev,2026:/feeds/changes.xml</id>
 ${eventsXml}

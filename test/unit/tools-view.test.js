@@ -18,7 +18,7 @@ describe('tools view module structure', () => {
   });
 
   test('has renderTools function', async () => {
-    const mod = await import('../site/views/tools.mjs');
+    const mod = await import('../../site/views/tools.mjs');
     assert.equal(typeof mod.renderTools, 'function', 'Should export renderTools');
   });
 

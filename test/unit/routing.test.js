@@ -16,7 +16,7 @@ describe('router module structure', () => {
 
     const content = fs.readFileSync(routerPath, 'utf8');
     assert.ok(content.length > 0, 'Router module should not be empty');
-    assert.ok(content.includes('(function()'), 'Should use IIFE pattern (no globals)');
+    assert.match(content, /\(function\s*\(\)/, 'Should use IIFE pattern (no globals)');
     assert.ok(content.includes('hashchange'), 'Should listen for hash changes');
   });
 

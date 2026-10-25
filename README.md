@@ -100,7 +100,8 @@ site/
 ## License
 
 - Code: MIT © 2026 mbdtf202-cyber
-- Curated data: CC BY 4.0
+- **Curated data** (in `curated/`, `news/`): CC BY 4.0
+- **Upstream data**: Original licenses apply (see individual sources)
 - Upstream data: Original licenses apply
 
 ---

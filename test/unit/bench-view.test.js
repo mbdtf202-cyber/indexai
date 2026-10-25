@@ -18,7 +18,7 @@ describe('bench view module structure', () => {
   });
 
   test('has renderBench function', async () => {
-    const mod = await import('../site/views/bench.mjs');
+    const mod = await import('../../site/views/bench.mjs');
     assert.equal(typeof mod.renderBench, 'function', 'Should export renderBench');
   });
 

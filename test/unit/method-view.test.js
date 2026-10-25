@@ -18,7 +18,7 @@ describe('method docs view module structure', () => {
   });
 
   test('has renderMethods function', async () => {
-    const mod = await import('../site/views/method.mjs');
+    const mod = await import('../../site/views/method.mjs');
     assert.equal(typeof mod.renderMethods, 'function', 'Should export renderMethods');
   });
 

@@ -16,7 +16,7 @@ describe('feed generator module', () => {
   });
 
   test('has generateAtomFeed function', async () => {
-    const mod = await import('../pipeline/derive/generate-feed.js');
+    const mod = await import('../../pipeline/derive/generate-feed.js');
     assert.equal(typeof mod.generateAtomFeed, 'function');
   });
 });

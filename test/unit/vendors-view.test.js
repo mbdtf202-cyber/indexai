@@ -18,7 +18,7 @@ describe('vendors view module structure', () => {
   });
 
   test('has renderVendors function', async () => {
-    const mod = await import('../site/views/vendors.mjs');
+    const mod = await import('../../site/views/vendors.mjs');
     assert.equal(typeof mod.renderVendors, 'function', 'Should export renderVendors');
   });
 

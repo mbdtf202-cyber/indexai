@@ -8,7 +8,7 @@ import fs from 'node:fs';
 
 describe('SEO generation system', () => {
   test('sitemap generator exists and is functional', async () => {
-    const seoModule = await import('../scripts/generate-seo-files.mjs');
+    const seoModule = await import('../../scripts/generate-seo-files.js');
 
     assert.ok(
       typeof seoModule.generateSitemap === 'function',
@@ -21,7 +21,7 @@ describe('SEO generation system', () => {
   });
 
   test('robots.txt generator creates valid robots file', async () => {
-    const { generateRobotsTxt } = await import('../scripts/generate-seo-files.mjs');
+    const { generateRobotsTxt } = await import('../../scripts/generate-seo-files.js');
     const robotsContent = generateRobotsTxt();
 
     assert.ok(robotsContent.includes('User-agent'), 'Should contain User-agent directive');

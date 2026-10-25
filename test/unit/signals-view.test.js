@@ -18,7 +18,7 @@ describe('signals view module structure', () => {
   });
 
   test('has renderSignals function', async () => {
-    const mod = await import('../site/views/signals.mjs');
+    const mod = await import('../../site/views/signals.mjs');
     assert.equal(typeof mod.renderSignals, 'function', 'Should export renderSignals');
   });
 

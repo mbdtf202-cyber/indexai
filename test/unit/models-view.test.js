@@ -18,7 +18,7 @@ describe('models view module structure', () => {
   });
 
   test('has renderModels function', async () => {
-    const mod = await import('../site/views/models.mjs');
+    const mod = await import('../../site/views/models.mjs');
     assert.equal(typeof mod.renderModels, 'function', 'Should export renderModels');
     assert.equal(typeof mod.applySortingAndFiltering, 'function', 'Should export helper functions');
   });

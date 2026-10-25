@@ -19,7 +19,7 @@ describe('model detail view module', () => {
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderModelDetail } = await import('../site/views/model-detail.mjs');
+    const { renderModelDetail } = await import('../../site/views/model-detail.mjs');
 
     // Test with no data
     let html = renderModelDetail();

@@ -2,7 +2,7 @@
  * Free Tier Display View (T5.1 Round 6) - Fixed
  */
 
-import { truncate } from './format.js';
+import { kfmt, truncate } from './format.js';
 
 export function renderFree(data) {
   const { offerings = [] } = data || {};
@@ -36,7 +36,7 @@ function renderFreeGrid(offerings) {
           (off) => `
         <article class="free-card">
           <h3>${truncate(off.name, 35)}</h3>
-          <div class="limit-display">${off.limit ? `${off.limit}/${off.unit}` : '—'}</div>
+          <div class="limit-display">${off.limit ? `${kfmt(off.limit)}/${off.unit}` : '—'}</div>
           <a href="${off.link}" target="_blank">Get Access →</a>
         </article>
       `,

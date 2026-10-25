@@ -18,7 +18,7 @@ describe('relays view module structure', () => {
   });
 
   test('has renderRelays function', async () => {
-    const mod = await import('../site/views/relays.mjs');
+    const mod = await import('../../site/views/relays.mjs');
     assert.equal(typeof mod.renderRelays, 'function', 'Should export renderRelays');
   });
 

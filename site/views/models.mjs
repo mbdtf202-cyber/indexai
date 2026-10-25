@@ -131,7 +131,7 @@ function renderNoResults() {
 }
 
 // Business logic helpers (pure functions)
-function applySortingAndFiltering(models, filters, sortBy, sortOrder) {
+export function applySortingAndFiltering(models, filters, sortBy, sortOrder) {
   let result = [...models];
 
   // Apply filters first

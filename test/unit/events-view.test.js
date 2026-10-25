@@ -18,7 +18,7 @@ describe('events view module structure', () => {
   });
 
   test('has renderEvents function', async () => {
-    const mod = await import('../site/views/events.mjs');
+    const mod = await import('../../site/views/events.mjs');
     assert.equal(typeof mod.renderEvents, 'function', 'Should export renderEvents');
   });
 

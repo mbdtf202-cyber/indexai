@@ -16,7 +16,7 @@ describe('lazy loading infrastructure', () => {
     const content = fs.readFileSync(actualPath, 'utf8');
     assert.ok(content.length > 0, 'Module should not be empty');
     assert.ok(content.includes('IntersectionObserver'), 'Should use IntersectionObserver pattern');
-    assert.ok(content.includes('(function()'), 'Should use IIFE pattern (no globals)');
+    assert.match(content, /\(function\s*\(\)/, 'Should use IIFE pattern (no globals)');
   });
 
   test('pre-render builder exists', () => {

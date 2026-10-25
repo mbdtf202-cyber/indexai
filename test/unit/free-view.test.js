@@ -18,7 +18,7 @@ describe('free tier view module structure', () => {
   });
 
   test('has renderFree function', async () => {
-    const mod = await import('../site/views/free.mjs');
+    const mod = await import('../../site/views/free.mjs');
     assert.equal(typeof mod.renderFree, 'function', 'Should export renderFree');
   });
 
