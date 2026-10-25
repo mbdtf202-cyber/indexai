@@ -1437,7 +1437,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：每个模型与厂商都有页面；通过 e2e 与性能预算。
 
-### [ ] T6.2 首页「今日变化」与变化页
+### [x] T6.2 Today's Changes Feed Complete
 
 依据：S5.2 · 依赖：T6.1
 
