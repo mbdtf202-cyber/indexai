@@ -1494,7 +1494,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：可用率与模板分组有单元测试；页面有 e2e。
 
-### [ ] T6.8 评测加载与源修正
+### [x] T6.8 Benchmark Loading [ ] T6.8 评测加载与源修正 Source Correction Complete
 
 依据：F25 · S8.6 · 依赖：T5.2
 
