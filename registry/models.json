@@ -1,0 +1,50 @@
+{
+  "models": [
+    {
+      "id": "openai/gpt-5",
+      "name": "GPT-5",
+      "vendor": "openai",
+      "aliases": ["gpt5", "openai-gpt-5"],
+      "family": "gpt-5"
+    },
+    {
+      "id": "anthropic/claude-sonnet",
+      "name": "Claude Sonnet",
+      "vendor": "anthropic",
+      "aliases": ["claude-sonnet", "sonnet"],
+      "family": "claude-sonnet"
+    },
+    {
+      "id": "google/gemini-pro",
+      "name": "Gemini Pro",
+      "vendor": "google",
+      "aliases": ["gemini-pro", "gemini"],
+      "family": "gemini-pro"
+    },
+    {
+      "id": "xai/grok-beta",
+      "name": "Grok Beta",
+      "vendor": "xai",
+      "aliases": ["grok-beta", "grok"],
+      "family": "grok-beta"
+    },
+    {
+      "id": "deepseek/deepseek-v3",
+      "name": "DeepSeek V3",
+      "vendor": "deepseek",
+      "aliases": ["deepseek-v3", "ds-v3"],
+      "family": "deepseek-v3"
+    },
+    {
+      "id": "meta/llama-3-70b",
+      "name": "Llama 3 70B",
+      "vendor": "meta",
+      "aliases": ["llama3", "llama-3-70b"],
+      "family": "llama-3-70b"
+    }
+  ],
+  "metadata": {
+    "generated_at": "2026-10-25T00:00:00Z",
+    "version": "1.0"
+  }
+}
