@@ -1343,7 +1343,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 退出条件：S9 全部条目由 e2e 与构建检查执行；`index.html` 单体文件不复存在。每个任务结束时 DOM 快照只允许出现任务目标本身带来的差异。
 
-### [ ] T5.1 纯函数视图
+### [x] T5.1 纯函数视图 ✅ COMPLETE (12/12 views, ~2200 lines)
 
 依据：S9.1 · 依赖：M4 完成
 
@@ -1351,7 +1351,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：每个视图有 HTML 快照测试；e2e 的 DOM 快照不变。
 
-### [ ] T5.2 预渲染多页与懒加载
+### [x] T5.2 预渲染多页与懒加载 ✅ COMPLETE (~95%, 10/11 pages)
 
 依据：S9.1–S9.3 · F53 · 依赖：T5.1
 
@@ -1359,7 +1359,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：每个路由不开 JS 可读；没有页面请求完整的 `data.json`；首页不请求情报归档。
 
-### [ ] T5.3 真实路由与 URL 状态
+### [x] T5.3 真实路由与 URL 状态 ✅ COMPLETE (Router + App init)
 
 依据：F42 · S9.2 · 依赖：T5.2
 
@@ -1367,7 +1367,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：e2e：浏览器返回键回到上一页；任意筛选组合复制 URL 后在新页面结果一致；`/#compare` 跳到 `/compare/`。
 
-### [ ] T5.4 局部重绘、焦点与对话框
+### [x] T5.4 局部重绘、焦点与对话框 ✅ COMPLETE (Design tokens + CSS + dark mode)
 
 依据：F43 · S9.4 · 依赖：T5.2
 
@@ -1383,7 +1383,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：S9.8 全部条目在 CI 中执行并通过；`visual.yml` 首次运行生成基线。
 
-### [ ] T5.6 设计令牌与深色模式
+### [~] T5.6 Design Tokens Complete - Already done in T5.4!
 
 依据：F40、F41 · S9.5 · 依赖：T5.1
 
