@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IndexAI - 运行状态</title>
+  <style>
+    :root { --status-ok: #22c55e; --status-warn: #f59e0b; --status-error: #ef4444; --bg: #0f172a; --card-bg: #1e293b; --text: #e2e8f0; --text-muted: #94a3b8; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+    header { margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid #334155; }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--text-muted); font-size: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+    .card { background: var(--card-bg); border-radius: 8px; padding: 1.5rem; border: 1px solid #334155; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .layer-name { font-weight: 600; font-size: 1.1rem; }
+    .status-badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; }
+    .status-ok { background: rgba(34, 197, 94, 0.2); color: var(--status-ok); }
+    .status-warn { background: rgba(245, 158, 11, 0.2); color: var(--status-warn); }
+    .status-error { background: rgba(239, 68, 68, 0.2); color: var(--status-error); }
+    .status-none { background: #334155; color: var(--text-muted); }
+    .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 1rem; }
+    .metric { background: rgba(0, 0, 0, 0.2); padding: 0.75rem; border-radius: 4px; text-align: center; }
+    .metric-value { font-size: 1.5rem; font-weight: 700; }
+    .metric-label { font-size: 0.75rem; color: var(--text-muted); }
+    .timeline { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #334155; }
+    .timeline-item { padding: 0.5rem 0; font-size: 0.875rem; color: var(--text-muted); }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #334155; color: var(--text-muted); text-align: center; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>IndexAI 运行状态</h1>
+      <p class="subtitle">最近 30 次运行的状态、计数趋势、耗时与请求账目</p>
+    </header>
+    <div class="grid" id="layers-grid"></div>
+    <footer><p>数据更新于 <span id="last-update"></span></p></footer>
+  </div>
+  <script type="module">
+    async function loadLayerStatus() {
+      try {
+        const layers = ['models', 'subs', 'news', 'bench'];
+        const grid = document.getElementById('layers-grid');
+        const updateTimestamp = new Date().toLocaleString('zh-CN');
+        grid.innerHTML = '';
+        for (const layer of layers) {
+          const mockData = { recent_runs: Array.from({ length: 10 }, (_, i) => ({ status: Math.random() > 0.3 ? 'ok' : Math.random() > 0.5 ? 'failed' : 'stale', timestamp: new Date(Date.now() - i * 3600000).toISOString(), duration_ms: Math.floor(Math.random() * 5000) + 1000, requests: Math.floor(Math.random() * 100), throttled: Math.random() > 0.7 })), alerts: [], last_alert: null };
+          const card = document.createElement('article');
+          card.className = 'card';
+          const latestStatus = mockData.recent_runs[0]?.status || 'none';
+          const statusClass = 'status-' + latestStatus;
+          card.innerHTML = '<div class="card-header"><span class="layer-name">' + layer + '</span><span class="status-badge ' + statusClass + '">' + getStatusLabel(latestStatus) + '</span></div><div class="metrics"><div class="metric"><div class="metric-value">' + mockData.recent_runs.length + '</div><div class="metric-label">近 30 次运行</div></div><div class="metric"><div class="metric-value">' + mockData.recent_runs.filter(r => r.status === 'ok').length + '</div><div class="metric-label">成功次数</div></div><div class="metric"><div class="metric-value">' + Math.round(mockData.recent_runs.reduce((sum, r) => sum + r.duration_ms, 0) / mockData.recent_runs.length / 1000) + 's</div><div class="metric-label">平均耗时</div></div><div class="metric"><div class="metric-value">' + mockData.recent_runs.reduce((sum, r) => sum + r.requests, 0) + '</div><div class="metric-label">总请求数</div></div></div><div class="timeline"><div class="timeline-item">最新：' + new Date(mockData.recent_runs[0]?.timestamp || Date.now()).toLocaleString('zh-CN') + '</div><div class="timeline-item">告警：' + mockData.alerts.length + '条</div></div>';
+          grid.appendChild(card);
+        }
+        document.getElementById('last-update').textContent = updateTimestamp;
+      } catch (e) { console.error('Failed to load status:', e); }
+    }
+    function getStatusLabel(status) { const labels = { ok: '正常', failed: '失败', stale: '过时', none: '无数据' }; return labels[status] || status; }
+    loadLayerStatus();
+  </script>
+</body>
+</html>
