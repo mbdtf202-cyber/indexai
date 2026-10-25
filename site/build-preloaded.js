@@ -1,17 +1,16 @@
 /**
- * Pre-rendering Builder for Multi-page Site (T5.2 Round 2)
+ * Pre-rendering Builder for Multi-page Site (T5.2 Round 3)
  */
 
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const OUTPUT_DIR = join(ROOT, 'dist', 'pre-rendered');
-const GOLDEN_DIR = join(ROOT, 'fixtures', 'golden');
 
-// Import view rendering functions
+// View modules to pre-render (relative paths from here)
 const viewsToRender = [
   { name: 'Home', module: './views/home.mjs', route: '/' },
   { name: 'Models', module: './views/models.mjs', route: '/models' },
@@ -29,16 +28,11 @@ const viewsToRender = [
 export async function buildPreRenderedSite() {
   console.log('[build] Starting pre-rendering build...\n');
 
-  // Create output directories
   if (!existsSync(OUTPUT_DIR)) {
     mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  const results = {
-    success: 0,
-    failed: 0,
-    pages: [],
-  };
+  const results = { success: 0, failed: 0, pages: [] };
 
   for (const view of viewsToRender) {
     try {
@@ -52,7 +46,6 @@ export async function buildPreRenderedSite() {
           `${view.route.replace(/^\//, '') || 'index'}${view.route.includes('.') ? '' : '.html'}`,
         );
 
-        // Ensure directory exists
         const dir = dirname(filePath);
         if (!existsSync(dir)) {
           mkdirSync(dir, { recursive: true });
@@ -72,7 +65,6 @@ export async function buildPreRenderedSite() {
     }
   }
 
-  // Generate lazy loading manifest
   generateLazyManifest(results.pages);
 
   console.log(`\n[build] Complete! ${results.success}/${viewsToRender.length} pages rendered`);
@@ -84,7 +76,7 @@ export async function buildPreRenderedSite() {
 }
 
 async function renderView(viewSpec) {
-  const modulePath = `./site/${viewSpec.module}`;
+  const modulePath = `./${viewSpec.module}`;
 
   try {
     const module = await import(modulePath);
@@ -95,7 +87,6 @@ async function renderView(viewSpec) {
       return '';
     }
 
-    // Use mock data or load from fixtures
     const mockData = generateMockData(viewSpec.name);
     const htmlContent = renderFunc(mockData);
 
@@ -136,7 +127,7 @@ function generateMockData(viewName) {
         rankings: {},
       };
     default:
-      return { test: true };
+      return { data: true };
   }
 }
 
@@ -146,7 +137,7 @@ function wrapInPageStructure(content, pageName, route) {
 <head>
   <meta charset="UTF-8">
   <title>${pageName} | IndexAI</title>
-  <meta name="description" content="${pageName} comparison page">
+  <meta name="description" content="${pageName} page for AI pricing comparison">
   <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
