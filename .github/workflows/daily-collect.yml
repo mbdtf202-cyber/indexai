@@ -99,7 +99,16 @@ jobs:
       - name: 健康检查门禁
         run: node health.mjs
 
-      - name: 组装发布目录
+      
+      - name: 复制新闻归档到构建目录
+        run: |
+          mkdir -p dist/news
+          cp news/*.json dist/news/ 2>/dev/null || echo "No news files yet"
+          echo "::group::News files copied"
+          ls -lh dist/news/ 2>/dev/null || echo "No news files"
+          echo "::endgroup::"
+
+- name: 组装发布目录
         run: |
           mkdir -p dist
           # news-archive.json 是情报页的真实数据源（data.json 里只有索引），必须一起发
