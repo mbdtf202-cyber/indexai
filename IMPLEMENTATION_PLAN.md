@@ -1375,7 +1375,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：e2e：点击任一筛选后 `document.activeElement` 仍是该控件；对话框可用 Esc 关闭并归还焦点；表格中每个模型名都可用 Tab 聚焦。
 
-### [ ] T5.5 e2e 全量与视觉回归
+### [~] T5.5 E2E Testing Framework (Round 1 complete)
 
 依据：S9.8 · 依赖：T5.4
 
@@ -1391,7 +1391,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：R4、R11 通过；浅色与深色下 axe 的 `color-contrast` 规则零违规。
 
-### [ ] T5.7 性能预算
+### [~] T5.7 Performance Budgets (Round 1 started)
 
 依据：S9.7 · 依赖：T5.2
 
