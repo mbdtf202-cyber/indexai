@@ -16,7 +16,7 @@
     "invariants": "node scripts/check-invariants.js",
     "test": "INDEXAI_HTTP=replay node --import ./test/support/http-replay.js --test \"test/unit/**/*.test.js\" \"test/golden/**/*.test.js\" \"test/contract/**/*.test.js\"",
     "verify": "npm run lint && npm run typecheck && npm run invariants && npm test && npm run build && npm run test:e2e",
-    "collect": "node pipeline/run.js",
+    "collect": "node pipeline/index.mjs",
     "record": "node --import ./test/support/http-record.js",
     "golden:update": "node scripts/update-golden.js",
     "build": "node site/build.js",
