@@ -1250,7 +1250,23 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 退出条件：站点能回答「什么变了」与「这个模型在各处多少钱、多强」。
 
-### [ ] T4.1 data 分支
+### [~] T4.1 data 分支（初始化完成）
+
+依据：D1 · S5.1、S4.2 · 依赖：T3.9
+
+**Round 1: 架构初始化 (当前进度)**
+- [x] 创建 data 分支初始化脚本 ✓
+- [x] 创建 data scripts 模块 ✓
+- [x] 更新 .gitignore 加入 .data/目录 ✓
+- [x] 添加 npm run data:* 命令到 package.json ✓
+- [ ] 完整 CI workflow 集成（等待 pipeline/index.mjs 稳定后）
+- [ ] news-archive.json → news/月度分片迁移
+- [ ] 停止 main 分支的数据提交
+
+**验收标准**:
+- main 之后不再出现 bot 提交 ✓(待 CI 集成后验证)
+- data 分支任意天快照可构建完整站点 ✓(待实现后测试)
+
 
 依据：D1 · S5.1、S4.2 · 依赖：T3.9
 

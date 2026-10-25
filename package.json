@@ -21,7 +21,10 @@
     "golden:update": "node scripts/update-golden.js",
     "build": "node site/build.js",
     "fixture:data": "node scripts/make-fixture-data.js",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "data:init": "bash scripts/init-data-branch.sh",
+    "data:pull": "git checkout -f data 2>/dev/null || git checkout --orphan data && rm -rf .data && git checkout main && git checkout .data 2>/dev/null || mkdir -p .data && git add .data",
+    "data:snapshot": "node scripts/data-scripts.mjs snapshot"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.4",
