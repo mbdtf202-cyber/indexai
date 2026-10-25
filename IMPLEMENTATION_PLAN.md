@@ -1465,7 +1465,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：新入库条目 ≥ 90% 带非聚合域名的原始出处；同一事件只显示一次；主题 macro-F1 ≥ 0.80。
 
-### [ ] T6.5 官方页面监测
+### [x] T6.5 Official Site Monitoring Complete
 
 依据：S8.8 · 依赖：T3.8
 
