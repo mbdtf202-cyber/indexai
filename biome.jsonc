@@ -43,10 +43,9 @@
   "overrides": [
     {
       "includes": [
-        "collect.mjs",
+        "pipeline/run.js",
         "bench.mjs",
         "health.mjs",
-        "deploy.mjs",
         "serve.mjs",
         "lib/**",
         "index.html"

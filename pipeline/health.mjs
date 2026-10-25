@@ -5,7 +5,7 @@
  * - 层契约验证（assertLayers）
  * - Luma 有状态封禁管理
  * - 各源的状态追踪与重置
- * 
+ *
  * 与其他模块解耦，只提供门禁相关函数。
  */
 
@@ -46,7 +46,7 @@ export function updateLumaState(blocked, reason, cooldownMs) {
  */
 export function assertLayers(layersMap) {
   const requiredKeys = ['id', 'sources', 'budget', 'fetch', 'normalize', 'merge', 'health'];
-  
+
   for (const [name, layer] of layersMap) {
     // 检查必需键
     for (const key of requiredKeys) {
@@ -54,7 +54,7 @@ export function assertLayers(layersMap) {
         throw new Error(`层 ${name} 缺少必需键：${key}`);
       }
     }
-    
+
     // 检查 budget 结构
     if (!layer.budget || typeof layer.budget !== 'object') {
       throw new Error(`层 ${name} 的 budget 必须是对象`);
@@ -62,7 +62,7 @@ export function assertLayers(layersMap) {
     if (typeof layer.budget.ms !== 'number' || typeof layer.budget.requests !== 'number') {
       throw new Error(`层 ${name} 的 budget.ms 和 budget.requests 必须是数字`);
     }
-    
+
     // 检查健康检查规则
     if (!layer.health || !Array.isArray(layer.health.rules)) {
       throw new Error(`层 ${name} 的 health 必须包含 rules 数组`);
