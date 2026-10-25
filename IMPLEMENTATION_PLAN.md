@@ -1445,7 +1445,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：e2e 覆盖「有变化」与「无变化」两种 fixture。
 
-### [ ] T6.3 订阅值不值计算器
+### [x] T6.3 Subscription Value Calculator Complete
 
 依据：S8.1、S8.3 · 依赖：T6.1
 
