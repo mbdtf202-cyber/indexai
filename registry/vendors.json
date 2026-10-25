@@ -1,0 +1,57 @@
+{
+  "vendors": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "rank": 1,
+      "official_site": "https://openai.com",
+      "canonical_models": ["gpt-5", "gpt-6"]
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "rank": 2,
+      "official_site": "https://anthropic.com",
+      "canonical_models": ["claude-5", "claude-sonnet", "claude-opus"]
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "rank": 3,
+      "official_site": "https://deepmind.google",
+      "canonical_models": ["gemini", "gemini-flash"]
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "rank": 4,
+      "official_site": "https://x.ai",
+      "canonical_models": ["grok"]
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "rank": 5,
+      "official_site": "https://deepseek.com",
+      "canonical_models": ["deepseek-v3", "deepseek-r1"]
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "rank": 6,
+      "official_site": "https://ai.meta.com",
+      "canonical_models": ["llama"]
+    }
+  ],
+  "aliases": {
+    "open_ai": ["openai"],
+    "openai_api": ["openai"],
+    "anthropic_inc": ["anthropic"],
+    "google_llm": ["google"],
+    "google_deepmind": ["google"]
+  },
+  "metadata": {
+    "last_updated": "2026-10-25T00:00:00Z",
+    "version": "1.0"
+  }
+}
