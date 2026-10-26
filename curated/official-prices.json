@@ -1,194 +1,305 @@
-[
-  {
-    "vendor": "DeepSeek",
-    "model": "deepseek-v4.1-flash",
-    "name": "DeepSeek V4.1 Flash",
-    "ctx": 1024,
-    "in": 0.1408,
-    "out": 0.5634,
-    "cr": 0.0028,
-    "cw": null,
-    "cny": {
-      "currency": "CNY",
-      "input": 1,
-      "output": 4,
-      "cache_read": 0.02
+{
+  "schema": "curated.official-prices/v1",
+  "items": [
+    {
+      "vendor": "DeepSeek",
+      "model": "deepseek-v4.1-flash",
+      "name": "DeepSeek V4.1 Flash",
+      "ctx": 1024,
+      "in": 0.1408,
+      "out": 0.5634,
+      "cr": 0.0028,
+      "cw": null,
+      "cny": {
+        "currency": "CNY",
+        "input": 1,
+        "output": 4,
+        "cache_read": 0.02
+      },
+      "cm": "自动前缀缓存，命中 0.02 元/1M；缓存自动写入不单独计费，未命中按输入价",
+      "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+      "conf": "high",
+      "note": "本行取空闲时段价（1 / 4 / 0.02 元）；高峰时段=工作日 9–12、14–18（北京时间），价格 ×2（2 / 8 / 0.04 元）",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+          "quote": "本行取空闲时段价（1 / 4 / 0.02 元）；高峰时段=工作日 9–12、14–18（北京时间），价格 ×2（2 / 8 / 0.04 元）",
+          "captured_at": "2026-10-25"
+        }
+      ]
     },
-    "cm": "自动前缀缓存，命中 0.02 元/1M；缓存自动写入不单独计费，未命中按输入价",
-    "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
-    "conf": "high",
-    "note": "本行取空闲时段价（1 / 4 / 0.02 元）；高峰时段=工作日 9–12、14–18（北京时间），价格 ×2（2 / 8 / 0.04 元）"
-  },
-  {
-    "vendor": "DeepSeek",
-    "model": "deepseek-v4-pro",
-    "name": "DeepSeek V4 Pro",
-    "ctx": 1024,
-    "in": 0.6338,
-    "out": 1.9014,
-    "cr": 0.0211,
-    "cw": null,
-    "cny": {
-      "currency": "CNY",
-      "input": 4.5,
-      "output": 13.5,
-      "cache_read": 0.15
+    {
+      "vendor": "DeepSeek",
+      "model": "deepseek-v4-pro",
+      "name": "DeepSeek V4 Pro",
+      "ctx": 1024,
+      "in": 0.6338,
+      "out": 1.9014,
+      "cr": 0.0211,
+      "cw": null,
+      "cny": {
+        "currency": "CNY",
+        "input": 4.5,
+        "output": 13.5,
+        "cache_read": 0.15
+      },
+      "cm": "自动前缀缓存，命中 0.15 元/1M；未命中按输入价",
+      "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+      "conf": "high",
+      "note": "本行取空闲时段价；高峰时段为 9 / 27 / 0.30 元",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+          "quote": "本行取空闲时段价；高峰时段为 9 / 27 / 0.30 元",
+          "captured_at": "2026-10-25"
+        }
+      ]
     },
-    "cm": "自动前缀缓存，命中 0.15 元/1M；未命中按输入价",
-    "src": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
-    "conf": "high",
-    "note": "本行取空闲时段价；高峰时段为 9 / 27 / 0.30 元"
-  },
-  {
-    "vendor": "MiniMax",
-    "model": "minimax-m3.1-flash",
-    "name": "MiniMax M3.1 Flash",
-    "ctx": 512,
-    "in": 0.1408,
-    "out": 0.5634,
-    "cr": 0.0141,
-    "cw": null,
-    "cny": {
-      "currency": "CNY",
-      "input": 1,
-      "output": 4,
-      "cache_read": 0.1
+    {
+      "vendor": "MiniMax",
+      "model": "minimax-m3.1-flash",
+      "name": "MiniMax M3.1 Flash",
+      "ctx": 512,
+      "in": 0.1408,
+      "out": 0.5634,
+      "cr": 0.0141,
+      "cw": null,
+      "cny": {
+        "currency": "CNY",
+        "input": 1,
+        "output": 4,
+        "cache_read": 0.1
+      },
+      "cm": "缓存读取按 0.10 元/1M 计；写入未单列",
+      "src": "https://platform.minimaxi.com/document/price",
+      "conf": "high",
+      "note": "官方语言模型价目表原文：输入 1.00 / 输出 4.00 / 缓存读取 0.10 元每百万 tokens",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://platform.minimaxi.com/document/price",
+          "quote": "官方语言模型价目表原文：输入 1.00 / 输出 4.00 / 缓存读取 0.10 元每百万 tokens",
+          "captured_at": "2026-10-25"
+        }
+      ]
     },
-    "cm": "缓存读取按 0.10 元/1M 计；写入未单列",
-    "src": "https://platform.minimaxi.com/document/price",
-    "conf": "high",
-    "note": "官方语言模型价目表原文：输入 1.00 / 输出 4.00 / 缓存读取 0.10 元每百万 tokens"
-  },
-  {
-    "vendor": "MiniMax",
-    "model": "minimax-m3",
-    "name": "MiniMax M3 (≤512K)",
-    "ctx": 512,
-    "in": 0.2958,
-    "out": 1.1831,
-    "cr": 0.0592,
-    "cw": null,
-    "cny": {
-      "currency": "CNY",
-      "input": 2.1,
-      "output": 8.4,
-      "cache_read": 0.42
+    {
+      "vendor": "MiniMax",
+      "model": "minimax-m3",
+      "name": "MiniMax M3 (≤512K)",
+      "ctx": 512,
+      "in": 0.2958,
+      "out": 1.1831,
+      "cr": 0.0592,
+      "cw": null,
+      "cny": {
+        "currency": "CNY",
+        "input": 2.1,
+        "output": 8.4,
+        "cache_read": 0.42
+      },
+      "cm": "缓存读取 0.42 元/1M；≤512K 输入档",
+      "src": "https://platform.minimaxi.com/document/price",
+      "conf": "high",
+      "note": "页面标注「永久五折」，本行为折后价；标准价 4.20 / 16.80 / 0.84 元",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://platform.minimaxi.com/document/price",
+          "quote": "页面标注「永久五折」，本行为折后价；标准价 4.20 / 16.80 / 0.84 元",
+          "captured_at": "2026-10-25"
+        }
+      ]
     },
-    "cm": "缓存读取 0.42 元/1M；≤512K 输入档",
-    "src": "https://platform.minimaxi.com/document/price",
-    "conf": "high",
-    "note": "页面标注「永久五折」，本行为折后价；标准价 4.20 / 16.80 / 0.84 元"
-  },
-  {
-    "vendor": "Anthropic",
-    "model": "claude-fable-5.1",
-    "name": "Claude Fable 5.1",
-    "ctx": 1000,
-    "in": 10,
-    "out": 50,
-    "cr": 0.25,
-    "cw": 12.5,
-    "cm": "提示缓存 5 分钟 TTL；读 $0.25 / 写 $12.50 每 1M",
-    "src": "https://www.anthropic.com/pricing",
-    "conf": "high",
-    "note": "官方 Latest models 表原文；Batch 五折另计"
-  },
-  {
-    "vendor": "Anthropic",
-    "model": "claude-opus-5.5",
-    "name": "Claude Opus 5.5",
-    "ctx": 1000,
-    "in": 4,
-    "out": 20,
-    "cr": 0.2,
-    "cw": 5,
-    "cm": "提示缓存 5 分钟 TTL；读 $0.20 / 写 $5 每 1M",
-    "src": "https://www.anthropic.com/pricing",
-    "conf": "high",
-    "note": "Fast mode 为 2 倍标准价；Batch 五折"
-  },
-  {
-    "vendor": "Anthropic",
-    "model": "claude-sonnet-5.5",
-    "name": "Claude Sonnet 5.5",
-    "ctx": 1000,
-    "in": 2,
-    "out": 10,
-    "cr": 0.1,
-    "cw": 2.5,
-    "cm": "提示缓存 5 分钟 TTL；读 $0.10 / 写 $2.50 每 1M",
-    "src": "https://www.anthropic.com/pricing",
-    "conf": "high",
-    "note": "Batch 五折"
-  },
-  {
-    "vendor": "Anthropic",
-    "model": "claude-haiku-5.5",
-    "name": "Claude Haiku 5.5 (≤100K)",
-    "ctx": 200,
-    "in": 0.1,
-    "out": 0.5,
-    "cr": 0.01,
-    "cw": 0.125,
-    "cm": "≤100K 提示档：读 $0.01 / 写 $0.125；>100K 档为 0.50 / 2.50 / 0.05 / 0.625",
-    "src": "https://www.anthropic.com/pricing",
-    "conf": "high",
-    "note": "本行为 ≤100K tokens 档"
-  },
-  {
-    "vendor": "OpenAI",
-    "model": "gpt-6-astra",
-    "name": "GPT-6 Astra",
-    "ctx": 400,
-    "in": 10,
-    "out": 50,
-    "cr": 1,
-    "cw": 12.5,
-    "cm": "自动缓存；写入 30 分钟 $12.50、12 小时 $25 每 1M",
-    "src": "https://platform.openai.com/docs/pricing",
-    "conf": "high",
-    "note": "Standard 档；Batch 五折、Fast 2 倍、Ultrafast 6 倍"
-  },
-  {
-    "vendor": "OpenAI",
-    "model": "gpt-6.1-sol",
-    "name": "GPT-6.1 Sol",
-    "ctx": 400,
-    "in": 2,
-    "out": 10,
-    "cr": 0.1,
-    "cw": 2.5,
-    "cm": "自动缓存；写入 30 分钟 $2.50、12 小时 $5 每 1M",
-    "src": "https://platform.openai.com/docs/pricing",
-    "conf": "high",
-    "note": "Standard 档；Fast 档 4 / 20 / 0.20"
-  },
-  {
-    "vendor": "OpenAI",
-    "model": "gpt-6-luna",
-    "name": "GPT-6 Luna",
-    "ctx": 400,
-    "in": 0.1,
-    "out": 0.5,
-    "cr": 0.01,
-    "cw": 0.125,
-    "cm": "自动缓存；写入 30 分钟 $0.125、12 小时 $0.25 每 1M",
-    "src": "https://platform.openai.com/docs/pricing",
-    "conf": "high",
-    "note": "Standard 档"
-  },
-  {
-    "vendor": "Google",
-    "model": "gemini-4-argon",
-    "name": "Gemini 4 Argon",
-    "ctx": 1000,
-    "in": 2,
-    "out": 10,
-    "cr": 0.1,
-    "cw": null,
-    "cm": "仅隐式缓存（不支持显式缓存），命中 $0.10 每 1M",
-    "src": "https://ai.google.dev/gemini-api/docs/pricing",
-    "conf": "high",
-    "note": "促销价至 2026-11-30；12-01 起翻倍为 4 / 20 / 0.20，且无免费额度"
-  }
-]
+    {
+      "vendor": "Anthropic",
+      "model": "claude-fable-5.1",
+      "name": "Claude Fable 5.1",
+      "ctx": 1000,
+      "in": 10,
+      "out": 50,
+      "cr": 0.25,
+      "cw": 12.5,
+      "cm": "提示缓存 5 分钟 TTL；读 $0.25 / 写 $12.50 每 1M",
+      "src": "https://www.anthropic.com/pricing",
+      "conf": "high",
+      "note": "官方 Latest models 表原文；Batch 五折另计",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://www.anthropic.com/pricing",
+          "quote": "官方 Latest models 表原文；Batch 五折另计",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "Anthropic",
+      "model": "claude-opus-5.5",
+      "name": "Claude Opus 5.5",
+      "ctx": 1000,
+      "in": 4,
+      "out": 20,
+      "cr": 0.2,
+      "cw": 5,
+      "cm": "提示缓存 5 分钟 TTL；读 $0.20 / 写 $5 每 1M",
+      "src": "https://www.anthropic.com/pricing",
+      "conf": "high",
+      "note": "Fast mode 为 2 倍标准价；Batch 五折",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://www.anthropic.com/pricing",
+          "quote": "Fast mode 为 2 倍标准价；Batch 五折",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "Anthropic",
+      "model": "claude-sonnet-5.5",
+      "name": "Claude Sonnet 5.5",
+      "ctx": 1000,
+      "in": 2,
+      "out": 10,
+      "cr": 0.1,
+      "cw": 2.5,
+      "cm": "提示缓存 5 分钟 TTL；读 $0.10 / 写 $2.50 每 1M",
+      "src": "https://www.anthropic.com/pricing",
+      "conf": "high",
+      "note": "Batch 五折",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://www.anthropic.com/pricing",
+          "quote": "Batch 五折",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "Anthropic",
+      "model": "claude-haiku-5.5",
+      "name": "Claude Haiku 5.5 (≤100K)",
+      "ctx": 200,
+      "in": 0.1,
+      "out": 0.5,
+      "cr": 0.01,
+      "cw": 0.125,
+      "cm": "≤100K 提示档：读 $0.01 / 写 $0.125；>100K 档为 0.50 / 2.50 / 0.05 / 0.625",
+      "src": "https://www.anthropic.com/pricing",
+      "conf": "high",
+      "note": "本行为 ≤100K tokens 档",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://www.anthropic.com/pricing",
+          "quote": "本行为 ≤100K tokens 档",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "OpenAI",
+      "model": "gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "ctx": 400,
+      "in": 10,
+      "out": 50,
+      "cr": 1,
+      "cw": 12.5,
+      "cm": "自动缓存；写入 30 分钟 $12.50、12 小时 $25 每 1M",
+      "src": "https://platform.openai.com/docs/pricing",
+      "conf": "high",
+      "note": "Standard 档；Batch 五折、Fast 2 倍、Ultrafast 6 倍",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://platform.openai.com/docs/pricing",
+          "quote": "Standard 档；Batch 五折、Fast 2 倍、Ultrafast 6 倍",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "OpenAI",
+      "model": "gpt-6.1-sol",
+      "name": "GPT-6.1 Sol",
+      "ctx": 400,
+      "in": 2,
+      "out": 10,
+      "cr": 0.1,
+      "cw": 2.5,
+      "cm": "自动缓存；写入 30 分钟 $2.50、12 小时 $5 每 1M",
+      "src": "https://platform.openai.com/docs/pricing",
+      "conf": "high",
+      "note": "Standard 档；Fast 档 4 / 20 / 0.20",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://platform.openai.com/docs/pricing",
+          "quote": "Standard 档；Fast 档 4 / 20 / 0.20",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "OpenAI",
+      "model": "gpt-6-luna",
+      "name": "GPT-6 Luna",
+      "ctx": 400,
+      "in": 0.1,
+      "out": 0.5,
+      "cr": 0.01,
+      "cw": 0.125,
+      "cm": "自动缓存；写入 30 分钟 $0.125、12 小时 $0.25 每 1M",
+      "src": "https://platform.openai.com/docs/pricing",
+      "conf": "high",
+      "note": "Standard 档",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://platform.openai.com/docs/pricing",
+          "quote": "Standard 档",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    },
+    {
+      "vendor": "Google",
+      "model": "gemini-4-argon",
+      "name": "Gemini 4 Argon",
+      "ctx": 1000,
+      "in": 2,
+      "out": 10,
+      "cr": 0.1,
+      "cw": null,
+      "cm": "仅隐式缓存（不支持显式缓存），命中 $0.10 每 1M",
+      "src": "https://ai.google.dev/gemini-api/docs/pricing",
+      "conf": "high",
+      "note": "促销价至 2026-11-30；12-01 起翻倍为 4 / 20 / 0.20，且无免费额度",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": [
+        {
+          "url": "https://ai.google.dev/gemini-api/docs/pricing",
+          "quote": "促销价至 2026-11-30；12-01 起翻倍为 4 / 20 / 0.20，且无免费额度",
+          "captured_at": "2026-10-25"
+        }
+      ]
+    }
+  ]
+}

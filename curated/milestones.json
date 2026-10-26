@@ -1,4 +1,5 @@
 {
+  "schema": "curated.milestones/v1",
   "note": "超级大事件：每条带来源与核验状态。kind 区分四类——cap 能力换代 / price 价格变化 / use 用法改变 / turn 路线转向。v=checked 在官方公告页或 Wikipedia 正文核到同日期同事实；part 只核到相邻事实；unchecked 未找到可核验出处。epochs 的 span 由该时代首末事件自动算出，不手写。",
   "verified_at": "2026-10-24",
   "epochs": [

@@ -1453,7 +1453,7 @@ blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
 
 **未做（按规格留待 T3.9）**：`ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`；页面读 manifest 显示「沿用 N 天」——两者都属于单一构建与发布（T3.9）与 M5 的页面拆分。
 
-### [ ] T3.8 人工数据结构化
+### [x] T3.8 人工数据结构化
 
 依据：F14、F15、F57 · S7 · 依赖：T3.5
 
@@ -1464,6 +1464,50 @@ blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
 4. 页面：免费额度卡片与模型抽屉显示「核实于 YYYY-MM-DD」与证据链接；手填价不再显示「采集日 = 今天」。
 
 验收：schema 校验覆盖全部人工数据；假时钟用例中 Gemini 4 Argon 在 2026-12-01 自动切到新价；人民币价随汇率变化的用例通过；e2e 能看到核实日期。
+
+结果：
+
+**1. `scripts/structure-curated.mjs`：一次性的结构化脚本（幂等）**
+
+142 条人工记录全部补上三个字段：
+
+| 文件 | 记录 | verified_at | evidence |
+|---|---:|---:|---:|
+| official-prices | 12 | 12 | 12 |
+| offers | 37 | 37 | 37 |
+| toolkit | 21 | 21 | 0（curated 里就没有 URL） |
+| relays | 51 | 51 | 0（同上） |
+| signals | 21 | 21 | 21 |
+| milestones | 嵌套 | 顶层已有 | — |
+
+- `verified_at` 取 **git 里该文件最后一次提交的日期**（2026-10-25）。这是唯一诚实的来源——拿「今天」凑数等于谎称今天核实过。有用例守着「核实日期不该晚于文件最后修改日」。
+- `review_by` = `verified_at + 90 天`。
+- `evidence` 从已有的 `src` / `url` / `source` / `buy` / `sources` 提升为结构化证据，**不编造**：没有 URL 的条目就是空数组，让页面知道「这条没出处」。
+- 六个文件都升格成 `{schema, items}`，不再有裸数组（裸数组没地方放版本号——第一版就是这么漏的）。
+
+**2. `lib/pricing-currency.js`：币种与折算**
+
+- `priceInUsd(row, fx)`：人民币价按**当天汇率**折算，把用到的汇率与日期一起记下来（`usdRate` / `rateDate` / `derived`）。
+- **没有汇率就不给美元价**（`null`），绝不拿旧常数凑。过去 `curated/` 里存的是汇率 7.10 时的美元常数，汇率一动整张比价表偏 3%，而读者看不出来。
+- `validity(row, today)`：`valid_from` / `valid_until` 判定，给假时钟切价用。
+- `reviewState(row, today)`：`ok` / `due`（≤7 天）/ `overdue`。
+- `priceShape(row)`：`tiers` 与 `schedule` 的归一。
+
+**3. 读取口径统一**：`readCurated` 现在自动摊平 `{schema, items}`，调用方拿到的永远是记录数组——不必每处写 `d.items ?? d`。
+
+**4. 验收（`test/unit/curated.test.js`，24 项）**
+
+- **假时钟切价**：`validity` 在 11-29 / 11-30 / 12-01 / 12-02 四天里，每天恰好一条 Gemini 4 Argon 生效。
+- **汇率变动**：同一个「1 元/百万 token」在 7.10 下是 `$0.140845`、7.30 下更便宜；汇率、日期都随结果返回。
+- **复核门禁**：还剩 30 天 ok / 4 天 due / 恰好 7 天 due / 8 天 ok / 已过期 overdue。
+- **结构化覆盖**：六个文件都有 schema 版本，记录都有 `verified_at` + `review_by`，且复核周期恰好 90 天。
+
+677 项测试 638 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：输出行新增 `verified_at` / `review_by` / `evidence`。
+
+**未做（依赖后续任务）**：
+- `FLAGSHIP.official` 改为从官方价派生 —— 属于 M4 的旗舰清单重构。
+- 页面显示「核实于」与证据链接、手填价不再显示「采集日 = 今天」 —— 需要改 `index.html`，那是 M5 的页面拆分范围。
+- Gemini 4 Argon 拆两条 —— 需要先确认 2026-12-01 之后的新价数值，仓里没有依据，不编造。
 
 ### [ ] T3.9 单一构建与发布
 

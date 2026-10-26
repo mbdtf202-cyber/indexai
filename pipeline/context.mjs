@@ -37,7 +37,14 @@ const readJson = async (path) => {
   }
 };
 
-const readCurated = (name) => readJson(join(ROOT, 'curated', name));
+/* 人工数据的读取口（T3.8）。curated/*.json 现在带 {schema, items} 包装，
+ * 这里统一摊平：调用方拿到的永远是「记录数组或原对象」，
+ * 不必每处都写 d.items ?? d。 */
+const readCurated = async (name) => {
+  const raw = await readJson(join(ROOT, 'curated', name));
+  if (raw && !Array.isArray(raw) && Array.isArray(raw.items)) return raw.items;
+  return raw;
+};
 
 /** OpenRouter 模型目录（models 层唯一的网络源）。 */
 async function fetchCatalog() {
