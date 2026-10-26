@@ -13,6 +13,7 @@ import * as http from '../lib/http.js';
 import { now, nowISO, todayISO, sleep } from '../lib/clock.js';
 import { parseNewsYaml, mergeArchive } from '../lib/news.js';
 import { band, familyKey, slugify, peakNote } from '../lib/model-keys.js';
+import { registerRelayHosts } from '../lib/http-policy.js';
 import { keepSafeUrl } from '../lib/safe-url.js';
 import { eventKind, eventRegion, eventStatus, foldRegions } from '../lib/event-classify.js';
 import { effectiveCost, PROFILES } from '../lib/effective-cost.js';
@@ -72,6 +73,11 @@ async function buildCtx(prev, outDir, state) {
     readCurated('relays.json'),
     readCurated('toolkit.json'),
   ]);
+
+  /* 中转站是通配策略：名单每天变，逐个写进表不现实。
+   * 把 curated 的域名注册给策略表，http.js 才知道「这个站单并发、无间隔」。 */
+  const relayList = relaysCurated?.relays || relaysCurated || [];
+  registerRelayHosts(relayList.map((r) => r.domain));
 
   const githubHeaders = (() => {
     const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || '';

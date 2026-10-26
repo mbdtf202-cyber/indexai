@@ -63,7 +63,6 @@ export default {
       } catch (e) {
         out.push({ ...row, status: 'error', error: e.message });
       }
-      await ctx.sleep(90);
     }
     // 按人工排序（谁更值得先看），不按星数
     return out;

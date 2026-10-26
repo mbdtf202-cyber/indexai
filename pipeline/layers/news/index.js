@@ -109,9 +109,7 @@ export default {
         }
         if (!d.page?.hasMore || !d.page.nextCursor) break;
         cursor = d.page.nextCursor;
-        await ctx.sleep(250);
       }
-      await ctx.sleep(250);
     }
     ctx.log(`aihot 全量 ${seen.size} 条 / ${requests} 次请求`);
     return [...seen.values()];
