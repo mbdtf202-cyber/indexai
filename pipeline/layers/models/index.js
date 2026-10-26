@@ -13,6 +13,39 @@
  * 经 ctx 注入；层负责的是「两个源怎么合、谁该沿用谁不该」。
  */
 
+/**
+ * OpenRouter 的 id 前缀 → 可读厂商名。
+ *
+ * `moonshotai` → `MoonshotAI`、`deepseek` → `DeepSeek`、`x-ai` → `xAI`。
+ * 只做首字母大写与连字符处理，不做词典映射——推不出来就是推不出来，
+ * 比维护一张永远不全的对照表可靠。
+ */
+function prettyVendor(prefix) {
+  const s = String(prefix || '').trim();
+  if (!s) return 'Unknown';
+  // 已知的品牌写法（都来自 OpenRouter 实际出现的前缀）
+  const KNOWN = {
+    'x-ai': 'xAI',
+    'z-ai': 'Z AI',
+    moonshotai: 'MoonshotAI',
+    deepseek: 'DeepSeek',
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    meta: 'Meta',
+    mistralai: 'Mistral',
+    qwen: 'Alibaba Qwen',
+    alibaba: 'Alibaba',
+    xiaomi: 'Xiaomi',
+    nvidia: 'NVIDIA',
+    cohere: 'Cohere',
+    perplexity: 'Perplexity',
+  };
+  const key = s.toLowerCase();
+  if (KNOWN[key]) return KNOWN[key];
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 export default {
   id: 'models',
   sources: ['openrouter.ai/api/v1/models', 'curated/official-prices.json'],
@@ -34,10 +67,41 @@ export default {
    * @param {object} ctx 需要 band / familyKey / dedupeModels / slugify / today
    */
   normalize(raw, ctx) {
-    const catalog =
+    const rawCatalog =
       raw?.catalog && Array.isArray(raw.catalog.rows)
         ? raw.catalog
         : { rows: [], dropped: 0, unpriced: 0, stale: false };
+
+    /* 聚合行补骨架字段（T3.5 发现的真缺口）。
+     *
+     * `fetchCatalog` 只给 id / name / created / 价格，而行契约还要求
+     * vendor / vendorId / channel / channelKind / band / family。
+     * 以前这些字段靠「人工官方价那半边」带进来，聚合行自己是裸的——
+     * schema 一上线就把 469 行隔离掉了，正好暴露它。
+     *
+     * 厂商名从 OpenRouter 的 id 前缀推（`moonshotai/kimi-k3.1-pro` → MoonshotAI），
+     * 推不出来标 Unknown，不编造。 */
+    const catalog = {
+      ...rawCatalog,
+      rows: rawCatalog.rows.map((m) => {
+        const prefix = String(m.id || '').split('/')[0] || '';
+        const vendorId = ctx.slugify(prefix) || 'unknown';
+        return {
+          ...m,
+          vendor: m.vendor || prettyVendor(prefix),
+          vendorId: m.vendorId || vendorId,
+          channel: m.channel || 'OpenRouter',
+          channelKind: m.channelKind || 'aggregator',
+          band: m.band || ctx.band(m.input, m.input === 0 && m.output === 0),
+          family: m.family || ctx.familyKey(vendorId, String(m.id || ''), m.name),
+          free: m.free ?? (m.input === 0 && m.output === 0),
+          src: m.src || 'https://openrouter.ai/api/v1/models',
+          srcType: m.srcType || 'api',
+          conf: m.conf || 'med',
+          ...(m.seen ? {} : { seen: ctx.today() }),
+        };
+      }),
+    };
 
     const curated = (raw?.curated || []).map((r) => ({
       id: r.model,

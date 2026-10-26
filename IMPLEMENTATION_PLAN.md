@@ -1290,13 +1290,58 @@ golden 差异：活动的 `startAt` / `endAt` / `tz` 三个新字段（其余字
 
 **未做**：页面的「按访客时区显示」需要页面消费 `startAt`+`tz`，而 `index.html` 仍是 256 KB 单体（M5 才拆）。数据侧已经备好，页面侧留到 M5。
 
-### [ ] T3.5 schema 与坏行隔离
+### [x] T3.5 schema 与坏行隔离
 
 依据：S3.2 · F03 · 依赖：T3.3
 
 步骤：`lib/schema.js`（零依赖：类型、必填、枚举、URL、ISO 日期、数值范围）；每层一份 schema，类型同时写进 `types/*.d.ts`；`normalize` 逐行校验，坏行进 `quarantined` 并附原因；隔离比例超过该层阈值（默认 2%）才判红。现有的语义红线（如 `input=0 && output>0`）改为行级规则。
 
 验收：用例「OpenRouter 某行 input=0、output>0」中该行被隔离、层为 ok 或 warn、运行不失败；隔离明细出现在运行报告。
+
+结果：
+
+**1. `lib/schema.js`（零依赖，206 行）**
+- 类型：`string` / `number` / `boolean` / `object` / `array` / **`enum`** / `any`
+- 必填（缺失 / null / 空串三者都算缺失）、枚举、数值范围与整数、正则
+- 通用片段：`HTTP_URL` / `ISO_DATE` / `ISO_DATETIME` / `NON_NEGATIVE`
+- `quarantineRatio(total, q, threshold=0.02)`：用 `>` 不用 `>=`，恰好等于阈值不红
+
+不引 zod / ajv：INV-6 要求运行时零依赖，而这里只需要五种能力，为它引一个库只会让无人值守任务的供应链面变大。
+
+**2. 七层 schema（`pipeline/schemas/`）**
+`models` / `events` / `relays` / `offers` / `subs` / `news` / `resources`，各有行契约与跨字段语义规则。
+
+**3. 语义红线降到行级**（F03 的正解）：
+- `price-zero-mismatch`：`input=0 && output>0`
+- `negative-price`：任一项为负
+- `cache-read-over-input`：缓存读比输入贵（算折扣会得负数）
+- 另有 `ok-without-prices`（中转站标 ok 却无价目）、`end-before-start`、`zero-price-plan`、`no-source`、`repo-shape`、`empty-title`
+
+**4. `pipeline/validate.mjs`**：逐行校验 → 坏行挑出 → 算比例。位置在 **merge 之后、写盘之前**，这样沿用的上一版数据也被过一遍，坏行不会借「沿用」溜进发布。
+
+**5. `types/schema.d.ts`**：类型与运行时 schema 是同一份知识的两面。
+
+**6. 一上线就抓到三个真问题**
+- **`enum` 不是合法 type**（我自己的 bug）：第一版把 `enum` 当 values 的附属属性，于是所有枚举字段都报「spec 里的 type 非法」，events/models 全量被隔离。已改成独立类型。
+- **models 聚合行缺骨架字段**：`fetchCatalog` 只给 id/name/created/价格，而 vendor/vendorId/channel/channelKind/band/family 全靠「人工官方价那半边」带进来。469 行裸奔跑了很多轮没人发现。已补映射（厂商名从前缀推，推不出标 Unknown）。
+- **resources 行用 `title` 不是 `name`**，news 的 `tp` 是数字编码不是字符串。schema 必须跟着真实字段走。
+
+**7. 实测产出**（回放 + 固定时钟）：
+
+```
+models    481 → 473   隔离 8 行（1.7%，未超 2% 阈值）→ ok
+events    182 → 182   0 隔离
+news      100 → 100   0 隔离
+relays / subs / offers / resources   全 0 隔离
+```
+
+被隔离的 8 行全是真垃圾：`typesafe/jev-router`、`nvidia/switchyard`、`openrouter/auto-beta`、`openrouter/fusion` 的价格是 **`-1000000`**（OpenRouter 的占位符）；`~deepseek/deepseek-pro-latest` 的 `cache_read=0.12 > input=0.1188`。
+
+**8. 隔离明细进报告**：`run-report.json` 新增 `quarantine` 段（每层 total/kept/quarantined/ratio/threshold/over_threshold + 5 条样例），CI job summary 多一张「坏行隔离」表。
+
+新增 `test/unit/schema.test.js`（27 项），逐条覆盖验收要求。601 项测试 562 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+golden 差异：models 从 481 行降到 473 行（8 行被隔离），其余字节不变。
 
 ### [ ] T3.6 合并策略与原子写入
 

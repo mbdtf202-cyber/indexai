@@ -60,6 +60,28 @@ if (report.net) {
   );
 }
 
+/* 隔离明细（T3.5）：只在真的有隔离时才出这一段。
+ * 一两行脏数据是源站常态，报告里不显眼地记一笔即可；
+ * 超过阈值的层已经在上面的表里标成 failed 了。 */
+const q = report.quarantine || {};
+const quarantined = Object.entries(q).filter(([, v]) => v.quarantined > 0);
+if (quarantined.length) {
+  lines.push('');
+  lines.push('### 坏行隔离');
+  lines.push('');
+  lines.push('| 层 | 隔离 / 总数 | 比例 | 阈值 | 样例 |');
+  lines.push('|---|---:|---:|---:|---|');
+  for (const [id, v] of quarantined) {
+    const pct = (v.ratio * 100).toFixed(1) + '%';
+    const cap = (v.threshold * 100).toFixed(0) + '%';
+    const sample = (v.samples || [])
+      .slice(0, 2)
+      .map((s) => `\`${s.id}\`：${s.reasons[0]}`)
+      .join('；');
+    lines.push(`| ${id} | ${v.quarantined} / ${v.total} | ${pct} | ${cap} | ${sample} |`);
+  }
+}
+
 // 有 failed 就显式提醒：旧数据比坏数据好，别急着发布
 if (report.totals.failed > 0) {
   lines.push('');

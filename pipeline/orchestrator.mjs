@@ -38,6 +38,8 @@ import * as sources from './sources/index.mjs';
 import { buildCtx } from './context.mjs';
 import { runLayer } from './budget.mjs';
 import { buildSources } from './sources-registry.mjs';
+import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
+import { SCHEMAS } from './schemas/index.mjs';
 import { persist } from './persist.mjs';
 
 import fxLayer from './layers/fx/index.js';
@@ -156,9 +158,46 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
    * 这些量由层在 merge 时算出，编排器只负责累加，不再自己数一遍。 */
   const dedupe = { aggregator_dropped: 0, unpriced_dropped: 0, offers_merged: 0 };
 
+  /* 每层的隔离明细（T3.5）：进 run-report，页面不读。 */
+  const quarantineReport = {};
+
   for (const layer of LAYERS) {
     const prevRows = prev[layer.id];
     const { value, rec } = await runLayer(layer, ctx, prevRows, runDeadline);
+
+    /* 逐行校验（T3.5 · S3.2）。位置很关键：必须在 merge 之后、写盘之前——
+     * 这样沿用的上一版数据也会被过一遍，坏行不会借「沿用」溜进发布。
+     * 坏行进 quarantined，只有隔离比例超过阈值才让这一层响（F03 的正解）。 */
+    const spec = SCHEMAS[layer.id];
+    const rowsForCheck = Array.isArray(value)
+      ? value
+      : Array.isArray(value?.rows)
+        ? value.rows
+        : Array.isArray(value?.subs)
+          ? value.subs
+          : null;
+
+    if (spec && rowsForCheck) {
+      const q = quarantineLayer(rowsForCheck, spec);
+      quarantineReport[layer.id] = summarizeQuarantine(q);
+
+      if (q.total !== q.kept) {
+        rec.n = q.kept;
+        if (q.overThreshold) {
+          rec.status = 'failed';
+          rec.error = `隔离 ${q.quarantined.length}/${q.total} 行超过阈值 ${(q.threshold * 100).toFixed(0)}%`;
+          ctx.log(`${layer.id} 隔离比例超阈值：${rec.error}`, { level: 'warn' });
+        } else {
+          ctx.log(`${layer.id} 隔离 ${q.quarantined.length}/${q.total} 行，其余照常发布`, {
+            level: 'warn',
+          });
+        }
+      }
+
+      if (Array.isArray(value)) value.splice(0, value.length, ...q.rows);
+      else if (Array.isArray(value.rows)) value.rows = q.rows;
+      else if (Array.isArray(value.subs)) value.subs = q.rows;
+    }
 
     /* 写回。三种形状（契约允许）：
      *   - 数组：直接写（events / models / relays / news …）
@@ -313,6 +352,8 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
       failed: collectLog.filter((r) => r.status === 'failed').length,
     },
     net: http.httpTotals(),
+    /* 隔离明细（T3.5）：哪层隔离了多少行、为什么。页面不读，排障用。 */
+    quarantine: quarantineReport,
   };
 
   console.log('[collect] 完成');
