@@ -13,7 +13,17 @@
  * 产物清单写在 FILES 里；`dist/` 只能出现清单里的文件（R8，T3.9 启用）。
  */
 
-import { cpSync, mkdirSync, rmSync, readdirSync, existsSync, statSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  rmSync,
+  readdirSync,
+  existsSync,
+  statSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -90,12 +100,79 @@ for (const rel of SHARED_MODULES) {
 }
 
 const copiedData = [];
+/* 数据文件带内容哈希（T3.9 · S3.5）。
+ *
+ * 为什么：发布出去的文件名里带哈希，CDN 就能给它设长缓存，而内容一变文件名就变——
+ * 不存在「用户拿到旧缓存」这种事。manifest 自己记录哈希，所以它必须不缓存。
+ *
+ *   dist/data/manifest.json          不缓存，页面先读它
+ *   dist/data/<name>.<hash8>.json    长缓存
+ *   dist/<name>                      兼容层：页面旧路径仍可用
+ */
+const DATA_DIR = join(DIST, 'data');
+mkdirSync(DATA_DIR, { recursive: true });
+
+const hashOf = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
+
+const published = [];
+
 for (const name of DATA_FILES) {
   const src = join(dataDir, name);
   if (!existsSync(src)) continue;
+
+  /* 采集侧的 manifest 原样搬：它自己记录哈希，不该被再哈希一次。 */
+  if (name === 'manifest.json') {
+    cpSync(src, join(DATA_DIR, 'manifest.json'));
+    copiedData.push('data/manifest.json');
+    continue;
+  }
+
+  const text = readFileSync(src, 'utf8');
+  const digest = hashOf(text);
+  const hashed = name.replace(/\.json$/, '.' + digest.slice(0, 8) + '.json');
+
+  writeFileSync(join(DATA_DIR, hashed), text, 'utf8');
+  published.push({
+    name,
+    file: 'data/' + hashed,
+    hash: digest,
+    bytes: Buffer.byteLength(text, 'utf8'),
+  });
+
   cpSync(src, join(DIST, name));
   copiedData.push(name);
+  copiedData.push('data/' + hashed);
 }
+
+/* dist/data/manifest.json（T3.9 · S3.5）：页面通过它找数据文件。
+ * 采集侧那份记「层 → 文件 → 门禁结论」，这份记「文件 → 内容哈希 → 体积」，
+ * 两者一起构成发布凭据；部署后逐层核对哈希（第 3 步）。 */
+const buildManifest = {
+  schema_version: 'data-manifest/v1',
+  files: published,
+  total_bytes: published.reduce((n, f) => n + f.bytes, 0),
+};
+writeFileSync(
+  join(DATA_DIR, 'manifest.json.build'),
+  JSON.stringify(buildManifest, null, 2),
+  'utf8',
+);
+
+/* 两份 manifest 要合并成一个：页面只读一份。
+ * 采集侧的层信息 + 构建侧的文件信息，缺一不可。 */
+const collectManifestPath = join(dataDir, 'manifest.json');
+let merged = buildManifest;
+if (existsSync(collectManifestPath)) {
+  try {
+    const collectManifest = JSON.parse(readFileSync(collectManifestPath, 'utf8'));
+    merged = { ...buildManifest, layers: collectManifest.layers || [], collect: collectManifest };
+  } catch {
+    /* 采集侧 manifest 坏了就用构建侧这份，不让构建失败 */
+  }
+}
+writeFileSync(join(DATA_DIR, 'manifest.json'), JSON.stringify(merged, null, 2), 'utf8');
+rmSync(join(DATA_DIR, 'manifest.json.build'), { force: true });
+copiedData.push('data/manifest.json');
 
 if (!copiedData.includes('data.json')) {
   console.error(`[build] ${dataDir} 里没有 data.json，页面无数据可渲染`);

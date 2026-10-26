@@ -2,7 +2,7 @@
 
 Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文件是执行清单，由 Ralph 在 build 模式下逐项执行并维护。不要用 plan 模式重写它。
 
-当前里程碑：**M3 管线**
+当前里程碑：**M4 资产**
 
 ## 规则
 
@@ -1509,7 +1509,7 @@ blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
 - 页面显示「核实于」与证据链接、手填价不再显示「采集日 = 今天」 —— 需要改 `index.html`，那是 M5 的页面拆分范围。
 - Gemini 4 Argon 拆两条 —— 需要先确认 2026-12-01 之后的新价数值，仓里没有依据，不编造。
 
-### [ ] T3.9 单一构建与发布
+### [x] T3.9 单一构建与发布
 
 依据：F37、F47 · S3.5 · 依赖：T3.7
 
@@ -1520,6 +1520,106 @@ blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
 4. 启用 R8 的 `dist/` 部分。
 
 验收：workflow 的组装步骤只有 `npm run build`；Cloudflare 密钥只出现在 deploy job；R8 通过；线上自检比对的是哈希。
+
+结果：
+
+**1. 带哈希的数据文件**
+
+```
+dist/data/manifest.json          不缓存（no-store）
+dist/data/data.ca8a86f0.json     长缓存（max-age=31536000, immutable）
+dist/data/bench.3dfb2eeb.json    同上
+dist/data/news-milestones.fd5c989f.json
+dist/data.json                   兼容层，5 分钟
+```
+
+- 文件名里的哈希就是内容指纹：内容一变文件名就变，不可能拿到旧缓存。
+- `dist/data/manifest.json` 合并了两份信息：构建侧的「文件 → 哈希 → 体积」+ 采集侧的「层 → 文件 → 门禁结论」。页面只读一份。
+- `_headers` 完整重写：页面外壳 `must-revalidate`、manifest `no-store`、带哈希文件 `immutable`、字体一天。
+
+**2. 三个 job（验收 2 / 3）**
+
+| job | 权限 | Cloudflare 密钥 | 做什么 |
+|---|---|---|---|
+| `collect` | `contents: write` + `issues: write` | ❌ | 采集、报告、门禁、提交情报归档 |
+| `build` | `contents: read` | ❌ | `npm ci` + **`npm run build -- --data .`** |
+| `deploy` | `contents: read` | ✅ | 校验 token、`wrangler pages deploy`、线上自检 |
+
+- build job 里**只有** `npm run build`：旧的「组装发布目录」那串手工 `cp` 全部删掉。
+- build 会自己校验产物：manifest schema、每个文件的哈希与磁盘字节一致，不一致直接失败。
+
+**3. 线上自检比对哈希（验收 4）**
+
+`scripts/verify-deploy.mjs`：拉线上 `data/manifest.json` → 比对 schema 版本 → 逐层比对层哈希 → **把每个数据文件真的下载下来再算一遍 sha256** → 有任何不一致就 `exit 1`。
+
+旧做法比 `meta.generated_at`，有两个漏洞：时间戳相同不代表内容相同（同日重跑第二次的修复看不见）；不同也不一定有问题（CDN 缓存几秒）。
+
+**4. R8 扩展到 dist/（验收 4）**
+
+`dist/` 里只允许构建能产出的东西：`index.html` / `favicon.svg` / `_headers` / 三个 json / `assets` `data` `lib` `news` 四个目录。混进手写文件会被判违反——那正是 F37 的形态：它会被发布出去，却不在任何构建清单里。
+
+**5. 顺手修掉**：新加的 action 引用最初写成 `@v4`，R12 立刻拦下，已全部固定到 40 位 SHA。
+
+新增 `test/unit/build-publish.test.js`（16 项）。693 项测试 654 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**M3 到此完成**：10 个任务全部 `[x]`。
+
+---
+
+## M3 里程碑结论（2026-10-27）
+
+**M3 完成：21 个任务全部 [x]。** 采集管线从「空壳入口」变成真正可运行、可隔离、可分层发布的分层系统。
+
+### 关键事实
+
+- **管线原本是断的**（N77）：`pipeline/index.mjs` 给每层塞硬编码空响应后打印 `{meta:{}}` 退出，12 个真实层从拆完那天起从没被调用过。这一轮才真正接通。
+- **10 层实测全部 ok**：models 473 / events 182 / news 100 / offers 37 / subs 12 / relays 3 / resources 3 / bench 26 榜 2788 行 / fx / adoption。
+- **确定性已验证**：两次运行 sha256 一致（INV-7）。
+
+### 结构
+
+| 模块 | 职责 |
+|---|---|
+| `pipeline/orchestrator.mjs`（394 行） | 唯一入口：逐层跑 + 记账 + 写盘 |
+| `pipeline/context.mjs` | ctx 依赖注入 |
+| `pipeline/budget.mjs` | 层预算，超预算记 partial 不记 failed |
+| `pipeline/persist.mjs` | 原子写 + 门禁三态 + 分层文件 |
+| `pipeline/validate.mjs` | 逐行 schema 校验与坏行隔离 |
+| `pipeline/manifest.mjs` | 分层门禁 + manifest + 回退 |
+| `pipeline/sources/*` | 逐源实现（devpost / luma / devfolio / aios / probe-relay） |
+| `lib/http-policy.js` + `lib/http-queue.js` | 主机策略表与排队闸 |
+| `lib/merge-strategies.js` | 四种合并策略 |
+| `lib/schema.js` + `lib/time.js` + `lib/pricing-currency.js` | 校验 / 时区 / 币种 |
+
+### 适应度规则
+
+R1, R9, R2a, **R2b**, **R13**, R8, R5, R10, R6, R3, R12 —— 全部通过。
+
+- R2b 启用时一次抓到 57 处违规（`new Date()` / `Date.now()` / `setTimeout` 散落在采集端）。
+- R13 是这一轮新加的：每层必须声明合并策略。
+- R8 扩到了 `dist/`。
+
+### 这一轮修掉的真 bug（都不是预设的）
+
+1. **枚举类型写错**：schema 把 `enum` 当 values 的附属属性，导致 events/models 全量被隔离。
+2. **models 聚合行缺 6 个骨架字段**：`fetchCatalog` 只给 id/name/created/价格，其余全靠人工价那半边带进来。
+3. **门禁规则形状不匹配**：规则读 `{rows}`/`{subs}`/`{apps}`，门禁传数组 → 473 个模型被判「目录为空」。
+4. **F38 两处现场**：events 的 merge 是「本次有就用本次」（Luma 掉一半 → 活动数腰斩）；models 只在全空时沿用。
+5. **截止时间不能用 mark() 算**：回放模式下 `mark()` 恒为 0，`deadline - now()` 变负数，所有层被误判超时。
+6. **Atom 条目 id 带时间戳**：同一输入两次产出不同（违反 INV-7）。
+7. **resources 用 `title`、news 的 `tp` 是数字编码**：schema 套了别层的习惯。
+
+### 测试
+
+693 项，654 通过，0 失败，5 todo（F24、F09、T5.2 预渲染 2 项）。
+
+e2e 28 项全过。
+
+### 留给后续
+
+- **M4**：历史与变化、统一实体、`FLAGSHIP.official` 从官方价派生、7 次快照的中位数缩水判定。
+- **M5**：页面拆分（`index.html` 仍是 256 KB 单体）、manifest 驱动的「沿用 N 天」标记、核实日期显示。
+- `ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`（S3.5 后半）。
 
 ---
 

@@ -339,7 +339,7 @@ function checkR5() {
 }
 
 /**
- * R8：仓库根目录只有白名单文件（dist/ 的部分等 M5 有构建清单后再加）。
+ * R8：仓库根目录只有白名单文件；dist/ 里只有构建该产出的东西。
  *
  * 理由（INV-10）：根目录每多一个文件，新人就要多猜一次「这是不是还在用」。
  * 孤儿文件、草稿页、一次性脚本都是这么留下来的 —— F28、F30、F37 全是这个形态。
@@ -432,6 +432,41 @@ function checkR8() {
       message: `R8 违反：根目录不该出现 ${e.name}（要么删掉，要么加进 ROOT_WHITELIST 并说明理由）`,
     });
   }
+  /* dist/ 部分（T3.9）：构建产物里只该有「构建能生成的东西」。
+   * 混进手写文件是 F37 的形态——它会被发布出去，却不在任何构建清单里，
+   * 下次谁都不知道它是哪来的、还敢不敢删。 */
+  const DIST_ALLOWED_DIRS = new Set(['assets', 'data', 'lib', 'news']);
+  const DIST_ALLOWED_FILE =
+    /^(?:index\.html|favicon\.svg|_headers|data\.json|bench\.json|news-(?:archive|milestones)\.json|manifest\.json)$/;
+
+  let distEntries;
+  try {
+    distEntries = readdirSync(join(ROOT, 'dist'), { withFileTypes: true });
+  } catch {
+    return violations; // 还没构建过：不算违反
+  }
+
+  for (const e of distEntries) {
+    if (e.name.startsWith('.')) continue;
+    if (e.isDirectory()) {
+      if (!DIST_ALLOWED_DIRS.has(e.name)) {
+        violations.push({
+          file: join('dist', e.name),
+          line: 1,
+          message: `R8 违反：dist/ 里不该有目录 ${e.name}（构建不会产出它）`,
+        });
+      }
+      continue;
+    }
+    if (!DIST_ALLOWED_FILE.test(e.name)) {
+      violations.push({
+        file: join('dist', e.name),
+        line: 1,
+        message: `R8 违反：dist/ 里不该有 ${e.name}（构建不会产出它；手放的文件请挪进 assets/）`,
+      });
+    }
+  }
+
   return violations;
 }
 

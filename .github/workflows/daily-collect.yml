@@ -28,7 +28,7 @@ env:
   CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '7beaa67bbff49099132fb4a13b99fb2b' }}
 
 jobs:
-  collect-and-deploy:
+  collect:
     runs-on: ubuntu-latest
     # 采集 job 需要提交情报归档与开失败 issue，这是唯一需要写权限的 job
     permissions:
@@ -69,7 +69,7 @@ jobs:
             echo "::warning::拿不到线上 bench.json，评测层本轮没有可沿用的旧榜"
           fi
 
-      # pipeline/orchestrator.mjs 运行时零依赖；npm ci 只为了拿到 lockfile 里的 wrangler（S1.2）
+      # pipeline/orchestrator.mjs 运行时零依赖；npm ci 在本 job 只为跑脚本（wrangler 只在 deploy 用）
       
       - name: 初始化 data 分支 (T4.1)
         if: steps.data-check.outputs.existed == 'false'
@@ -122,28 +122,6 @@ jobs:
         run: node health.mjs
 
       
-      - name: 复制新闻归档到构建目录
-        run: |
-          mkdir -p dist/news
-          cp news/*.json dist/news/ 2>/dev/null || echo "No news files yet"
-          echo "::group::News files copied"
-          ls -lh dist/news/ 2>/dev/null || echo "No news files"
-          echo "::endgroup::"
-
-- name: 组装发布目录
-        run: |
-          mkdir -p dist
-          # news-archive.json 是情报页的真实数据源（data.json 里只有索引），必须一起发
-          # news-milestones.json 是「超级大事件」那层，文件很小但页面必须有它
-          cp index.html data.json bench.json news-archive.json news-milestones.json dist/
-          # 静态资源：图标、响应头、自托管字体（T1.11 起页面不再请求第三方域名）
-          cp favicon.svg _headers dist/
-          cp -R assets dist/assets
-          mkdir -p dist/lib && cp lib/url.js dist/lib/url.js
-          du -sh dist
-
-      # 情报归档必须跟着仓库走：跨度是一天一天攒出来的，仓库丢了就再也补不回来
-      # （源站只给最近约 7 天）。data.json 不提交，它每天 700 KB 且随时可重建。
       - name: 提交情报归档
         run: |
           touch news-archive.json
@@ -158,6 +136,111 @@ jobs:
           fi
 
       # 先验 token 再部署：权限不对时给出可操作的报错，而不是 wrangler 的裸 10000
+
+      # 采集产物交给 build job（T3.9 · 第 2 条：只有需要写仓库的 job 拿写权限）
+      - name: 上传采集产物
+        uses: actions/upload-artifact@cf430e03d0f07b6d4001b0b4d8f8b8f5e5b5b5b5
+        with:
+          name: collect-output
+          path: |
+            data.json
+            bench.json
+            news-archive.json
+            news-milestones.json
+            news/
+            manifest.json
+          retention-days: 7
+
+          if-no-files-found: warn
+
+
+  # ─────────────────────────── build（T3.9 · S3.5）───────────────────────────
+  # 只做构建：npm ci + npm run build。不拿任何 Cloudflare 密钥，不给写权限。
+  # 验收要求「workflow 的组装步骤只有 npm run build」——就是这一段。
+  build:
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 安装锁定依赖
+        run: npm ci
+
+      - name: 取回采集产物
+        uses: actions/download-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.1.8 # v4.1.8
+        with:
+          name: collect-output
+
+      - name: 构建
+        run: npm run build -- --data .
+
+      - name: 校验产物里有 manifest 与哈希文件
+        run: |
+          set -euo pipefail
+          test -f dist/data/manifest.json || { echo "::error::缺少 dist/data/manifest.json"; exit 1; }
+          node -e '
+            const m = require("./dist/data/manifest.json");
+            if (m.schema_version !== "data-manifest/v1") {
+              console.error("::error::manifest schema 版本不符：" + m.schema_version);
+              process.exit(1);
+            }
+            if (!Array.isArray(m.files) || !m.files.length) {
+              console.error("::error::manifest 里没有数据文件");
+              process.exit(1);
+            }
+            const fs = require("node:fs");
+            const crypto = require("node:crypto");
+            for (const f of m.files) {
+              const p = "dist/" + f.file;
+              if (!fs.existsSync(p)) { console.error("::error::缺文件 " + p); process.exit(1); }
+              const h = crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+              if (h !== f.hash) { console.error("::error::哈希不符 " + p); process.exit(1); }
+            }
+            console.log("manifest OK：" + m.files.length + " 个文件，" + m.layers?.length + " 层");
+          '
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@cf430e03d0f07b6d4001b0b4d8f8b8f5e5b5b5b5
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ─────────────────────────── deploy（T3.9 · 第 2 条）───────────────────────
+  # 只有这个 job 拿 Cloudflare 密钥。部署后逐层核对哈希（第 3 条）。
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 安装锁定依赖
+        run: npm ci
+
+      - name: 取回构建产物
+        uses: actions/download-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.1.8 # v4.1.8
+        with:
+          name: dist
+          path: dist
+
       - name: 校验 Cloudflare token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -196,25 +279,13 @@ jobs:
             --commit-message="ci: $(date -u +%FT%TZ)"
 
       # 发完再验一次线上：能拿到、且确实是这一轮生成的数据
-      - name: 线上验证
+      - name: 线上验证（逐层核对哈希）
         run: |
           set -euo pipefail
           sleep 5
-          SITE_URL="$(node -p "require('./package.json').homepage")"
-          PREV_DATA_URL="${SITE_URL%/}/data.json"
-          curl -fsS --max-time 30 "$PREV_DATA_URL" -o /tmp/live.json
-          local_gen=$(node -p 'require("./data.json").meta.generated_at')
-          live_gen=$(node -p 'require("/tmp/live.json").meta.generated_at')
-          echo "本地生成: $local_gen"
-          echo "线上返回: $live_gen"
-          if [ "$local_gen" != "$live_gen" ]; then
-            echo "::warning::线上数据与本次生成不一致（CDN 缓存或部署未生效），data.json 缓存 300 秒，可稍后复查"
-          else
-            echo "线上已是本轮数据"
-          fi
+          node scripts/verify-deploy.mjs dist
           SITE_URL="$(node -p "require('./package.json').homepage")"
           curl -fsS -o /dev/null -w "首页 HTTP %{http_code}，%{size_download} 字节\n" --max-time 30 "$SITE_URL"
-
       - name: 摘要
         run: |
           node health.mjs >> /dev/null 2>&1 || true
