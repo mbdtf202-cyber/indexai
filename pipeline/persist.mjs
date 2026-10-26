@@ -15,6 +15,17 @@ import { join } from 'node:path';
 export async function persist(outDir, data) {
   await mkdir(outDir, { recursive: true });
 
+  /* 运行报告单独一个文件（T3.3 · S2.4）：它不是站点数据，是给 CI 与排障看的。
+   * 从 data 里取出来后就删掉，绝不进 data.json——那会给页面多一个没人读的字段。 */
+  if (data.__runReport) {
+    await writeFile(
+      join(outDir, 'run-report.json'),
+      JSON.stringify(data.__runReport, null, 2),
+      'utf8',
+    );
+    delete data.__runReport;
+  }
+
   /* 评测：把 boards 拆进 bench.json，data.json 只留目录与统计（F02）。
    * 页面与采集基线都靠 data.bench.file 找到真实文件。 */
   const benchFull = data.bench;

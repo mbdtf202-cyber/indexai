@@ -8,6 +8,7 @@
  */
 
 import { httpGet } from '../../lib/http.js';
+import { nowISO } from '../../lib/clock.js';
 
 /**
  * 调一次 GitHub API 并返回结构化响应。
@@ -110,7 +111,7 @@ export async function handleAlertDecision({ owner, repo, token, alertInfo, actio
           body: [
             '### Alert Continued',
             '',
-            `**Timestamp**: ${new Date().toISOString()}`,
+            `**Timestamp**: ${nowISO()}`,
             `**Reason**: ${alertInfo.reason}`,
             '',
             `Issue opened at ${new Date(existing.created_at).toISOString()}.`,
@@ -136,7 +137,7 @@ export async function handleAlertDecision({ owner, repo, token, alertInfo, actio
           body: [
             '### Alert Resolved',
             '',
-            `Recovery detected at ${new Date().toISOString()}. Closing this issue.`,
+            `Recovery detected at ${nowISO()}. Closing this issue.`,
           ].join('\n'),
         },
       });

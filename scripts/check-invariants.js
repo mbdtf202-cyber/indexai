@@ -19,6 +19,7 @@ export const ENABLED = {
   R1: true, // T0.1
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
   R2a: true, // T1.4
+  R2b: true, // T3.3：采集端时间与睡眠只在 lib/clock.js
   R8: true, // T2.1（根目录部分）
   R5: true, // T2.2
   R10: true, // T2.5
@@ -434,6 +435,70 @@ function checkR8() {
 }
 
 /**
+ * R2b：采集端的「取当前时间」与「睡眠」只出现在 lib/clock.js（T3.3 · INV-7）。
+ *
+ * 理由：没有注入的时钟就没有确定性。同一个输入跑两次结果不同，
+ * golden 就没法逐字节比较，回压体系从根上失效。
+ *
+ * 检查三件事（只看采集侧 pipeline/ 与 lib/，测试与站点不管）：
+ * 1. 无参 new Date() —— 要时间就调 now()
+ * 2. Date.now() —— 同上
+ * 3. setTimeout —— 睡眠只走 sleep()
+ *
+ * 允许的例外：
+ * - lib/clock.js 本身（它就是出口）
+ * - new Date(某个参数) —— 解析时间戳，不是取当前时间
+ * - 「测量耗时」也拦：耗时会让输出不确定，该用 clock 的 mark() / since()
+ */
+function checkR2b() {
+  const violations = [];
+  const dirs = ['pipeline', 'lib'];
+
+  for (const dir of dirs) {
+    let files = [];
+    try {
+      files = collectFiles(join(ROOT, dir));
+    } catch {
+      continue;
+    }
+    for (const abs of files) {
+      const rel = relative(ROOT, abs);
+      if (rel === join('lib', 'clock.js')) continue;
+      /* budget.mjs 的预算计时器必须真实走墙钟：超时判断若被固定时钟抹平，
+       * 「某层超预算」永远测不到。这是唯一一处豁免，且只在 setTimeout 上。 */
+      if (rel === join('pipeline', 'budget.mjs')) continue;
+      if (!/\.(m?js)$/.test(rel)) continue;
+
+      readLines(abs).forEach((line, i) => {
+        const code = line.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '');
+        if (/new\s+Date\s*\(\s*\)/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：new Date() 只允许出现在 lib/clock.js，用 ctx 的 now()',
+          });
+        }
+        if (/\bDate\.now\s*\(/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：Date.now() 只允许出现在 lib/clock.js，用 mark() / since()',
+          });
+        }
+        if (/\bsetTimeout\s*\(/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：setTimeout 只允许出现在 lib/clock.js，用 sleep()',
+          });
+        }
+      });
+    }
+  }
+  return violations;
+}
+
+/**
  * R2a：采集端（collect.mjs / bench.mjs / health.mjs / lib/*.js）的 `fetch(`
  * 只出现在 `lib/http.js`。
  *
@@ -538,6 +603,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R2b',
+    description: '采集端时间与睡眠只在 lib/clock.js',
+    check: checkR2b,
   },
   {
     id: 'R3',

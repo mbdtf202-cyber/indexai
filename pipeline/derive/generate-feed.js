@@ -1,4 +1,5 @@
 import { SITE, HOST } from './config.js';
+import { nowISO } from '../../lib/clock.js';
 
 /**
  * Generate Atom Feed from changes (T4.3 Round 3)
@@ -23,8 +24,8 @@ export function generateAtomFeed(events, options = {}) {
     <title>${escapeXml(summary)}</title>
     <link href="https://github.com/indexai-index/indexai" />
     <published>${event.timestamp}</published>
-    <updated>${new Date().toISOString()}</updated>
-    <id>tag:${HOST},2026:${event.type}:${Date.now()}</id>
+    <updated>${nowISO()}</updated>
+    <id>tag:${HOST},2026:${event.type}:${event.id ?? event.timestamp ?? event.title}</id>
     <summary>${escapeXml(summary)}</summary>
   </entry>`;
     })
@@ -36,7 +37,7 @@ export function generateAtomFeed(events, options = {}) {
   <subtitle>${escapeXml(subtitle)}</subtitle>
   <link href="${SITE.BASE_URL}/feeds/changes.xml" rel="self" />
   <link href="${SITE.BASE_URL}/" />
-  <updated>${new Date().toISOString()}</updated>
+  <updated>${nowISO()}</updated>
   <id>tag:${HOST},2026:/feeds/changes.xml</id>
 ${eventsXml}
 </feed>`;

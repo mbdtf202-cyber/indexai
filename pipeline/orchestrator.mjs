@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import * as http from '../lib/http.js';
-import { nowISO, todayISO } from '../lib/clock.js';
+import { mark, now, nowISO, since, todayISO } from '../lib/clock.js';
 import { effectiveCost, PROFILES } from '../lib/effective-cost.js';
 import { FLAGSHIP } from '../lib/relay-pricing.js';
 import { unsafeUrlStats, resetUnsafeUrlStats } from '../lib/safe-url.js';
@@ -36,6 +36,7 @@ import { eventKind, eventRegion, eventStatus, foldRegions } from '../lib/event-c
  * 编排器只留「逐层跑 + 记账 + 写盘」。 */
 import * as sources from './sources/index.mjs';
 import { buildCtx } from './context.mjs';
+import { runLayer } from './budget.mjs';
 import { buildSources } from './sources-registry.mjs';
 import { persist } from './persist.mjs';
 
@@ -117,73 +118,13 @@ const LAYERS = [
 /**
  * 跑一层。失败只影响本层（INV-1）。
  */
-async function runLayer(layer, ctx, prevRows) {
-  const started = Date.now();
-  const rec = { layer: layer.id, status: 'ok', n: 0, ms: 0 };
-
-  try {
-    const raw = await layer.fetch(ctx);
-
-    let next;
-    try {
-      next = layer.normalize(raw, ctx);
-    } catch (e) {
-      throw new Error(`normalize 失败：${e.message}`);
-    }
-
-    /* 契约细节：normalize 可能返回 `{records, quarantined}`（多数层），
-     * 也可能直接返回数组。merge 一律期望数组，这里统一取出 records。
-     * adoption 的 records 是 `{apps}` 对象而非数组——按对象形状原样传下去。 */
-    const nextRows = Array.isArray(next)
-      ? next
-      : next?.records !== undefined &&
-          !Array.isArray(next.records) &&
-          typeof next.records === 'object'
-        ? next.records
-        : (next?.records ?? []);
-
-    let merged;
-    try {
-      merged = layer.merge(prevRows, nextRows, ctx);
-    } catch (e) {
-      throw new Error(`merge 失败：${e.message}`);
-    }
-
-    /* 两种交付形状（层契约允许）：
-     *   - 数组：rows 型层（events / models / relays / news …）
-     *   - 对象：单值型层（fx 交付 {USDCNY, as_of}）或带 rows 包装的层
-     * 用「是不是数组」区分，比猜字段名可靠。 */
-    if (Array.isArray(merged)) {
-      rec.n = merged.length;
-      rec.status = 'ok';
-      rec._ms = Date.now() - started;
-      return { value: merged, rec };
-    }
-
-    if (merged && typeof merged === 'object') {
-      const isRowsWrapper = Array.isArray(merged.rows);
-      rec.n = isRowsWrapper ? merged.rows.length : Object.keys(merged).length;
-      rec.status = merged.stale ? 'stale' : 'ok';
-      rec._ms = Date.now() - started;
-      return { value: merged, rec };
-    }
-
-    /* null / undefined：这一层确实没有产出 */
-    rec.n = 0;
-    rec.status = 'failed';
-    rec.error = 'merge 返回空';
-    rec._ms = Date.now() - started;
-    return { value: prevRows ?? [], rec };
-  } catch (e) {
-    rec.status = 'failed';
-    rec.error = e.message;
-    rec._ms = Date.now() - started;
-    ctx.log(`${layer.id} 失败：${e.message}`, { level: 'warn' });
-    // 整层失败：沿用上一版（INV-1），标 stale
-    return { value: prevRows ?? [], rec };
-  }
-}
-
+/**
+ * 层预算（T3.3 · S2.2 · INV-8）。
+ *
+ * 每层自己声明 `budget: { ms, requests }`。超预算不是「失败」，是 **partial**：
+ * 已经拿到的部分照常交付，并在报告里写明为什么没跑完。这两者必须分开——
+ * 超时把它当 failed 会丢掉已采到的数据，那是更糟的结果（T1.3 的教训）。
+ */
 /* ─────────────────────────── 主流程 ─────────────────────────── */
 
 export async function collect({ outDir = resolveOutDir() } = {}) {
@@ -196,6 +137,17 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
   const lumaState = { blocked: false, reason: null, cooldownMs: 0, gaveUp: 0 };
   const state = { luma: lumaState };
 
+  /* 整次运行的硬截止（T3.3 · S2.2）：15 分钟。
+   * 超过它，后面的层直接标 partial 跳过，而不是让 job 被 CI 砍掉——
+   * 那样连报告都写不出来，等于一无所知。 */
+  const RUN_DEADLINE_MS = 15 * 60 * 1000;
+  /* 截止时间必须用真实时钟（now()），不能用 mark()：
+   * mark() 在回放模式下恒为 0，会让「剩余时间」变成负数，所有层被误判为超时。
+   * 而耗时统计（duration_ms）用 mark()/since() 是对的——那里要保持输出确定。 */
+  const runStartedWall = now().getTime();
+  const runDeadline = runStartedWall + RUN_DEADLINE_MS;
+  const runStarted = mark();
+
   const ctx = await buildCtx(prev, outDir, state);
 
   const out = { ...prev };
@@ -206,7 +158,7 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
 
   for (const layer of LAYERS) {
     const prevRows = prev[layer.id];
-    const { value, rec } = await runLayer(layer, ctx, prevRows);
+    const { value, rec } = await runLayer(layer, ctx, prevRows, runDeadline);
 
     /* 写回。三种形状（契约允许）：
      *   - 数组：直接写（events / models / relays / news …）
@@ -336,6 +288,33 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
   out.sources = sourcesList;
   out.signals = signals;
 
+  /* 运行报告（T3.3 · S2.4）：CI 写进 job summary，也作为 artifact 保留。
+   * 结构固定，有 contract 测试守着（test/contract/run-report.test.js）。 */
+  const runReport = {
+    schema: 'run-report/v1',
+    started_at: new Date(runStarted).toISOString(),
+    finished_at: nowISO(),
+    duration_ms: since(runStarted),
+    deadline_ms: RUN_DEADLINE_MS,
+    over_deadline: now().getTime() > runDeadline,
+    profile: TEST_PROFILE ? 'test' : 'full',
+    layers: collectLog.map((r) => ({
+      id: r.layer,
+      status: r.status,
+      n: r.n,
+      ms: r._ms ?? 0,
+      ...(r.error ? { error: r.error } : {}),
+      ...(r.reason ? { reason: r.reason } : {}),
+    })),
+    totals: {
+      ok: collectLog.filter((r) => r.status === 'ok').length,
+      stale: collectLog.filter((r) => r.status === 'stale').length,
+      partial: collectLog.filter((r) => r.status === 'partial').length,
+      failed: collectLog.filter((r) => r.status === 'failed').length,
+    },
+    net: http.httpTotals(),
+  };
+
   console.log('[collect] 完成');
   for (const r of collectLog) {
     console.log(
@@ -343,6 +322,7 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
     );
   }
 
+  out.__runReport = runReport;
   return out;
 }
 

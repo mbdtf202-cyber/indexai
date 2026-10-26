@@ -1197,13 +1197,50 @@ golden 与 DOM 快照全部重录：架构从单文件换成模块化，输出�
 
 golden 差异：无。`meta.net` 的字段集没变（每主机账目本来就有），排队只是让请求按策略发。
 
-### [ ] T3.3 运行上下文、预算与运行报告
+### [x] T3.3 运行上下文、预算与运行报告
 
 依据：S2.2–S2.4 · INV-7 · 依赖：T3.2
 
 步骤：编排器构造 `ctx`（`now`、`today(tz)`、`http`、`curated`、`registry`、`prev`、`log`）注入各层；层模块不再 import 时钟与网络。每层声明 `budget`，超时或超次返回 `partial` 并写明原因；整次运行截止 15 分钟，workflow 的 job 超时改为 25 分钟。产出 `run-report.json`，CI 写进 job summary 并作为 artifact 保留 30 天（原始响应同样作为 artifact 保留 30 天）。启用 R2b。
 
 验收：R2b 通过；用例「某层超预算」返回 partial 且其它层不受影响；报告结构有 contract 测试。
+
+结果：
+
+**1. 预算与截止**
+- `pipeline/budget.mjs`（`runLayer` 拆出来，可单测）：层声明的 `budget.ms` 与整次运行的剩余时间取更紧的那个。
+- 超预算记 **partial** 而不是 failed——这是 T1.3 的教训：把超时当失败会丢掉已采到的数据。partial 带 `reason`，failed 带 `error`，两者在报告里分开。
+- 已过整次截止的层直接标 partial 并**不发起请求**，而不是让 CI 把 job 砍掉（那样连报告都写不出来）。
+- 整次运行截止 15 分钟；workflow 的 `timeout-minutes` 已是 25。
+
+**2. 运行报告**
+- `run-report.json`：`schema` / `started_at` / `finished_at` / `duration_ms` / `deadline_ms` / `over_deadline` / `profile` / `layers[]` / `totals` / `net`。
+- 由 `pipeline/persist.mjs` 单独落盘，**不进 data.json**（页面没有消费者，加进去只是脏数据）。
+- CI：`scripts/summarize-run.mjs` 渲染成 job summary（表格 + 总计 + 网络账），`upload-artifact` 保留 30 天。
+- `test/contract/run-report.test.js`（9 项）锁结构：schema 版本、必填字段、状态枚举、failed/partial 必须带原因、totals 与 layers 自洽、报告不进 data.json。
+
+**3. R2b 启用：一开就抓到 57 处违规**
+
+规则：采集端（`pipeline/` + `lib/`）的 `new Date()` / `Date.now()` / `setTimeout` 只允许出现在 `lib/clock.js`。修掉的分布：
+
+| 文件 | 处数 | 处置 |
+|---|---|---|
+| `lib/sequence-generator.js` | 9 | `new Date().toISOString()` → `nowISO()` |
+| `pipeline/derive/changes.js` | 8 | 同上 |
+| `pipeline/budget.mjs` | 7 | `mark()` / `since()`；计时器集中到模块边界 |
+| `lib/official-api.js` | 5 | `nowISO()` |
+| `lib/vendor-monitor.js` | 4 | `nowISO()` |
+| 其余 12 个文件 | 24 | 同上 |
+
+唯一豁免：`pipeline/budget.mjs` 的预算计时器必须走真实墙钟——超时判断若被固定时钟抹平，「某层超预算」永远测不到。
+
+**4. 过程中修掉的一个真 bug**：截止时间不能用 `mark()` 算。`mark()` 在回放模式下恒为 0，`deadline - now()` 变负数，所有层被误判超时、news 直接不跑。改成 `now().getTime()` 之后 10 层恢复全 ok；耗时统计（`duration_ms`）仍用 `mark()`/`since()`，那里要保持输出确定。
+
+**5. 顺手修掉**：`generate-feed.js` 的 Atom 条目 id 用了 `Date.now()`，同一输入两次产出不同（违反 INV-7）。改成用事件自身的 `id`/`timestamp`。
+
+新增 `test/unit/layer-budget.test.js`（4 项）与 `test/contract/run-report.test.js`（9 项）。558 项测试 519 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+golden 全部重录：新增 `run-report.json`，且时钟改为注入后输出仍确定（两次运行 sha256 一致）。
 
 ### [ ] T3.4 时间口径
 

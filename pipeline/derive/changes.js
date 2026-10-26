@@ -5,6 +5,7 @@
  * 写入 data 分支的 changes/<date>.json
  */
 import { BASE_URL, HOST } from './config.js';
+import { nowISO } from '../../lib/clock.js';
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -78,7 +79,7 @@ export function compareSnapshots(prev, current) {
               input: { old: prev.input, new: curr.input },
               output: { old: prev.output, new: curr.output },
             },
-            timestamp: new Date().toISOString(),
+            timestamp: nowISO(),
           });
         }
 
@@ -91,7 +92,7 @@ export function compareSnapshots(prev, current) {
             changes: {
               free_quota: { old: prev.free, new: curr.free },
             },
-            timestamp: new Date().toISOString(),
+            timestamp: nowISO(),
           });
         }
       } else {
@@ -101,7 +102,7 @@ export function compareSnapshots(prev, current) {
           id: curr.id,
           name: curr.name,
           vendor: curr.vendor,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
         });
       }
     }
@@ -114,7 +115,7 @@ export function compareSnapshots(prev, current) {
           id,
           name: prev.name,
           vendor: prev.vendor,
-          timestamp: new Date().toISOString(),
+          timestamp: nowISO(),
         });
       }
     }
@@ -140,7 +141,7 @@ export function compareSnapshots(prev, current) {
                 oldScore: prevRow.score,
                 newScore: row.score,
                 diff: scoreDiff,
-                timestamp: new Date().toISOString(),
+                timestamp: nowISO(),
               });
             }
           }
@@ -170,7 +171,7 @@ export function saveChanges(events, date) {
     `${JSON.stringify(
       {
         date,
-        generated_at: new Date().toISOString(),
+        generated_at: nowISO(),
         events,
       },
       null,
@@ -185,7 +186,7 @@ export function saveChanges(events, date) {
  * Generate Atom feed XML
  */
 export function generateAtomFeed(events) {
-  const now = new Date().toISOString();
+  const stamp = nowISO();
 
   let entriesXml = '';
   for (const event of events.slice(0, 20)) {
@@ -242,9 +243,7 @@ function getEventSummary(event) {
 // CLI usage
 if (process.argv[1]?.endsWith('changes.js')) {
   const args = process.argv.slice(2);
-  const today =
-    args.find((a) => a.startsWith('--today='))?.split('=')[1] ||
-    new Date().toISOString().slice(0, 10);
+  const today = args.find((a) => a.startsWith('--today='))?.split('=')[1] || nowISO().slice(0, 10);
   const prevDate = args.find((a) => a.startsWith('--prev='))?.split('=')[1] || undefined;
 
   try {

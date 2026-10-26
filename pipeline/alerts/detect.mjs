@@ -5,6 +5,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
+import { now } from '../../lib/clock.js';
 import { join } from 'node:path';
 
 const ROOT = process.cwd();
@@ -17,7 +18,7 @@ export function parseStatusLine(line) {
     const obj = JSON.parse(line);
     return {
       ...obj,
-      timestamp: new Date(obj.timestamp || Date.now()),
+      timestamp: new Date(obj.timestamp || now().getTime()),
     };
   } catch (_e) {
     console.warn('[parse] Invalid JSON line:', line.slice(0, 50));

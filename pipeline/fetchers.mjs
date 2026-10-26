@@ -20,7 +20,7 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
-import { nowISO, todayISO, sleep } from '../lib/clock.js';
+import { now, nowISO, sleep, todayISO } from '../lib/clock.js';
 import { httpGet, httpText } from '../lib/http.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -31,7 +31,7 @@ const _ROOT = join(HERE, '..');
 export async function fetchFx(ctx) {
   const fxCtx = {
     http: { json: async () => ({}) },
-    now: () => new Date(),
+    now: () => now(),
     prev: ctx.prev ?? null,
   };
   let fx = null;
