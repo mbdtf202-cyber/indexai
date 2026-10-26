@@ -20,6 +20,7 @@ export const ENABLED = {
   R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
   R2a: true, // T1.4
   R2b: true, // T3.3：采集端时间与睡眠只在 lib/clock.js
+  R13: true, // T3.6：每层声明合并策略，且名字在实现表里
   R8: true, // T2.1（根目录部分）
   R5: true, // T2.2
   R10: true, // T2.5
@@ -435,6 +436,50 @@ function checkR8() {
 }
 
 /**
+ * R13：每层必须声明合并策略，且策略名有实现（T3.6 · S3.3）。
+ *
+ * 为什么值得一条规则：拆层最容易丢的就是合并语义——层还在、`merge` 还叫这个名字，
+ * 但里面只剩「本次有就用本次」。那是整层回退不是合并，部分采集直接把数量打塌（F38）。
+ * 声明了策略名，至少能在代码评审时看出「这一层到底打算怎么合」。
+ */
+function checkR13() {
+  const violations = [];
+  const ALLOWED = new Set(['catalog', 'sessions', 'archive', 'curated']);
+
+  let dirs = [];
+  try {
+    dirs = readdirSync(join(ROOT, 'pipeline', 'layers'), { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch {
+    return violations;
+  }
+
+  for (const id of dirs) {
+    const rel = join('pipeline', 'layers', id, 'index.js');
+    let text = '';
+    try {
+      text = readFileSync(join(ROOT, rel), 'utf8');
+    } catch {
+      continue;
+    }
+    const m = text.match(/mergeStrategy:\s*'([a-z]+)'/);
+    if (!m) {
+      violations.push({ file: rel, line: 1, message: `R13 违反：层 ${id} 没声明 mergeStrategy` });
+      continue;
+    }
+    if (!ALLOWED.has(m[1])) {
+      violations.push({
+        file: rel,
+        line: 1,
+        message: `R13 违反：层 ${id} 的策略 ${m[1]} 不在 ${[...ALLOWED].join('/')} 之内`,
+      });
+    }
+  }
+  return violations;
+}
+
+/**
  * R2b：采集端的「取当前时间」与「睡眠」只出现在 lib/clock.js（T3.3 · INV-7）。
  *
  * 理由：没有注入的时钟就没有确定性。同一个输入跑两次结果不同，
@@ -603,6 +648,11 @@ export const RULES = [
     id: 'R9',
     description: 'fixtures 各目录不超过体积上限',
     check: checkR9,
+  },
+  {
+    id: 'R13',
+    description: '每层声明合并策略',
+    check: checkR13,
   },
   {
     id: 'R2b',

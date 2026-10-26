@@ -17,10 +17,15 @@
  * 这样依赖是**声明式的**：看得见、能测、不会跨层串味。
  */
 
+import { mergeSessions } from '../../../lib/merge-strategies.js';
+
 export default {
   id: 'events',
   sources: ['devpost.com/api/hackathons', 'api.lu.ma', 'api.devfolio.co', 'AIOS_OPPORTUNITIES'],
   // 四源并发；Luma 有 geo 预算（6 分钟）与冷却，Devpost 最多翻 40 页
+  /** 合并策略（T3.6 · S3.3）：场次型（S3.3）：与上一版里未结束、lastSeen 不超 TTL 的场次取并集。 */
+  mergeStrategy: 'sessions',
+
   budget: { ms: 900_000, requests: 400 },
 
   /**
@@ -80,18 +85,21 @@ export default {
   },
 
   /**
-   * 合并：本次全空时沿用上一版。
+   * 合并：**场次型并集**（T3.6 · S3.3 · F38）。
    *
-   * 逐源沿用不在这里做——它已经在各源的实现里（Devpost 退避重试、Luma 冷却后
-   * 交部分结果、Devfolio 小源失败即空）。到这一层只剩「四个源同时归零」。
+   * 旧实现是「本次有就用本次」——Luma 只拿到一半时活动数直接腰斩，
+   * 读者看到的是「今天活动少了」，而不是「今天有个源没跑完」。这是 F38。
+   *
+   * 现在与上一版里**未结束**且 lastSeen 不超过 TTL（3 天）的场次取并集：
+   * - 已结束的场次不留（既不在时间轴上，也不该占搜索位置）；
+   * - 连着 3 天没再出现的场次视为下架，丢掉。
    *
    * @param {object[]|null} prev
    * @param {object[]} next
+   * @param {object} ctx 需要 today
    */
-  merge(prev, next) {
-    if (next?.length) return next;
-    if (prev?.length) return prev;
-    return [];
+  merge(prev, next, ctx) {
+    return mergeSessions(prev, next, { today: ctx.today(), ttlDays: 3 });
   },
 
   /** 门禁：一个活动都没有通常是全源失败；量级门槛由 health.mjs 的分源规则管。 */

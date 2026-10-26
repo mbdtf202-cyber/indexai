@@ -106,16 +106,30 @@ describe('events 层（T3.1c10）', () => {
     assert.equal(out.quarantined.length, 1);
   });
 
-  test('merge：本次有内容就用本次的', () => {
-    const out = layer.merge([{ id: 'old' }], [{ id: 'new' }]);
-    assert.equal(out[0].id, 'new');
+  /* 场次型合并（T3.6 · S3.3 · F38）：不再是「本次有就用本次」。
+   * 旧语义会让「Luma 掉一半」直接变成「活动数腰斩」。 */
+  const ctx = { today: () => '2026-10-24' };
+
+  test('merge：本次与上一版取并集，不是覆盖', () => {
+    const prev = [{ id: 'old', start: '2026-11-01', end: '2026-11-02' }];
+    const next = [{ id: 'new', start: '2026-11-03', end: '2026-11-04' }];
+    const out = layer.merge(prev, next, ctx);
+    assert.equal(out.length, 2, '两条都该在（并集）');
+    assert.ok(out.some((e) => e.id === 'new'));
+    assert.ok(out.some((e) => e.id === 'old'));
   });
 
-  test('merge：本次全空时沿用上一版并标 stale', () => {
-    const out = layer.merge([{ id: 'old' }], []);
+  test('merge：本次全空时沿用上一版（未结束且在 TTL 内）', () => {
+    const prev = [{ id: 'old', start: '2026-11-01', end: '2026-11-02', lastSeen: '2026-10-24' }];
+    const out = layer.merge(prev, [], ctx);
     assert.equal(out.length, 1);
     assert.equal(out[0].id, 'old');
-    assert.equal(out.stale, undefined, 'stale 标在层结论上，不是每条记录上');
+    assert.equal(out[0].stale, true, '沿用来的场次要标 stale');
+  });
+
+  test('merge：已结束的场次不再保留', () => {
+    const prev = [{ id: 'past', start: '2026-10-01', end: '2026-10-05', lastSeen: '2026-10-24' }];
+    assert.equal(layer.merge(prev, [], ctx).length, 0);
   });
 
   test('门禁：一个活动都没有告警（Devfolio 等源本身就小）', () => {

@@ -17,6 +17,9 @@ export default {
   id: 'resources',
   sources: ['api.github.com/repos'],
   // 90ms 节流 + 逐条请求：60 条名单约 6 秒。预算取宽松值，超了交部分结果。
+  /** 合并策略（T3.6 · S3.3）：人工型（S3.3）：直接读 curated/，校验到期日。 */
+  mergeStrategy: 'curated',
+
   budget: { ms: 90_000, requests: 200 },
 
   /**

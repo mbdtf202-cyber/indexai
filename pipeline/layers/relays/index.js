@@ -14,6 +14,9 @@ export default {
   id: 'relays',
   sources: ['*/api/pricing'],
   // 51 站 × 2 次尝试 × 9 秒超时，按 5 并发算约 3 分钟；预算给到 10 分钟留余量
+  /** 合并策略（T3.6 · S3.3）：目录型（S3.3）：本次没拿到的条目沿用上一版并记 lastOk，超过 TTL 才移除。 */
+  mergeStrategy: 'catalog',
+
   budget: { ms: 600_000, requests: 120 },
 
   /**

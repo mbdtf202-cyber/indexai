@@ -31,6 +31,9 @@ function toRow(x) {
 export default {
   id: 'news',
   sources: ['data.aibijia.org/news-frontline.yaml', 'aihot.news/api/v1/items'],
+  /** 合并策略（T3.6 · S3.3）：归档型（S3.3）：只增不删。 */
+  mergeStrategy: 'archive',
+
   budget: { ms: 300_000, requests: 250 },
 
   /**

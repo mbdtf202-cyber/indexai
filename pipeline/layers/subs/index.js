@@ -23,6 +23,9 @@ const SUB_NOTE = {
 export default {
   id: 'subs',
   sources: ['data.aibijia.org/apple_subscriptions.json', 'data.aibijia.org/products.json'],
+  /** 合并策略（T3.6 · S3.3）：目录型（S3.3）：本次没拿到的条目沿用上一版并记 lastOk，超过 TTL 才移除。 */
+  mergeStrategy: 'catalog',
+
   budget: { ms: 60_000, requests: 2 },
 
   /**

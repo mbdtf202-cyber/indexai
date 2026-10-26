@@ -13,6 +13,8 @@
  * 经 ctx 注入；层负责的是「两个源怎么合、谁该沿用谁不该」。
  */
 
+import { mergeCatalog } from '../../../lib/merge-strategies.js';
+
 /**
  * OpenRouter 的 id 前缀 → 可读厂商名。
  *
@@ -49,6 +51,9 @@ function prettyVendor(prefix) {
 export default {
   id: 'models',
   sources: ['openrouter.ai/api/v1/models', 'curated/official-prices.json'],
+  /** 合并策略（T3.6 · S3.3）：目录型（S3.3）：本次没拿到的条目沿用上一版并记 lastOk，超过 TTL 才移除。 */
+  mergeStrategy: 'catalog',
+
   budget: { ms: 120_000, requests: 6 },
 
   /**
@@ -162,21 +167,29 @@ export default {
    * @param {object[]|null} prev 上一版 models（只有 aggregator 行会被用上）
    * @param {object} next normalize 的产物
    */
-  merge(prev, next) {
+  merge(prev, next, ctx) {
     const rows = next?.rows || [];
-    const aggregator = rows.filter((m) => m.channelKind === 'aggregator');
-    if (aggregator.length) return next;
-
-    // 本次聚合目录为空：沿用上一版的 aggregator 行，人工价仍用本次的
-    const prevAgg = (prev || []).filter((m) => m.channelKind === 'aggregator');
-    if (!prevAgg.length) return next;
-
     const direct = rows.filter((m) => m.channelKind !== 'aggregator');
-    return {
-      ...next,
-      rows: [...prevAgg.map((m) => ({ ...m, stale: true })), ...direct],
-      stale: true,
-    };
+    const aggregator = rows.filter((m) => m.channelKind === 'aggregator');
+
+    /* 目录型（T3.6 · S3.3）：**逐条**合并，不是「全空才回退」。
+     *
+     * 旧实现只在聚合目录整个为空时沿用；只要源站给了 400 条（平时 480 条），
+     * 那 80 个模型就从比价表里消失，而且没人知道是「下架了」还是「这次没翻到」。
+     *
+     * 现在：本次出现的用本次，没出现的沿用上一版并标 stale，超过 TTL（3 天）
+     * 才真正移除。人工官方价（direct）永远用本次的——那是手写的，不该被沿用逻辑碰。 */
+    const prevAgg = (prev || []).filter((m) => m.channelKind === 'aggregator');
+    const merged = mergeCatalog(prevAgg, aggregator, {
+      keyOf: (m) => m.id,
+      ttlDays: 3,
+      today: ctx.today(),
+    });
+
+    const staleCount = merged.filter((m) => m.stale).length;
+    if (staleCount) ctx.log(`models 沿用上一版 ${staleCount} 个未出现的模型`);
+
+    return { ...next, rows: [...direct, ...merged] };
   },
 
   /** 门禁：一个模型都没有说明两个源都坏了。 */

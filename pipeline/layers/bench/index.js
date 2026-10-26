@@ -24,6 +24,9 @@ export default {
     'artificialanalysis.ai',
   ],
   // 12 个榜、其中 LMArena 要下 parquet：预算给得宽，但仍是有限值
+  /** 合并策略（T3.6 · S3.3）：目录型（S3.3）：本次没拿到的条目沿用上一版并记 lastOk，超过 TTL 才移除。 */
+  mergeStrategy: 'catalog',
+
   budget: { ms: 600_000, requests: 120 },
 
   /**

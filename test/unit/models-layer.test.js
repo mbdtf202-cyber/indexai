@@ -87,33 +87,62 @@ describe('models 层（T3.1c8）', () => {
     assert.ok(out.records.rows.some((r) => r.channelKind === 'direct'));
   });
 
-  test('聚合有值时直接用本次结果，不标 stale', () => {
+  /* 目录型（T3.6 · S3.3）：**逐条**合并，不是「全空才回退」。
+   * 旧语义下只要源站给了 400 条（平时 480），缺的 80 个模型就直接从比价表消失，
+   * 而且没人知道是「下架了」还是「这次没翻到」。 */
+  const mergeCtx = { today: () => '2026-10-24', log: () => {} };
+
+  test('聚合有值时用本次结果，并与旧版取并集', () => {
     const next = layer.normalize({ catalog: agg(3), curated: official }, ctx).records;
-    const out = layer.merge([{ channelKind: 'aggregator', id: 'old' }], next);
-    assert.equal(out.stale, undefined);
+    const out = layer.merge([], next, mergeCtx);
     assert.ok(out.rows.some((r) => r.id === 'm0'));
+    assert.equal(out.rows.filter((r) => r.stale).length, 0, '没有旧版就没有 stale');
   });
 
-  test('聚合为空时沿用旧聚合，但人工价仍用本次的', () => {
+  test('本次少了一部分：缺的沿用并标 stale，人工价仍用本次的', () => {
     const prev = [
-      { id: 'oldAgg', channelKind: 'aggregator', input: 9 },
+      { id: 'oldAgg', channelKind: 'aggregator', input: 9, lastOk: '2026-10-23' },
       { id: 'oldDirect', channelKind: 'direct', input: 99 },
     ];
-    const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
-    const out = layer.merge(prev, next);
+    const next = layer.normalize({ catalog: agg(3), curated: official }, ctx).records;
+    const out = layer.merge(prev, next, mergeCtx);
 
-    const aggRow = out.rows.find((r) => r.channelKind === 'aggregator');
-    assert.equal(aggRow.id, 'oldAgg', '聚合沿用旧值');
-    assert.equal(aggRow.stale, true);
+    const carried = out.rows.find((r) => r.id === 'oldAgg');
+    assert.ok(carried, '本次没出现的聚合模型应当沿用');
+    assert.equal(carried.stale, true, '沿用的要标 stale');
+    assert.equal(carried.input, 9, '沿用旧价');
 
     const directRow = out.rows.find((r) => r.id === 'sonnet');
     assert.ok(directRow, '人工价必须来自本次，不是上一版的 oldDirect');
     assert.equal(directRow.input, 2);
+    assert.equal(
+      out.rows.some((r) => r.id === 'oldDirect'),
+      false,
+      '人工价不参与沿用——那是手写的，不该被旧值顶替',
+    );
+  });
+
+  test('聚合全空时沿用旧聚合', () => {
+    const prev = [{ id: 'oldAgg', channelKind: 'aggregator', input: 9, lastOk: '2026-10-23' }];
+    const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
+    const out = layer.merge(prev, next, mergeCtx);
+    assert.equal(out.rows.filter((r) => r.channelKind === 'aggregator').length, 1);
+  });
+
+  test('超过 TTL 的旧聚合才移除', () => {
+    const prev = [{ id: 'ancient', channelKind: 'aggregator', input: 9, lastOk: '2026-09-01' }];
+    const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
+    const out = layer.merge(prev, next, mergeCtx);
+    assert.equal(
+      out.rows.some((r) => r.id === 'ancient'),
+      false,
+      '38 天没出现，应当移除',
+    );
   });
 
   test('没有上一版聚合时也不编造', () => {
     const next = layer.normalize({ catalog: { rows: [] }, curated: official }, ctx).records;
-    const out = layer.merge(null, next);
+    const out = layer.merge(null, next, mergeCtx);
     assert.equal(out.rows.filter((r) => r.channelKind === 'aggregator').length, 0);
   });
 
