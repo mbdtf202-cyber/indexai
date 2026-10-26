@@ -1402,13 +1402,56 @@ blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
 
 630 项测试 591 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：活动行新增 `lastSeen` 字段。
 
-### [ ] T3.7 分层门禁与分层发布
+### [x] T3.7 分层门禁与分层发布
 
 依据：F03 · S3.5、S4.1–S4.3 · 依赖：T3.6
 
 步骤：门禁按层产出结论；每层输出一个文件，输出目录里的 `manifest.json` 记录每层文件名、哈希、status、as_of、last_ok、计数、门禁结论（构建时进入 `dist/data/`，见 T3.9）。某层 red 时沿用上一版：在 data 分支建立之前，从线上 manifest 指向的文件取回。整站只在 manifest 本身或 schema 版本出错时失败。`ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`。页面读 manifest，只在用到该层的页面显示「沿用 N 天」。
 
 验收：用例「评测层 red」中其它层照常更新，manifest 里评测层为 `stale` 并指向上一版文件；只有评测页显示沿用标记。
+
+结果：
+
+**1. `pipeline/manifest.mjs`：门禁 + manifest + 回退**
+
+- `runLayerGate`：四类判据（S4.1）
+  - **下限** `floor`：只拦灾难性失败，数值保守
+  - **缩水** `shrink`：相对上一版（历史中位数要等 M4 的 7 次快照）
+  - **新鲜度** `freshness`：最新条目年龄，认 `startAt`/`checked_at`/`publishedAt`/`d`/`seen`
+  - **语义规则** `rules`：层自带，抛错降级为 warn 而不是炸门禁
+- 结论三态：`ok` / `warn` / `red`。**red 覆盖 warn**，不会因为后面的 warn 降级
+- `gateAndFallback`：red 时把上一版的行放回 `data[layer.id]`——这是「某层 red 时其它层照常更新」的唯一实现点
+- `rowsOf`：层契约三种形状（数组 / `{rows}` / `{subs}`）的**唯一出口**，分散判断必然漏一种
+
+**2. 每层一个文件 + manifest**
+
+`layer-<id>.json` + `manifest.json`，条目含 `file` / `served_file` / `hash` / `status` / `as_of` / `last_ok` / `count` / `gate` / `stale_days`。
+
+- `hash` 是内容的 SHA-256，S3.5 部署后核对线上 manifest 用
+- `served_file` 在 red 时指向上一版——页面据此显示「沿用 N 天」
+- `stale_days` 由 `last_ok` 与 `as_of` 算出
+
+**3. 整站只在两件事上失败**（S3.5）：manifest 写不出来、`schema_version` 不符。单层 red 不会让 manifest 失效（有用例守着）。
+
+**4. 一上线抓到三处门禁误判**
+
+门禁规则收的是**行数组**，但 `models` / `subs` / `offers` / `adoption` 的规则读的是 `{rows}` / `{subs}` / `{apps}` 包装对象——于是 473 个模型被判「目录为空」，37 条额度被判 red。全部改成两种形状都认。
+
+这类 bug 只有在门禁真跑起来时才会暴露，之前 `health` 从来没有被调用过。
+
+**5. 构建接入**：`manifest.json` 进 `DATA_FILES`，构建时落到 `dist/`；`make-fixture-data` 同步生成一份，让 e2e 有真实的 manifest 可读。
+
+**6. 验收**
+
+- 「评测层 red」：bench 标 `red` 且 `served_file` 指向上一版、`stale_days=5`；events / models 仍 `ok`、用本次文件、`stale_days=0`；`summary.stale=1, ok=2`
+- 「整站不因单层 red 失败」：`validateManifest` 仍返回 ok
+- 门禁分级：下限 / 缩水 → red；新鲜度 / 语义 warn → warn；规则抛错 → warn 不炸
+
+新增 `test/unit/manifest.test.js`（23 项）。编排器因新增门禁超 R3，把门禁与 `resolveOutDir` 拆进 `manifest.mjs` / `persist.mjs`，回到 394 行。
+
+653 项测试 614 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：`meta.collected[].warn`（门禁告警记录）。
+
+**未做（按规格留待 T3.9）**：`ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`；页面读 manifest 显示「沿用 N 天」——两者都属于单一构建与发布（T3.9）与 M5 的页面拆分。
 
 ### [ ] T3.8 人工数据结构化
 

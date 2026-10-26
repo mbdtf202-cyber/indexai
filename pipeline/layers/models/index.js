@@ -200,8 +200,11 @@ export default {
     rules: [
       {
         id: 'models-not-empty',
+        /* 门禁收到的是「行数组」（pipeline/manifest.mjs 统一传入），
+         * 不是 normalize 的 {rows} 包装——两种形状都认，否则会误判整层为空。 */
         check: (v) => {
-          if (!v?.rows?.length) return { level: 'red', message: '模型目录为空' };
+          const n = Array.isArray(v) ? v.length : (v?.rows?.length ?? 0);
+          if (!n) return { level: 'red', message: '模型目录为空' };
           return { level: 'ok' };
         },
       },

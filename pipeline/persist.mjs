@@ -10,7 +10,11 @@
  */
 
 import { writeFile, mkdir, rename, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { buildManifest, manifestEntry, VERDICT } from './manifest.mjs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
  * 原子写入（T3.6 · S3.4 · F38）。
@@ -34,6 +38,19 @@ export async function writeFileAtomic(target, content) {
     await rm(tmp, { force: true });
     throw e;
   }
+}
+
+/**
+ * 输出目录（T3.3）：显式 INDEXAI_OUT_DIR 优先；测试档位写 fixtures/data；否则 .data。
+ *
+ * 放在落盘模块里而不是编排器：这是「写到哪里」的知识，与「怎么算」无关。
+ */
+export function resolveOutDir() {
+  const explicit = process.env.INDEXAI_OUT_DIR;
+  if (explicit) return String(explicit).replace(/\/+$/, '');
+  const test = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
+  if (test) return join(ROOT, 'fixtures', 'data');
+  return join(ROOT, '.data');
 }
 
 /** 门禁判定结果（T3.6 · S3.4）。 */
@@ -165,6 +182,43 @@ export async function persist(outDir, data, opt = {}) {
   };
 
   await writeFileAtomic(join(outDir, 'data.json'), JSON.stringify(data));
+
+  /* 每层一个文件 + manifest（T3.7 · S3.5）。
+   *
+   * 分层发布的意义：某层 red 时，其它层的文件照常更新，只有它指向上一版。
+   * 构建期从 manifest 找每层的真实文件，页面按层显示「沿用 N 天」。
+   * 整站只在 manifest 写不出来或 schema 版本不符时失败（S3.5）。 */
+  const layerFiles = [];
+  const layerGate = report?.gate || {};
+
+  for (const [id, rows] of Object.entries(data)) {
+    if (id === 'meta' || id === 'sources' || id === 'signals') continue;
+    if (!Array.isArray(rows) && !(rows && Array.isArray(rows.rows))) continue;
+
+    const list = Array.isArray(rows) ? rows : rows.rows;
+    const fileName = `layer-${id}.json`;
+    const content = JSON.stringify(list);
+    await writeFileAtomic(join(outDir, fileName), content);
+
+    const verdict = layerGate[id]?.verdict || VERDICT.OK;
+    layerFiles.push(
+      manifestEntry({
+        layer: id,
+        file: fileName,
+        content,
+        verdict,
+        reasons: layerGate[id]?.reasons || [],
+        asOf: data.meta?.date || '',
+        lastOk: data.meta?.date || null,
+        count: list.length,
+        // red 时编排器已经把上一版的行放回 data[id]，文件就是那一版
+        servedFile: verdict === VERDICT.RED ? fileName : null,
+      }),
+    );
+  }
+
+  const manifest = buildManifest({ layers: layerFiles, generatedAt: data.meta?.date || '' });
+  await writeFileAtomic(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 
   return { wrote: true, gate: gate.verdict, reason: gate.reason };
 }

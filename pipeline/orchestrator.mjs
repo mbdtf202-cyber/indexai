@@ -40,7 +40,8 @@ import { runLayer } from './budget.mjs';
 import { buildSources } from './sources-registry.mjs';
 import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
 import { SCHEMAS } from './schemas/index.mjs';
-import { persist } from './persist.mjs';
+import { gateAndFallback, VERDICT } from './manifest.mjs';
+import { persist, resolveOutDir } from './persist.mjs';
 
 import fxLayer from './layers/fx/index.js';
 import adoptionLayer from './layers/adoption/index.js';
@@ -59,13 +60,6 @@ const ROOT = join(HERE, '..');
 export const TEST_PROFILE = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
 
 /** 输出目录：INDEXAI_OUT_DIR > 测试档位的 fixtures/data > 仓库 .data（生成物，不进仓库）。 */
-function resolveOutDir() {
-  const explicit = process.env.INDEXAI_OUT_DIR;
-  if (explicit) return String(explicit).replace(/\/+$/, '');
-  if (TEST_PROFILE) return join(ROOT, 'fixtures', 'data');
-  return join(ROOT, '.data');
-}
-
 const readJson = async (path) => {
   try {
     return JSON.parse(await readFile(path, 'utf8'));
@@ -160,14 +154,15 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
 
   /* 每层的隔离明细（T3.5）：进 run-report，页面不读。 */
   const quarantineReport = {};
+  /* 分层门禁结论（T3.7）：进 manifest 与 report。 */
+  const gateReport = {};
 
   for (const layer of LAYERS) {
     const prevRows = prev[layer.id];
     const { value, rec } = await runLayer(layer, ctx, prevRows, runDeadline);
 
-    /* 逐行校验（T3.5 · S3.2）。位置很关键：必须在 merge 之后、写盘之前——
-     * 这样沿用的上一版数据也会被过一遍，坏行不会借「沿用」溜进发布。
-     * 坏行进 quarantined，只有隔离比例超过阈值才让这一层响（F03 的正解）。 */
+    /* 逐行校验（T3.5）：必须在 merge 之后、写盘之前——沿用的旧数据也过一遍，
+     * 坏行不会借「沿用」溜进发布。 */
     const spec = SCHEMAS[layer.id];
     const rowsForCheck = Array.isArray(value)
       ? value
@@ -215,7 +210,20 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
     } else {
       out[layer.id] = value;
     }
-    /* 层的去重账目（models / offers 提供）：页面底部与运行说明读 meta.dedupe。 */
+    /* 分层门禁（T3.7 · S4.1）：隔离管"行"，门禁管"层"。red 时
+     * gateAndFallback 把上一版的行放回 out[layer.id]。 */
+    const g = gateAndFallback({ layer, data: out, prev, asOf: nowISO() });
+    gateReport[layer.id] = { verdict: g.verdict, reasons: g.reasons };
+
+    if (g.servedPrev) {
+      rec.status = 'stale';
+      rec.reason = g.reasons.join('；');
+      ctx.log(`${layer.id} 门禁 red，沿用上一版：${rec.reason}`, { level: 'warn' });
+    } else if (g.verdict === VERDICT.WARN) {
+      rec.warn = g.reasons.join('；');
+      ctx.log(`${layer.id} 门禁 warn：${rec.warn}`, { level: 'warn' });
+    }
+    /* 层的去重账目：页面底部读 meta.dedupe。 */
     if (value && !Array.isArray(value)) {
       if (Number.isFinite(value.dropped)) dedupe.aggregator_dropped += value.dropped;
       if (Number.isFinite(value.merged)) dedupe.offers_merged += value.merged;
@@ -354,6 +362,8 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
     net: http.httpTotals(),
     /* 隔离明细（T3.5）：哪层隔离了多少行、为什么。页面不读，排障用。 */
     quarantine: quarantineReport,
+    /* 每层的门禁结论（T3.7 · S4.1）。 */
+    gate: gateReport,
   };
 
   console.log('[collect] 完成');

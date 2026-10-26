@@ -32,7 +32,10 @@ const SHARED_MODULES = ['lib/url.js', 'lib/cost.js', 'lib/effective-cost.js'];
 const ASSET_DIRS = ['assets'];
 
 /** 数据文件名：从 --data 指定的目录复制。 */
-const DATA_FILES = ['data.json', 'bench.json', 'news-milestones.json']; // news-archive.json removed (T4.1)
+// news-archive.json 按需拉取，不进构建产物（T4.1）
+// manifest.json 记录每层的文件名 / 哈希 / 门禁结论（T3.7 · S3.5）：
+// 页面据此判断「这一层是不是沿用了上一版」，从而只在相关页显示「沿用 N 天」
+const DATA_FILES = ['data.json', 'bench.json', 'news-milestones.json', 'manifest.json'];
 
 /** 解析 `--data <目录>`，默认 fixtures/data。 */
 function parseDataDir(argv) {

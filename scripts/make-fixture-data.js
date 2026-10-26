@@ -11,6 +11,7 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -254,6 +255,34 @@ mkdirSync(OUT, { recursive: true });
 writeFileSync(join(OUT, 'data.json'), `${JSON.stringify(outData)}\n`);
 writeFileSync(join(OUT, 'bench.json'), `${JSON.stringify(benchSmall)}\n`);
 writeFileSync(join(OUT, 'news-archive.json'), `${JSON.stringify(newsSmall)}\n`);
+
+/* manifest（T3.7）：构建期要把它放进 dist/data/，页面据此判断哪层沿用了上一版。
+ * fixture 里的层清单与真实产出一致，只是行数被裁小。 */
+{
+  const layerIds = ['models', 'events', 'news', 'bench', 'relays', 'subs', 'offers', 'resources'];
+  const layers = layerIds
+    .filter((id) => outData[id] !== undefined)
+    .map((id) => {
+      const rows = Array.isArray(outData[id]) ? outData[id] : (outData[id]?.rows ?? []);
+      const content = JSON.stringify(rows);
+      return {
+        layer: id,
+        file: `layer-${id}.json`,
+        served_file: `layer-${id}.json`,
+        hash: createHash('sha256').update(content, 'utf8').digest('hex'),
+        status: 'ok',
+        as_of: outData.meta?.date ?? '',
+        last_ok: outData.meta?.date ?? '',
+        count: rows.length,
+        gate: { verdict: 'ok', reasons: [] },
+        stale_days: 0,
+      };
+    });
+  writeFileSync(
+    join(OUT, 'manifest.json'),
+    `${JSON.stringify({ schema_version: 'manifest/v1', generated_at: outData.meta?.date ?? '', layers, summary: { total: layers.length, ok: layers.length, warn: 0, stale: 0 } }, null, 2)}\n`,
+  );
+}
 if (milestones) {
   writeFileSync(join(OUT, 'news-milestones.json'), `${JSON.stringify(milestones)}\n`);
 }

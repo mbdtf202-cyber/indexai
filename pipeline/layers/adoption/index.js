@@ -104,8 +104,11 @@ export default {
     rules: [
       {
         id: 'adoption-empty',
+        /* 门禁收到的是行数组；此层的 normalize 产物是 {apps}（对象而非数组）。
+         * 两种形状都认，否则会误判整层为空。 */
         check: (v) => {
-          if (!v?.apps?.length) return { level: 'warn', message: '没有应用到任何调用量数据' };
+          const n = Array.isArray(v) ? v.length : (v?.apps?.length ?? 0);
+          if (!n) return { level: 'warn', message: '没有应用到任何调用量数据' };
           return { level: 'ok' };
         },
       },

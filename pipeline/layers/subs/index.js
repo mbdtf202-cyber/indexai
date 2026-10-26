@@ -99,8 +99,11 @@ export default {
     rules: [
       {
         id: 'subs-not-empty',
+        /* 门禁收到的是行数组（pipeline/manifest.mjs 统一传入）；
+         * normalize 的产物是 {subs, subsThird, subsRegions}。两种形状都认。 */
         check: (v) => {
-          if (!v?.subs?.length) return { level: 'warn', message: '没有任何官方档位' };
+          const n = Array.isArray(v) ? v.length : (v?.subs?.length ?? 0);
+          if (!n) return { level: 'warn', message: '没有任何官方档位' };
           return { level: 'ok' };
         },
       },

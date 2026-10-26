@@ -84,8 +84,10 @@ export default {
     rules: [
       {
         id: 'offers-not-empty',
+        /* 门禁收到的是行数组；normalize 的产物是 {rows}。两种形状都认。 */
         check: (v) => {
-          if (!v?.rows?.length) return { level: 'red', message: '免费额度为空' };
+          const n = Array.isArray(v) ? v.length : (v?.rows?.length ?? 0);
+          if (!n) return { level: 'red', message: '免费额度为空' };
           return { level: 'ok' };
         },
       },
