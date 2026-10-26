@@ -2,7 +2,7 @@
  * Subscription Pricing View (T5.1 Round 5) - Fixed
  */
 
-import { money, pct, kfmt } from './format.js';
+import { money, kfmt } from './format.js';
 
 export function renderSubs(data) {
   const { products = [], selectedVendor = null } = data || {};

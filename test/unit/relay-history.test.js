@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('relay history library', () => {
   test('history library exists and exports correctly', async () => {
-    const libPath = 'lib/relay-history.mjs';
+    const libPath = 'lib/relay-history.js';
 
     assert.ok(fs.existsSync(libPath), `History library should exist at ${libPath}`);
 
-    const historyModule = await import('../lib/relay-history.mjs');
+    const historyModule = await import('../../lib/relay-history.js');
 
     // Check required functions
     assert.equal(
@@ -38,7 +38,7 @@ describe('relay history library', () => {
   });
 
   test('availability rate calculation works correctly', async () => {
-    const { calculateAvailabilityRate } = await import('../lib/relay-history.mjs');
+    const { calculateAvailabilityRate } = await import('../../lib/relay-history.js');
 
     // Test with mock data
     const mockData = [
@@ -57,7 +57,7 @@ describe('relay history library', () => {
   });
 
   test('price template classification works', async () => {
-    const { classifyPriceTemplate } = await import('../lib/relay-history.mjs');
+    const { classifyPriceTemplate } = await import('../../lib/relay-history.js');
 
     // Budget tier
     const budget = classifyPriceTemplate(0.05, 0.1);
@@ -87,7 +87,7 @@ describe('relay history view module', () => {
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderRelayHistory } = await import('../site/views/relays-history.mjs');
+    const { renderRelayHistory } = await import('../../site/views/relays-history.mjs');
 
     // Test with no relays
     let html = renderRelayHistory({ relays: [] });

@@ -4,7 +4,7 @@
  * Individual vendor page showing model offerings and pricing
  */
 
-import { money } from '../styles/tokens.mjs';
+import { money } from './format.js';
 import { renderThemeToggle } from '../components/theme-toggle.mjs';
 
 export function renderVendorDetail(data = {}) {
@@ -141,7 +141,7 @@ function renderPriceHistory(history) {
 }
 
 // Utility functions
-function formatDate(dateStr) {
+function _formatDate(dateStr) {
   if (!dateStr) return 'Unknown';
   return new Date(dateStr).toLocaleDateString('en-US', {
     year: 'numeric',

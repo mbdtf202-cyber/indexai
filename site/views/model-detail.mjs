@@ -4,7 +4,7 @@
  * Individual model page showing detailed pricing, benchmarks, history
  */
 
-import { money, pct } from '../styles/tokens.mjs';
+import { money, pct } from './format.js';
 import { renderThemeToggle } from '../components/theme-toggle.mjs';
 
 export function renderModelDetail(data = {}) {

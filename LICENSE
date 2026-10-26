@@ -19,3 +19,17 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## 数据与内容许可（D7）
+
+本仓库**不是整仓 MIT**。代码与数据的许可分开：
+
+- **代码**（`pipeline/`、`site/`、`lib/`、`scripts/`、`test/` 等）：MIT，即上文全文。
+- **本站整理的数据**（`curated/` 下的模型价、活动、优惠与工具名单，以及由它们派生的
+  `data.json`、`bench.json`、`news-archive.json`）：**CC BY 4.0**
+  （Creative Commons Attribution 4.0 International，https://creativecommons.org/licenses/by/4.0/）。
+  可以自由使用、修改、商用，只需注明来源 IndexAI 并链接回本站。
+- **上游数据**（评测榜、模型目录、活动与情报的原始内容）：版权归各上游，
+  按各自的许可与署名要求使用。逐条署名清单见数据页与各层的 `sources` 字段。

@@ -5,7 +5,7 @@
  * Zero global state dependencies - accepts data object as input, returns HTML string
  */
 
-import { money, kfmt, truncate } from './format.js';
+import { money, truncate } from './format.js';
 
 /**
  * Render relays page HTML
@@ -64,7 +64,7 @@ function renderFilterControls(currentFilter) {
   `;
 }
 
-function renderSortControls(currentSortBy, currentSortOrder) {
+function renderSortControls(_currentSortBy, _currentSortOrder) {
   return `
     <div class="sort-controls">
       <span>Sort by:</span>
@@ -199,7 +199,7 @@ function formatMarkup(markupPercent) {
   return `${sign}${markupPercent.toFixed(1)}%`;
 }
 
-function getStatusBadge(status, lastUpdate) {
+function getStatusBadge(status, _lastUpdate) {
   if (!status) return '<span class="badge unknown">Unknown</span>';
 
   const badges = {

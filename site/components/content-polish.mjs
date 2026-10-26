@@ -49,13 +49,13 @@ export const contentChecklist = {
 // Copy editing utilities
 export function improveHeadline(headline) {
   if (!headline || headline.length < 20) return headline;
-  if (headline.length > 60) return headline.slice(0, 60) + '...';
+  if (headline.length > 60) return `${headline.slice(0, 60)}...`;
   return headline.charAt(0).toUpperCase() + headline.slice(1);
 }
 
 export function improveSubtitle(subtitle) {
   if (!subtitle) return '';
-  if (subtitle.length > 150) return subtitle.slice(0, 150) + '...';
+  if (subtitle.length > 150) return `${subtitle.slice(0, 150)}...`;
   return subtitle.charAt(0).toUpperCase() + subtitle.slice(1);
 }
 
@@ -64,7 +64,7 @@ export function getPolifiedCTA(index = 0) {
 }
 
 // Accessibility checker stub
-export function checkAccessibility(pageHtml) {
+export function checkAccessibility(_pageHtml) {
   return {
     passed: true,
     issues: [],

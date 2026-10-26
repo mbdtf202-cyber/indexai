@@ -21,7 +21,7 @@ describe('changes view module', () => {
   });
 
   test('rendering handles empty data gracefully', async () => {
-    const { renderChanges } = await import('../site/views/changes.mjs');
+    const { renderChanges } = await import('../../site/views/changes.mjs');
 
     // Test with no changes
     let html = renderChanges();

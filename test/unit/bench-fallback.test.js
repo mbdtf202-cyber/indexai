@@ -168,7 +168,7 @@ describe('上一版快照要从 bench.json 读（F02 的根因）', () => {
   });
 
   test('readPrevBench 从 bench.json 读完整快照', async () => {
-    const { readPrevBench } = await import('../../collect.mjs');
+    const { readPrevBench } = await import('../../pipeline/orchestrator.mjs');
     const bench = JSON.parse(readFileSync(join(ROOT, 'fixtures', 'data', 'bench.json'), 'utf8'));
     assert.ok(bench.boards, 'fixture 的 bench.json 必须带 boards');
 
@@ -178,7 +178,7 @@ describe('上一版快照要从 bench.json 读（F02 的根因）', () => {
   });
 
   test('默认路径读不到时返回 null，不抛错', async () => {
-    const { readPrevBench } = await import('../../collect.mjs');
+    const { readPrevBench } = await import('../../pipeline/orchestrator.mjs');
     const dir = mkdtempSync(join(tmpdir(), 'indexai-prevbench-'));
     try {
       assert.equal(readPrevBench(join(dir, 'bench.json')), null, '文件不存在');

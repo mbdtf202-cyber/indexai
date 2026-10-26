@@ -8,7 +8,8 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { band, familyKey, dedupeModels } from '../../collect.mjs';
+import { band, familyKey } from '../../lib/model-keys.js';
+import { dedupeModels } from '../../pipeline/processors.mjs';
 
 const ctx = {
   band,

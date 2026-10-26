@@ -21,6 +21,8 @@ playwright-report/
 # 每天重建一次，提交只会让仓库膨胀。需要它们时跑一次采集即可。
 data.json
 bench.json
+# 归档只增不删，属于要提交的资产：它是「攒出来就补不回来」的东西
+!news-archive.json
 
 # T4.1: Data branch staging (T4.1)
 .data/

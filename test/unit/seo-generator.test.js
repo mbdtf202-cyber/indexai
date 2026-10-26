@@ -4,7 +4,6 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 
 describe('SEO generation system', () => {
   test('sitemap generator exists and is functional', async () => {

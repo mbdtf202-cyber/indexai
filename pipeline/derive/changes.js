@@ -4,6 +4,7 @@
  * 比较今天快照与上一版快照，产出 S5.2 表中全部事件类型
  * 写入 data 分支的 changes/<date>.json
  */
+import { BASE_URL, HOST } from './config.js';
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -121,7 +122,7 @@ export function compareSnapshots(prev, current) {
 
   // Benchmark changes
   if (current.bench?.boards && prev.bench?.boards) {
-    const currMap = new Map(current.bench.boards.map((b) => [b.id, b]));
+    const _currMap = new Map(current.bench.boards.map((b) => [b.id, b]));
     const prevMap = new Map(prev.bench.boards.map((b) => [b.id, b]));
 
     for (const board of current.bench.boards) {
@@ -166,7 +167,7 @@ export function saveChanges(events, date) {
 
   writeFileSync(
     outputPath,
-    JSON.stringify(
+    `${JSON.stringify(
       {
         date,
         generated_at: new Date().toISOString(),
@@ -174,7 +175,7 @@ export function saveChanges(events, date) {
       },
       null,
       2,
-    ) + '\n',
+    )}\n`,
   );
 
   console.log(`[changes] Saved ${events.length} events to ${outputPath}`);
@@ -202,10 +203,10 @@ export function generateAtomFeed(events) {
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>IndexAI Changes Feed</title>
   <subtitle>Latest changes in model pricing, quotas, benchmarks</subtitle>
-  <link href="https://indexai.pages.dev/feeds/changes.xml" rel="self" />
-  <link href="https://indexai.pages.dev/" />
+  <link href="${BASE_URL}/feeds/changes.xml" rel="self" />
+  <link href="${BASE_URL}/" />
   <updated>${now}</updated>
-  <id>tag:indexai.pages.dev,2026:/feeds/changes.xml</id>
+  <id>tag:${HOST},2026:/feeds/changes.xml</id>
 ${entriesXml}</feed>`;
 }
 

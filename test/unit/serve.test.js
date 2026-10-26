@@ -41,7 +41,7 @@ describe('本地预览服务器的边界检查（F50）', () => {
 
   test('正常路径映射到 dist 下', () => {
     const got = serve.resolvePath('/index.html');
-    assert.ok(got && got.startsWith(serve.ROOT), String(got));
+    assert.ok(got?.startsWith(serve.ROOT), String(got));
     assert.ok(got.endsWith('index.html'));
   });
 

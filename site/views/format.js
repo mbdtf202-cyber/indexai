@@ -6,7 +6,7 @@
 
 /** Format price with currency symbol and proper precision */
 export function money(value, currency = '$') {
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
 
@@ -22,7 +22,7 @@ export function money(value, currency = '$') {
 
 /** Format percentage with % symbol */
 export function pct(value) {
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
   return `${(value * 100).toFixed(1)}%`;
@@ -30,7 +30,7 @@ export function pct(value) {
 
 /** Format large numbers with K/M/B suffixes */
 export function kfmt(value) {
-  if (value === null || value === undefined || isNaN(value)) {
+  if (value === null || value === undefined || Number.isNaN(value)) {
     return '—';
   }
 
@@ -56,7 +56,7 @@ export function ctx(ctxMs) {
 /** Truncate text with ellipsis */
 export function truncate(text, maxLength = 60) {
   if (!text || text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + '...';
+  return `${text.slice(0, maxLength - 3)}...`;
 }
 
 /** Format date for display */

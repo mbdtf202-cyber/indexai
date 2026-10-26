@@ -29,6 +29,34 @@ describe('design tokens and CSS', () => {
     assert.ok(content.includes('toggleTheme'), 'Should have toggleTheme function');
   });
 
+  test('format helpers exist in views (separated from tokens per modular architecture)', () => {
+    const formatPath = 'site/views/format.js';
+
+    if (!fs.existsSync(formatPath)) {
+      throw new Error(`Format helpers should exist at ${formatPath}`);
+    }
+
+    const content = fs.readFileSync(formatPath, 'utf8');
+
+    // Check for formatting utilities (not in tokens - that's a separate concern)
+    assert.ok(
+      content.includes('kfmt') || content.includes('export.*kfmt'),
+      'Should have kfmt formatter',
+    );
+    assert.ok(
+      content.includes('money') || content.includes('export.*money'),
+      'Should have money formatter',
+    );
+    assert.ok(
+      content.includes('truncate') || content.includes('export.*truncate'),
+      'Should have truncate utility',
+    );
+    assert.ok(
+      content.includes('formatDate') || content.includes('export.*formatDate'),
+      'Should have formatDate utility',
+    );
+  });
+
   test('main CSS file exists with both themes', () => {
     const cssPath = 'site/styles/main.css';
 

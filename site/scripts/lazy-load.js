@@ -5,9 +5,7 @@
  * Zero global state - uses module pattern with closure scope
  */
 
-(function () {
-  'use strict';
-
+(() => {
   let intersectionObserver = null;
   let isInitialized = false;
 
@@ -102,7 +100,7 @@
       'method',
     ];
     routes.forEach((route) => {
-      loadScriptForRoute('/' + route);
+      loadScriptForRoute(`/${route}`);
     });
   }
 

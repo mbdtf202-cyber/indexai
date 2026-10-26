@@ -19,7 +19,7 @@ import assert from 'node:assert/strict';
 import { addFault, clearFaults } from '../support/http-replay.js';
 import { resetSleepCounter, peekRequestedSleepMs } from '../../lib/clock.js';
 
-/** 单主机冷却总上限（与 collect.mjs 的常量对齐，改动必须两边同时改）。 */
+/** 单主机冷却总上限（与 pipeline/sources/luma.mjs 的常量对齐，改动必须两边同时改）。 */
 const COOLDOWN_CAP_MS = 6 * 60 * 1000;
 /** geo 总预算（同样是常量镜像）。 */
 const GEO_BUDGET_MS = 8 * 60 * 1000;
@@ -29,9 +29,9 @@ describe('Luma 冷却上界（F04）', () => {
 
   before(async () => {
     // 回放由运行器的 --import 建立（npm test 已带 INDEXAI_HTTP=replay）。
-    // 这里不要自己改 process.env 再 import：动态 import 会把 collect.mjs 拉成
+    // 这里不要自己改 process.env 再 import：动态 import 会把 luma.mjs 拉成
     // 第二份实例，限速状态与 sleep 记账都不在同一个模块上。
-    luma = await import('../../collect.mjs');
+    luma = await import('../../pipeline/sources/luma.mjs');
   });
 
   after(() => {

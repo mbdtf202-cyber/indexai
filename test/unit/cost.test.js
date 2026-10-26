@@ -14,11 +14,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-describe('lib/cost.js（F36）', () => {
+describe('lib/effective-cost.js（F36）', () => {
   let cost;
 
   test('加载', async () => {
-    cost = await import('../../lib/cost.js');
+    cost = await import('../../lib/effective-cost.js');
     assert.equal(typeof cost.effectiveCost, 'function');
     assert.equal(typeof cost.PROFILES, 'object');
     assert.equal(typeof cost.FORMULA, 'string');

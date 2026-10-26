@@ -17,11 +17,11 @@ describe('vendor detail view module', () => {
       content.includes('export function renderVendorDetail'),
       'Should export renderVendorDetail function',
     );
-    assert.ok(content.includes('models-grid'), 'Should generate models grid');
+    assert.ok(content.includes('model-grid'), 'Should generate model grid');
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderVendorDetail } = await import('../site/views/vendor-detail.mjs');
+    const { renderVendorDetail } = await import('../../site/views/vendor-detail.mjs');
 
     // Test with no data
     let html = renderVendorDetail();

@@ -5,9 +5,7 @@
  * Zero global state - uses module pattern
  */
 
-(function () {
-  'use strict';
-
+(() => {
   let appInitialized = false;
 
   /**
@@ -68,7 +66,7 @@
 
       // Import and render view based on route
       const viewComponent = getViewById(route);
-      if (viewComponent && viewComponent.render) {
+      if (viewComponent?.render) {
         const mockData = generateMockDataForRoute(route);
         const html = viewComponent.render(mockData);
 

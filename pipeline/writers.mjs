@@ -12,10 +12,9 @@
 import { writeFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..');
+const _ROOT = join(HERE, '..');
 
 // 输出路径定义
 const OUT_URL = new URL('./fixtures/data/data.json', import.meta.url);

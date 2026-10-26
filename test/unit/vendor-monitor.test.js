@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('vendor monitoring library', () => {
   test('monitoring library exists and exports correctly', async () => {
-    const libPath = 'lib/vendor-monitor.mjs';
+    const libPath = 'lib/vendor-monitor.js';
 
     assert.ok(fs.existsSync(libPath), `Monitoring library should exist at ${libPath}`);
 
-    const monitorModule = await import('../lib/vendor-monitor.mjs');
+    const monitorModule = await import('../../lib/vendor-monitor.js');
 
     // Check required functions
     assert.equal(
@@ -34,7 +34,7 @@ describe('vendor monitoring library', () => {
   });
 
   test('snapshot comparison detects changes correctly', async () => {
-    const { compareSnapshots } = await import('../lib/vendor-monitor.mjs');
+    const { compareSnapshots } = await import('../../lib/vendor-monitor.js');
 
     const oldSnapshot = {
       vendor_id: 'test',
@@ -57,7 +57,7 @@ describe('vendor monitoring library', () => {
   });
 
   test('health score calculation works correctly', async () => {
-    const { calculateHealthScore } = await import('../lib/vendor-monitor.mjs');
+    const { calculateHealthScore } = await import('../../lib/vendor-monitor.js');
 
     const results = [
       { vendor: 'openai', status: 'success' },
@@ -87,7 +87,7 @@ describe('vendor monitoring view module', () => {
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderMonitor } = await import('../site/views/vendor-monitor.mjs');
+    const { renderMonitor } = await import('../../site/views/vendor-monitor.mjs');
 
     // Test with no data
     let html = renderMonitor();

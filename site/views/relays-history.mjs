@@ -4,13 +4,12 @@
  * Track relay history, availability rates, and price template grouping
  */
 
-import { kfmt } from '../styles/tokens.mjs';
+import { kfmt } from './format.js';
 import {
   groupByPriceTemplate,
-  calculateAvailabilityRate,
   getRelayHistoryTimeline,
   generateRelayReport,
-} from '../../lib/relay-history.mjs';
+} from '../../lib/relay-history.js';
 
 export function renderRelayHistory(data = {}) {
   const { relays = [], historicalDataMap = {}, showHistoryDetails = false } = data;

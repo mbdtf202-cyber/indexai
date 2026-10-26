@@ -9,13 +9,11 @@
  * 与其他模块解耦，只提供门禁相关函数。
  */
 
-import { existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..');
+const _ROOT = join(HERE, '..');
 
 /* ==================== LUMA 状态管理 ==================== */
 

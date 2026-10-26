@@ -12,7 +12,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-const now = () => '2026-10-24';
+const _now = () => '2026-10-24';
 
 /** 一个最小的状态对象，形状与 collect.mjs 的 lumaState 一致。 */
 function freshState() {

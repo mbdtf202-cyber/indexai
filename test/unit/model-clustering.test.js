@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('model clustering library', () => {
   test('clustering library exists and exports correctly', async () => {
-    const libPath = 'lib/model-clustering.mjs';
+    const libPath = 'lib/model-clustering.js';
 
     assert.ok(fs.existsSync(libPath), `Clustering library should exist at ${libPath}`);
 
-    const clusterModule = await import('../lib/model-clustering.mjs');
+    const clusterModule = await import('../../lib/model-clustering.js');
 
     // Check required functions
     assert.equal(
@@ -33,9 +33,7 @@ describe('model clustering library', () => {
   });
 
   test('clustering function returns valid clusters', async () => {
-    const { clusterEquivalentModels, normalizeModelName } = await import(
-      '../lib/model-clustering.mjs'
-    );
+    const { clusterEquivalentModels } = await import('../../lib/model-clustering.js');
 
     // Test with sample models
     const testModels = [
@@ -57,7 +55,7 @@ describe('model clustering library', () => {
   });
 
   test('normalizeModelName handles various formats', async () => {
-    const { normalizeModelName } = await import('../lib/model-clustering.mjs');
+    const { normalizeModelName } = await import('../../lib/model-clustering.js');
 
     // Test different model ID formats
     assert.ok(normalizeModelName('gpt-4'), 'Should handle simple name');
@@ -80,7 +78,7 @@ describe('model clustering view module', () => {
   });
 
   test('rendering handles empty data gracefully', async () => {
-    const { renderClustering } = await import('../site/views/models-clustering.mjs');
+    const { renderClustering } = await import('../../site/views/models-clustering.mjs');
 
     // Test with no models
     let html = renderClustering({ models: [], clusters: [] });

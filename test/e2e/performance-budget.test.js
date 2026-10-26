@@ -8,7 +8,7 @@ import fs from 'node:fs';
 
 describe('performance budget system', () => {
   test('performance budget module exists and exports correctly', async () => {
-    const budgetPath = 'lib/performance-budget.mjs';
+    const _budgetPath = 'lib/performance-budget.js';
     const actualPath = 'lib/performance-budget.js';
 
     if (fs.existsSync(actualPath)) {

@@ -1,15 +1,14 @@
-import { SITE } from './config.js';
+import { SITE, HOST } from './config.js';
 
 /**
  * Generate Atom Feed from changes (T4.3 Round 3)
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..');
+const _ROOT = join(HERE, '..');
 
 export function generateAtomFeed(events, options = {}) {
   const {
@@ -25,7 +24,7 @@ export function generateAtomFeed(events, options = {}) {
     <link href="https://github.com/indexai-index/indexai" />
     <published>${event.timestamp}</published>
     <updated>${new Date().toISOString()}</updated>
-    <id>tag:indexai.pages.dev,2026:${event.type}:${Date.now()}</id>
+    <id>tag:${HOST},2026:${event.type}:${Date.now()}</id>
     <summary>${escapeXml(summary)}</summary>
   </entry>`;
     })
@@ -38,7 +37,7 @@ export function generateAtomFeed(events, options = {}) {
   <link href="${SITE.BASE_URL}/feeds/changes.xml" rel="self" />
   <link href="${SITE.BASE_URL}/" />
   <updated>${new Date().toISOString()}</updated>
-  <id>tag:indexai.pages.dev,2026:/feeds/changes.xml</id>
+  <id>tag:${HOST},2026:/feeds/changes.xml</id>
 ${eventsXml}
 </feed>`;
 }

@@ -146,7 +146,7 @@ function filterSignals(signals, categoryFilter, searchQuery) {
   }
 
   // Search filtering
-  if (searchQuery && searchQuery.trim()) {
+  if (searchQuery?.trim()) {
     const query = searchQuery.toLowerCase();
     result = result.filter(
       (s) =>

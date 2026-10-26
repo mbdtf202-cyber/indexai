@@ -2,16 +2,10 @@
  * Home Page View (T5.1 Round 2) - Fixed with all helpers
  */
 
-import { money, pct, kfmt, formatDate } from './format.js';
+import { money, pct, formatDate } from './format.js';
 
 export function renderHome(data) {
-  const {
-    latestNews = [],
-    recentChanges = [],
-    topModels = [],
-    benchmarks = [],
-    stats = {},
-  } = data || {};
+  const { latestNews = [], recentChanges = [], topModels = [], benchmarks = [] } = data || {};
 
   return `
     <div id="home" class="page">

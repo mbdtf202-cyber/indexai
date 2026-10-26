@@ -242,15 +242,18 @@ function checkR6() {
 }
 
 /**
- * R10：用量画像与有效成本公式只在 `lib/cost.js`（INV-5 · F36）。
+ * R10：用量画像与有效成本公式只在 `lib/effective-cost.js`（INV-5 · F36）。
+ *
+ * 归属变更：拆分时 `lib/cost.js` 被重写为订阅套餐计算，成本公式搬到了
+ * `lib/effective-cost.js`。规则跟着真正的单一来源走，而不是跟着文件名走。
  *
  * 理由：同一个公式曾在四处各写一份、参数还不一样（采集端 s=0.3、比价页 s=0.2、
  * 中转页 s=0.3、方法页两套都抄）。任何一处改动，另外三处就悄悄错，
  * 而表现出来的只是「同一个模型在两张表里价格不同」——读者只会看到矛盾。
  *
  * 检查两件事：
- * 1. 除 lib/cost.js 外，任何文件里不该再出现 `(1 - h` 这类公式骨架；
- * 2. 除 lib/cost.js 与方法页文案渲染处，不该再出现写死的阶梯数字 0.7 / 0.2 / 0.3
+ * 1. 除 lib/effective-cost.js 外，任何文件里不该再出现 `(1 - h` 这类公式骨架；
+ * 2. 除 lib/effective-cost.js 与方法页文案渲染处，不该再出现写死的阶梯数字 0.7 / 0.2 / 0.3
  *    与 `h`/`s` 成对赋值（画像只在这里定义）。
  */
 function checkR10() {
@@ -269,7 +272,7 @@ function checkR10() {
     // 站点入口已迁走时跳过
   }
 
-  const ALLOWED = new Set(['lib/cost.js', join('lib', 'cost.js')]);
+  const ALLOWED = new Set(['lib/effective-cost.js', join('lib', 'effective-cost.js')]);
 
   for (const rel of files) {
     if (ALLOWED.has(rel)) continue;
@@ -287,7 +290,7 @@ function checkR10() {
         violations.push({
           file: rel,
           line: i + 1,
-          message: 'R10 违反：用量画像在别处定义，应读 lib/cost.js 的 PROFILES',
+          message: 'R10 违反：用量画像在别处定义，应读 lib/effective-cost.js 的 PROFILES',
         });
       }
     });
@@ -345,6 +348,7 @@ const ROOT_WHITELIST = new Set([
   '.gitignore',
   '.node-version',
   'AGENTS.md',
+  'ARCHITECTURE.md', // 新架构规格 (T7.x)
   'IMPLEMENTATION_PLAN.md',
   'PROMPT_build.md',
   'README.md',

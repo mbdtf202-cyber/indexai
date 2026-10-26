@@ -11,15 +11,16 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { parseDevpostDates } from '../../lib/devpost-dates.js';
 import {
-  parseDevpostDates,
   eventStatus,
   eventKind,
   eventRegion,
   foldRegions,
   regionFromCountryCode,
-  devfolioIsAI,
-  devfolioPrize,
+} from '../../lib/event-classify.js';
+import { devfolioIsAI, devfolioPrize } from '../../pipeline/sources/devfolio.mjs';
+import {
   parseBillingExpr,
   exprCoefficients,
   tierBranches,
@@ -27,16 +28,12 @@ import {
   rowGroups,
   groupRatioTable,
   pickFlagship,
-  familyKey,
-  band,
-  per1M,
-  peakNote,
-  effectiveCost,
-  dedupeModels,
-  dedupeOffers,
-  parseOpenRouter,
   parseJsonLoose,
-} from '../../collect.mjs';
+} from '../../lib/relay-pricing.js';
+import { familyKey, band, per1M, peakNote } from '../../lib/model-keys.js';
+import { effectiveCost } from '../../lib/effective-cost.js';
+import { dedupeModels, dedupeOffers } from '../../pipeline/processors.mjs';
+import { parseOpenRouter } from '../../lib/openrouter-rankings.js';
 
 describe('parseDevpostDates', () => {
   test('第一种写法：同月跨日 "Oct 05 - 27, 2026"', () => {

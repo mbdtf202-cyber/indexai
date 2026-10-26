@@ -97,12 +97,11 @@ site/
 2. **Finish T5.4-T5.10** - Design tokens, performance, SEO, etc.
 3. **Transition to M6** - Growth features on solid foundation
 
-## License
+## 许可 / License
 
 - Code: MIT © 2026 mbdtf202-cyber
 - **Curated data** (in `curated/`, `news/`): CC BY 4.0
-- **Upstream data**: Original licenses apply (see individual sources)
-- Upstream data: Original licenses apply
+- **上游数据 / Upstream data**：版权归各上游，按各自许可与署名要求使用（逐条署名见数据页与各层的 `sources` 字段）
 
 ---
 

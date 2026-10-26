@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 test('unmatched report module exists', () => {
-  const modulePath = 'lib/unmatch-report.mjs';
+  const _modulePath = 'lib/unmatch-report.js';
   // Note: file was created as .js but will be used via dynamic import with .mjs extension in tests
   const actualPath = 'lib/unmatch-report.js';
 

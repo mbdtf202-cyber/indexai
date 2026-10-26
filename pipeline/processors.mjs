@@ -11,15 +11,17 @@
  */
 
 import { todayISO } from '../lib/clock.js';
-import { splitGroups, isGrayGroup } from '../lib/relay-groups.js';
 
 /* ==================== MODELS 去重 ==================== */
 
 export function dedupeModels(rows) {
   const byKey = new Map();
+  let dropped = 0;
 
   for (const r of rows) {
-    if (!r.id || !r.name) continue; // 跳过无效行
+    /* 唯一键：聚合目录按 OpenRouter id，官方直连按 vendorId + 模型名。
+     * 没有 id 的行无法去重，只能跳过——但它不计入 dropped（那不是「重复」，是无效输入）。 */
+    if (!r?.id) continue;
 
     const key = r.channelKind === 'aggregator' ? `or::${r.id}` : `off::${r.vendorId}::${r.id}`;
 
@@ -34,9 +36,10 @@ export function dedupeModels(rows) {
     if ((rank[r.channelKind] || 0) > (rank[prev.channelKind] || 0)) {
       byKey.set(key, r);
     }
+    dropped += 1;
   }
 
-  return { rows: [...byKey.values()], dropped: byKey.size < rows.length };
+  return { rows: [...byKey.values()], dropped };
 }
 
 /* ==================== OFFERS 去重 ==================== */
@@ -70,7 +73,7 @@ export function dedupeOffers(list) {
 /* ==================== NEWS Archive 合并 ==================== */
 
 export function mergeNewsArchive(prev, fresh, options = {}) {
-  const { before, after, spanDays, days, bytes } = options;
+  const { spanDays, days, bytes } = options;
   const now = todayISO();
 
   const map = new Map((prev || []).map((x) => [x.url, x]));

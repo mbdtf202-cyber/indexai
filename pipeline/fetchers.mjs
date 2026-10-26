@@ -20,14 +20,11 @@ import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
-import { isGrayGroup, splitGroups } from '../lib/relay-groups.js';
-import { parseNewsYaml, mergeArchive, archiveStats, buildIndex } from '../lib/news.js';
 import { nowISO, todayISO, sleep } from '../lib/clock.js';
-import { httpGet, httpJson, httpText } from '../lib/http.js';
-import { safeUrl } from '../lib/url.js';
+import { httpGet, httpText } from '../lib/http.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..');
+const _ROOT = join(HERE, '..');
 
 /* ==================== FX 层 ==================== */
 
@@ -84,7 +81,7 @@ export async function fetchResources(ctx) {
 /* ==================== BENCH 层 ==================== */
 
 // 保留原实现，被测试文件直接 import
-export async function fetchBenchmarks(prev) {
+export async function fetchBenchmarks(_prev) {
   try {
     const raw = JSON.parse(
       await readFile(pathToFileURL(new URL('./fixtures/data/bench.json', import.meta.url)), 'utf8'),
@@ -102,7 +99,7 @@ export async function fetchModels(ctx) {
     fetchCatalog: ctx.fetchCatalog || (() => Promise.resolve({ rows: [] })),
     curated: ctx.curated?.official || [],
     band: ctx.band || (() => null),
-    familyKey: ctx.familyKey || ((v, id, name) => `${v}-${id}`),
+    familyKey: ctx.familyKey || ((v, id, _name) => `${v}-${id}`),
     dedupeModels: ctx.dedupeModels || (() => ({ rows: [], dropped: 0 })),
     slugify:
       ctx.slugify ||
@@ -122,7 +119,7 @@ export async function fetchModels(ctx) {
 export async function fetchOffers(ctx) {
   const offCtx = {
     curated: { offers: ctx.curated?.offers || [] },
-    dedupeOffers: ctx.dedupeOffers || ((list) => ({ rows: [], merged: 0 })),
+    dedupeOffers: ctx.dedupeOffers || ((_list) => ({ rows: [], merged: 0 })),
   };
   const raw = await ctx.fetch(offCtx);
   const norm = ctx.normalize(raw, offCtx);
@@ -163,7 +160,7 @@ export async function fetchNews(ctx) {
   };
   const raw = await ctx.fetch(newsCtx);
   const norm = ctx.normalize(raw, newsCtx);
-  const freshCount = ctx.enrich?.archive.__freshCount ?? 0;
+  const _freshCount = ctx.enrich?.archive.__freshCount ?? 0;
   return ctx.merge(ctx.archiveBefore || [], norm.records, newsCtx);
 }
 
@@ -186,7 +183,7 @@ export async function fetchRelays(ctx) {
 
 /* ==================== EVENTS 层 ==================== */
 
-export async function fetchEvents(ctx) {
+export async function fetchEvents(_ctx) {
   // 四源并发调度由编排器统一处理，这里只返回标准化后的空对象
   return { devpost: [], luma: [], devfolio: [], aios: [] };
 }

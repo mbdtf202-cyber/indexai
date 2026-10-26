@@ -6,7 +6,7 @@
 
 import { loadLayerHistory, detectAlertDecision } from './detect.mjs';
 import { handleAlertDecision } from './github.mjs';
-import { existsSync, readdirSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 

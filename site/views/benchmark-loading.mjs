@@ -1,32 +1,44 @@
 /**
  * Benchmark Page with Lazy Loading (T6.8)
- * 
+ *
  * Load benchmark directories and rankings lazily, support parquet fallback
  */
 
-import { kfmt, pct } from '../styles/tokens.mjs';
-import { fetchBenchmarkDirectory, fetchSelectedBenchmark, sortTauBenchBySubmissionDate, validateBenchmarkEntry, paginateResults, computeRankings } from '../../lib/benchmark-loading.mjs';
+import { kfmt, pct } from './format.js';
+import {
+  sortTauBenchBySubmissionDate,
+  validateBenchmarkEntry,
+  paginateResults,
+  computeRankings,
+} from '../../lib/benchmark-loading.js';
 
 export function renderBenchmark(data = {}) {
-  const { lazyLoad = true, selectedBenchmark = null, directory = null, benchmarks = [], loadingStats = {}, currentPage = 1 } = data;
-  
+  const {
+    lazyLoad = true,
+    selectedBenchmark = null,
+    directory = null,
+    benchmarks = [],
+    loadingStats = {},
+    currentPage = 1,
+  } = data;
+
   return `
     <div id="benchmark" class="page benchmark-page">
       ${renderHeader()}
       
       <aside class="benchmark-sidebar">
         ${lazyLoad ? renderLazyLoadInstructions() : ''}
-        ${await renderDirectoryList(directory)}
+        ${renderDirectoryList(directory)}
       </aside>
       
       <main class="benchmark-main">
-        ${selectedBenchmark ? await renderBenchmarkDetails(selectedBenchmark, benchmarks, loadingStats, currentPage) : renderBenchmarkSelect()}
+        ${selectedBenchmark ? renderBenchmarkDetails(selectedBenchmark, benchmarks, loadingStats, currentPage) : renderBenchmarkSelect()}
       </main>
     </div>
   `;
 }
 
-async function renderHeader() {
+function renderHeader() {
   return `
     <header class="page-header">
       <h1>📊 AI Benchmarks</h1>
@@ -49,28 +61,32 @@ function renderLazyLoadInstructions() {
   `;
 }
 
-async function renderDirectoryList(directory) {
+function renderDirectoryList(directory) {
   if (!directory) {
     return '<section class="loading-status"><p>Loading directory...</p></section>';
   }
-  
+
   return `
     <nav class="benchmark-nav">
       <h3>Benchmark Directories</h3>
       <ul class="directory-list">
-        ${directory.items.map(item => `
+        ${directory.items
+          .map(
+            (item) => `
           <li class="dir-item">
             <a href="/benchmarks?benchmark=${item.name}" class="link-primary">${item.name}</a>
             <span class="size">${kfmt(item.size)}</span>
           </li>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </ul>
       <small>Total: ${directory.total_items} benchmarks</small>
     </nav>
   `;
 }
 
-async function renderBenchmarkSelect() {
+function renderBenchmarkSelect() {
   return `
     <section class="select-benchmark">
       <h2>Select a Benchmark to View</h2>
@@ -84,20 +100,20 @@ async function renderBenchmarkSelect() {
   `;
 }
 
-async function renderBenchmarkDetails(benchmarkId, benchmarks, loadingStats, currentPage) {
+function renderBenchmarkDetails(benchmarkId, benchmarks, loadingStats, currentPage) {
   // Sort τ-bench by submission_date first
   const sortedBenchmarks = sortTauBenchBySubmissionDate(benchmarks);
-  
+
   // Validate each entry
-  const validated = sortedBenchmarks.map(entry => validateBenchmarkEntry(entry));
-  const validEntries = validated.filter(v => v.valid).map(v => v.corrected_entry);
-  
+  const validated = sortedBenchmarks.map((entry) => validateBenchmarkEntry(entry));
+  const validEntries = validated.filter((v) => v.valid).map((v) => v.corrected_entry);
+
   // Pre-compute rankings
   const rankedEntries = computeRankings(validEntries);
-  
+
   // Paginate results
   const paginated = paginateResults(rankedEntries, currentPage);
-  
+
   return `
     <section class="benchmark-detail">
       <header class="detail-header">
@@ -105,9 +121,10 @@ async function renderBenchmarkDetails(benchmarkId, benchmarks, loadingStats, cur
         <span class="badge source-badge">${loadingStats.source || 'parquet'}</span>
       </header>
       
-      ${paginated.data.length === 0 
-        ? '<section class="no-data"><p>No benchmark results available.</p></section>'
-        : renderRankingsTable(paginated.data, paginated.pagination)
+      ${
+        paginated.data.length === 0
+          ? '<section class="no-data"><p>No benchmark results available.</p></section>'
+          : renderRankingsTable(paginated.data, paginated.pagination)
       }
       
       ${renderLoadingStats(loadingStats)}
@@ -117,7 +134,7 @@ async function renderBenchmarkDetails(benchmarkId, benchmarks, loadingStats, cur
 
 function renderRankingsTable(entries, pagination) {
   if (!entries || entries.length === 0) return '';
-  
+
   return `
     <table class="rankings-table">
       <thead>
@@ -130,7 +147,10 @@ function renderRankingsTable(entries, pagination) {
         </tr>
       </thead>
       <tbody>
-        ${entries.slice(0, 50).map((entry, idx) => `
+        ${entries
+          .slice(0, 50)
+          .map(
+            (entry, idx) => `
           <tr>
             <td class="rank-cell">#${idx + 1}</td>
             <td class="model-name"><strong>${entry.model_name || 'Unknown'}</strong></td>
@@ -138,7 +158,9 @@ function renderRankingsTable(entries, pagination) {
             <td class="rank-value">${entry.rank || 'N/A'}</td>
             <td class="date-cell">${formatDate(entry.submission_date)}</td>
           </tr>
-        `).join('')}
+        `,
+          )
+          .join('')}
       </tbody>
     </table>
     
@@ -164,7 +186,7 @@ function renderPagination(pagination) {
 
 function renderLoadingStats(stats) {
   if (!stats || !stats.parquet_count) return '';
-  
+
   return `
     <aside class="loading-stats">
       <h4>📈 Loading Statistics</h4>
@@ -180,11 +202,11 @@ function renderLoadingStats(stats) {
 // Helpers
 function formatDate(dateStr) {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-async function await(value) {
-  return value instanceof Promise ? await value : value;
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export default { renderBenchmark };

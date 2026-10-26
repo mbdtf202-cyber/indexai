@@ -10,7 +10,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-const RANKINGS_URL = 'https://openrouter.ai/rankings';
+const _RANKINGS_URL = 'https://openrouter.ai/rankings';
 
 /** 造一个足够长的假页面（层会拒绝短页面）。 */
 function longHtml() {

@@ -131,7 +131,7 @@ function generateMockData(viewName) {
   }
 }
 
-function wrapInPageStructure(content, pageName, route) {
+function wrapInPageStructure(content, pageName, _route) {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -155,7 +155,7 @@ function generateLazyManifest(pages) {
     lazy_load_enabled: true,
   };
 
-  writeFileSync(join(OUTPUT_DIR, 'lazy-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  writeFileSync(join(OUTPUT_DIR, 'lazy-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   console.log('[build] Generated lazy loading manifest');
 }
 

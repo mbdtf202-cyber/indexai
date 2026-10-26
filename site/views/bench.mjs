@@ -5,7 +5,7 @@
  * Zero global state dependencies - accepts data object as input, returns HTML string
  */
 
-import { money, pct, kfmt, truncate } from './format.js';
+import { pct, kfmt, truncate } from './format.js';
 
 /**
  * Render benchmarks page HTML

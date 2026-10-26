@@ -37,8 +37,12 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 
 ## 目录
 
-- `pipeline/run.js` (collect)、`bench.mjs`、`health.mjs`：采集、评测、门禁（T3.1 起拆进 `pipeline/`）
-- `index.html`：整个站点（M5 起拆进 `site/`）；`lib/`：共享的纯函数模块
+- `pipeline/orchestrator.mjs`：**采集唯一入口**（`npm run collect` 指向它）。它逐层调用 `pipeline/layers/*` 的 fetch/normalize/merge，失败只影响该层
+- `pipeline/context.mjs`：层需要的依赖全在这里注入（http / clock / 人工数据 / 纯函数 / 逐源 fetcher）
+- `pipeline/persist.mjs`：三份输出的落盘规则（bench 拆文件、news 归档 + 索引）
+- `pipeline/sources/*`：逐源实现（devpost / luma / devfolio / aios / probe-relay）；配置在 `luma-config.mjs`
+- `bench.mjs`（根目录）：**评测采集的真实实现**（8 个源）。`pipeline/fetchers.mjs` 里同名的是读 fixture 的桩，别接错
+- `index.html`：仍是生产站点入口（256 KB 单体，M5 才拆）；`lib/`：共享的纯函数模块
 - `fixtures/`：回放数据、golden、页面测试数据；`test/`：unit、golden、contract、e2e
 - 生成物，不手改、不提交：`data.json`、`bench.json`、`dist/`、`.ralph/`、`coverage/`、`test-results/`
 - `fixtures/data/`：`npm run fixture:data` 从真实数据裁出，≤ 1 MB；页面 e2e 用它
@@ -52,7 +56,7 @@ Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PAT
 - 网络只走 `lib/http.js`，时间与睡眠只走 `lib/clock.js`（两者都由 R2a/R2b 把关）
 - `lib/http.js` 返回的是响应对象：`httpText` 给 `{status, ok, url, text}`，`httpJson` 直接给对象，`httpBuffer` 给 Buffer；
   要读正文就别再写 `await res.text()`
-- UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:pipeline/run.js`
+- UPGRADE_PLAN 的行号对应标签 `review-base`：`git show review-base:collect.mjs`（该文件已删除，历史版本在 `41dec66`）
 
 ## 已知坑
 

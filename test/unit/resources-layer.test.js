@@ -33,7 +33,7 @@ function makeCtx(handlers) {
     calls,
     ctx: {
       http: {
-        get: async (url, opt) => {
+        get: async (url, _opt) => {
           calls.push(url);
           const repo = url.split('/').pop();
           const h = handlers[repo];

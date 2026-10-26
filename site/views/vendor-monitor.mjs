@@ -4,13 +4,6 @@
  * Monitor official vendor websites for pricing/model changes
  */
 
-import { money } from '../styles/tokens.mjs';
-import {
-  monitorVendors,
-  calculateHealthScore,
-  getMonitoringSchedule,
-} from '../../lib/vendor-monitor.mjs';
-
 export function renderMonitor(data = {}) {
   const { vendors = [], lastRun = null, health, schedules = {} } = data;
 
@@ -190,15 +183,15 @@ function formatRelativeTime(timestamp) {
 
 function formatSize(bytes) {
   if (!bytes) return 'N/A';
-  if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
-  if (bytes >= 1e3) return (bytes / 1e3).toFixed(1) + ' KB';
-  return bytes + ' B';
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  if (bytes >= 1e3) return `${(bytes / 1e3).toFixed(1)} KB`;
+  return `${bytes} B`;
 }
 
 // URL parameter parsing helper
 export function parseMonitorParams(params) {
   const vendorIds = params.get('vendors')?.split(',') || ['all'];
-  const interval = parseInt(params.get('interval')) || 24;
+  const interval = parseInt(params.get('interval'), 10) || 24;
 
   return {
     filter: vendorIds[0] === 'all' ? 'all' : vendorIds,

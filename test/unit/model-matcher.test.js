@@ -5,7 +5,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { getModelsRegistry } from '../../lib/match.mjs';
+import { getModelsRegistry } from '../../lib/match.js';
 
 describe('model registry structure', () => {
   test('registry file exists and is valid JSON', () => {

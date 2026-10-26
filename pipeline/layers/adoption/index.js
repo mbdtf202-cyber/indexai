@@ -22,7 +22,7 @@ export const RANKINGS_URL = 'https://openrouter.ai/rankings';
  * @param {(url: string, opt?: object) => Promise<{ok: boolean, status: number, text: string}>} text
  * @returns {(ctx: object) => Promise<{apps: object[], models: object[]}>}
  */
-export function makeFetch(parse, text) {
+export function makeFetch(parse, _text) {
   return async function fetchRankings(ctx) {
     const res = await ctx.http.text(RANKINGS_URL, { label: 'openrouter-rankings' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('official API library', () => {
   test('official API library exists and exports correctly', async () => {
-    const libPath = 'lib/official-api.mjs';
+    const libPath = 'lib/official-api.js';
 
     assert.ok(fs.existsSync(libPath), `Official API library should exist at ${libPath}`);
 
-    const apiModule = await import('../lib/official-api.mjs');
+    const apiModule = await import('../../lib/official-api.js');
 
     // Check required functions
     assert.equal(typeof apiModule.fetchAAModels, 'function', 'Should export fetchAAModels');
@@ -34,7 +34,7 @@ describe('official API library', () => {
   });
 
   test('attribution generation works correctly', async () => {
-    const { generateAttribution } = await import('../lib/official-api.mjs');
+    const { generateAttribution } = await import('../../lib/official-api.js');
 
     const aaAttr = generateAttribution('artificial_analysis');
     assert.ok(aaAttr.includes('Artificial Analysis'), 'Should include AA name');
@@ -45,7 +45,7 @@ describe('official API library', () => {
   });
 
   test('official API method detection works', async () => {
-    const { isOfficialApiMethod } = await import('../lib/official-api.mjs');
+    const { isOfficialApiMethod } = await import('../../lib/official-api.js');
 
     assert.equal(isOfficialApiMethod('official_api_v1'), true);
     assert.equal(isOfficialApiMethod('official_api_v2'), true);

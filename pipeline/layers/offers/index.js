@@ -42,7 +42,7 @@ export default {
     const withBacking = [];
     const quarantined = [];
     for (const o of list) {
-      const sources = o.sources && o.sources.length ? o.sources : o.source ? [o.source] : [];
+      const sources = o.sources?.length ? o.sources : o.source ? [o.source] : [];
       if (!sources.length) {
         quarantined.push({ reason: '缺少 source，无法回溯', product: o?.product });
         continue;

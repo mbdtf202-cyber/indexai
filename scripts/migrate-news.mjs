@@ -74,7 +74,7 @@ export function migrateToMonthlyFiles(articles) {
     const filepath = join(newsDir, `${month}.json`);
     writeFileSync(
       filepath,
-      JSON.stringify(
+      `${JSON.stringify(
         {
           month,
           generated_at: new Date().toISOString(),
@@ -82,7 +82,7 @@ export function migrateToMonthlyFiles(articles) {
         },
         null,
         2,
-      ) + '\n',
+      )}\n`,
     );
     console.log(`[migrate] ${month}: ${items.length} 条 → ${filepath}`);
   }
@@ -131,7 +131,7 @@ if (process.argv[1]?.endsWith('migrate-news.mjs')) {
   console.log(`[migrate] Created ${monthCount} monthly files`);
 
   const confirm = await new Promise((resolve) => {
-    const rl = require('readline').createInterface({
+    const rl = require('node:readline').createInterface({
       input: process.stdin,
       output: process.stdout,
     });

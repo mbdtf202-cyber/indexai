@@ -4,8 +4,7 @@
  * Display clusters of equivalent AI models across different providers
  */
 
-import { money } from '../styles/tokens.mjs';
-import { clusterEquivalentModels, generateDedupReport } from '../../lib/model-clustering.mjs';
+import { clusterEquivalentModels, generateDedupReport } from '../../lib/model-clustering.js';
 
 export function renderClustering(data = {}) {
   const { models = [], clusters, showDetails = false, filter = 'all' } = data;
@@ -72,7 +71,7 @@ function generateRecommendationsHTML(recommendations) {
           <li class="rec-item ${rec.priority}">
             <strong>${getPriorityBadge(rec.priority)}</strong>
             <span>${rec.reason}</span>
-            <code>${rec.affected.slice(0, 2).join(', ')}</code>${rec.affected.length > 2 ? '+' + (rec.affected.length - 2) : ''}
+            <code>${rec.affected.slice(0, 2).join(', ')}</code>${rec.affected.length > 2 ? `+${rec.affected.length - 2}` : ''}
           </li>
         `,
           )

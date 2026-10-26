@@ -4,13 +4,13 @@
  * Display AI activity quality metrics, duplicates, and clustering
  */
 
-import { kfmt } from '../styles/tokens.mjs';
+import { kfmt } from './format.js';
 import {
   calculateAiRelevance,
   findDuplicates,
   validateQuality,
   REGION_DICTIONARY,
-} from '../../lib/event-quality.mjs';
+} from '../../lib/event-quality.js';
 
 export function renderQuality(data = {}) {
   const { events = [], filters = {}, results = null } = data;
@@ -28,9 +28,9 @@ export function renderQuality(data = {}) {
         ${computedResults.events.length > 0 ? renderQualitySummary(computedResults) : renderNoEvents()}
         
         ${
-          computedResults.quality_report.passes_quality_line
-            ? renderQualityBadge(computedResults.quality_report)
-            : renderQualityWarning(computedResults.quality_report)
+          computedResults.qualityReport.passes_quality_line
+            ? renderQualityBadge(computedResults.qualityReport)
+            : renderQualityWarning(computedResults.qualityReport)
         }
         
         ${computedResults.duplicates.length > 0 ? renderDuplicatesSection(computedResults) : ''}
@@ -84,7 +84,7 @@ function renderFiltersSection(currentFilters) {
 }
 
 function computeResults(events, filters) {
-  const minScore = parseInt(filters.min_score) || 10;
+  const minScore = parseInt(filters.min_score, 10) || 10;
 
   // Apply AI relevance filtering
   const scoredEvents = events
@@ -280,7 +280,7 @@ function renderEventTable(events) {
 // Helper functions
 function truncate(str, maxLength) {
   if (!str) return '';
-  return str.length > maxLength ? str.slice(0, maxLength - 3) + '...' : str;
+  return str.length > maxLength ? `${str.slice(0, maxLength - 3)}...` : str;
 }
 
 function formatRegionCode(code) {

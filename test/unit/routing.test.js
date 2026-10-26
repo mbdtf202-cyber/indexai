@@ -16,7 +16,12 @@ describe('router module structure', () => {
 
     const content = fs.readFileSync(routerPath, 'utf8');
     assert.ok(content.length > 0, 'Router module should not be empty');
-    assert.match(content, /\(function\s*\(\)/, 'Should use IIFE pattern (no globals)');
+    // IIFE 形态：`(function(){...})` 与箭头 `(() => {...})` 都算，只要不泄漏全局
+    assert.match(
+      content,
+      /^\(\s*(?:\(function\s*\(\)|\(\)\s*=>)/m,
+      'Should use IIFE pattern (no globals)',
+    );
     assert.ok(content.includes('hashchange'), 'Should listen for hash changes');
   });
 

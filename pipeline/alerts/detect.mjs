@@ -19,7 +19,7 @@ export function parseStatusLine(line) {
       ...obj,
       timestamp: new Date(obj.timestamp || Date.now()),
     };
-  } catch (e) {
+  } catch (_e) {
     console.warn('[parse] Invalid JSON line:', line.slice(0, 50));
     return null;
   }
@@ -48,7 +48,7 @@ export function loadLayerHistory(layer) {
  * 检测告警决策
  * @returns { 'open' | 'append' | 'close' | 'none' } decision type
  */
-export function detectAlertDecision(history, options = {}) {
+export function detectAlertDecision(history, _options = {}) {
   const RED_STATES = ['failed', 'red'];
   const STALE_STATES = ['stale'];
   const RECOVERY_STATES = ['ok'];

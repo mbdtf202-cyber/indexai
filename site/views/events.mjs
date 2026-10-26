@@ -4,10 +4,10 @@
 
 import { truncate, formatDate } from './format.js';
 
-let showPast = false;
+const _showPast = false;
 
 export function renderEvents(data) {
-  const { events = [], filterType = 'all', searchQuery = '' } = data || {};
+  const { events = [] } = data || {};
 
   return `
     <div id="events" class="page events-page">
@@ -24,7 +24,7 @@ function renderHeader() {
   return `<header class="page-header"><h1>📅 AI Events & Hackathons</h1><p class="subtitle">Discover AI hackathons and meetups</p></header>`;
 }
 
-function renderFilterControls(currentType) {
+function renderFilterControls(_currentType) {
   return `<nav class="type-tabs"><button class="tab-link active">All Events</button></nav>`;
 }
 

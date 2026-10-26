@@ -8,7 +8,7 @@ import fs from 'node:fs';
 
 describe('sequence generator module structure', () => {
   test('file exists and is readable', () => {
-    const modulePath = 'lib/sequence-generator.mjs';
+    const _modulePath = 'lib/sequence-generator.js';
     const actualPath = 'lib/sequence-generator.js';
 
     if (!fs.existsSync(actualPath)) {

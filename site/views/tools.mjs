@@ -68,7 +68,7 @@ function renderCategoryTabs(currentCategory) {
   `;
 }
 
-function renderSortControls(currentSort) {
+function renderSortControls(_currentSort) {
   return `
     <div class="info-card">
       <h4>ℹ️ Tool Metrics</h4>
@@ -166,7 +166,7 @@ function filterByCategoryAndSearch(tools, categoryFilter, searchQuery) {
   }
 
   // Search filtering
-  if (searchQuery && searchQuery.trim()) {
+  if (searchQuery?.trim()) {
     const query = searchQuery.toLowerCase();
     result = result.filter(
       (t) =>

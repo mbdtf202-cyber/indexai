@@ -37,7 +37,7 @@ describe('GitHub issue integration module', () => {
 
   describe('alert decision integration', () => {
     test('accepts required parameters object shape', async () => {
-      const mod = await import(ALERT_MODULE);
+      const _mod = await import(ALERT_MODULE);
 
       const mockParams = {
         owner: 'test-owner',

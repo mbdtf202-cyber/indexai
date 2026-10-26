@@ -5,12 +5,10 @@
  * Zero global state - uses module pattern with closure scope
  */
 
-(function () {
-  'use strict';
-
+(() => {
   // Private router instance (no globals)
   let currentRoute = '/';
-  let subscribers = new Set();
+  const subscribers = new Set();
   let isInitialized = false;
 
   /**
@@ -50,14 +48,14 @@
    */
   function normalizeRoute(route) {
     if (!route || route === '') return '/';
-    return '/' + route.replace(/^\/+|\/+$/g, '');
+    return `/${route.replace(/^\/+|\/+$/g, '')}`;
   }
 
   /**
    * Navigate to a new route
    */
   function navigateTo(path) {
-    window.location.hash = '#' + path.replace(/^\//, '');
+    window.location.hash = `#${path.replace(/^\//, '')}`;
   }
 
   /**

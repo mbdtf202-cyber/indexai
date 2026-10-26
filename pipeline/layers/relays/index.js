@@ -91,7 +91,7 @@ export default {
         return ctx.enrich({ ...r, stale: false, checked_at: r.checked_at || null });
 
       const old = before.get(r.domain);
-      const hasPrices = old && old.prices && Object.keys(old.prices).length > 0;
+      const hasPrices = old?.prices && Object.keys(old.prices).length > 0;
       const age = daysSince(old?.checked_at);
 
       if (hasPrices && age <= ttl) {

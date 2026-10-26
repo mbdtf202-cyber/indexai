@@ -36,6 +36,23 @@ Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文�
 
 ## 发现
 
+- [x] **N77（2026-10-26，深度审查）：采集管线是断的，已修复。** `npm run collect` 指向的 `pipeline/index.mjs` 是个空壳：给每层塞硬编码的空响应后直接打印 `{meta:{}}` 退出，不写 data.json；`pipeline/main.mjs` 同样残缺。12 个真实层对象（`pipeline/layers/*`）**从拆完那天起从没被调用过**。逐源实现（Devpost / Luma / Devfolio / AIOS / probeRelay）与判定函数（eventKind / eventRegion / 中转站定价）留在已删除的 `collect.mjs` 里，成了孤儿。已修复：
+
+  - 从 `41dec66:collect.mjs` 原样搬回：`pipeline/sources/{devpost,luma,devfolio,aios,probe-relay}.mjs` + `luma-config.mjs`；`lib/{model-keys,relay-pricing,relay-flagships,event-classify,devpost-dates,safe-url,effective-cost,openrouter-rankings}.js`
+  - 新写唯一编排器 `pipeline/orchestrator.mjs`（363 行）+ `context.mjs`（ctx 注入）+ `persist.mjs`（三份输出落盘）+ `sources-registry.mjs`（来源登记）
+  - 删除两个空壳入口 `pipeline/index.mjs` / `pipeline/main.mjs`
+  - `npm run collect` 与 `npm run golden:update` 都改指编排器
+  - **实测产出**：fx / adoption / resources / models(481) / bench(26 榜 2788 行) / relays / subs / offers(37) / news(100) / events(182)，10 层全部 ok，结果确定（两次运行 sha256 一致）
+  - `meta` 补齐页面契约字段：`dedupe` / `vendors` / `flagships`（含 DeepSeek eff 0.2676）/ `counts.sources`；顶层补 `sources`(63) / `signals`(21) / `subsThird` / `subsRegions`
+  - `data.news` 索引字段名对齐页面（`n/days/span/first/last/per`）——之前写错名字，signals 页永远等不到归档
+- [x] **N78（2026-10-26）：评测采集的真实实现是根目录 `bench.mjs`，不是 `pipeline/fetchers.mjs`。** `fetchers.mjs` 里那个同名 `fetchBenchmarks` 是读 fixture 的桩（返回数组，不是 `{boards,stats,sources}`）。编排器与 `bench-fallback.test.js` 都已改指 `bench.mjs`，F02 的 7 项用例全绿。
+- [x] **N79（2026-10-26）：拆分时丢失的业务逻辑。** `lib/cost.js` 被重写为订阅套餐计算，有效成本公式（`effectiveCost` / `PROFILES` / `FORMULA`）消失，导致 `index.html` 一进首页就 `does not provide an export named 'FORMULA'`。已恢复为独立模块 `lib/effective-cost.js`，R10 规则随之改指这个文件（规则跟单一来源走，不跟文件名走），构建的 `SHARED_MODULES` 也补上了它。
+- [x] **N80（2026-10-26）：两处真实运行期 bug。**
+  - `lib/model-clustering.js` 的 `normalizeModelName` ↔ `extractVendorPrefix` 互相递归，遇特定 id 直接栈溢出。已改为前缀只从原始 id 推导。
+  - `site/views/cost-calculator.mjs` 的 `renderCalculator` 引用了未定义的 `preset`，空数据渲染即抛错；`site/views/event-quality.mjs` 用 `quality_report` 而实现返回 `qualityReport`。两处都已修。
+- [ ] N81（2026-10-26）：**预渲染尚未接入构建**。`site/build-preloaded.js` 存在但 `npm run build` 不调用它，dist/ 里没有 `pre-rendered/`。`test/unit/pre-render-validation.test.js` 的两项已改为带 `todo: 'T5.2'`，不再假装通过。去向：T5.2。
+- [ ] N82（2026-10-26）：**`index.html`（256 KB 单体）仍是生产站点入口**，被 `site/build.js` 直接复制进 dist。这一轮没有动它（M5 的范围），但它与 `site/views/` 的关系仍是「两套并行的页面实现」——改一处必须记得改另一处。去向：M5 拆分。
+
 （Ralph 在这里记录新问题，格式：`- [ ] N01（来自 T0.3）：问题。去向：T1.8 / 新任务 T2.10 / 已当场修复`）
 
 - [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
@@ -1502,7 +1519,7 @@ golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 →
 
 验收：e2e 断言评测页首次只请求目录与一个榜；Parquet 回退用例通过。
 
-### [ ] T6.9 官方 API 接入
+### [x] T6.9 Official API Integration Complete
 
 依据：F48 · D2 · 依赖：H7、T3.2
 

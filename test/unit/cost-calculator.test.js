@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('cost calculation library', () => {
   test('cost library exists and exports correctly', async () => {
-    const libPath = 'lib/cost.mjs';
+    const libPath = 'lib/cost.js';
 
     assert.ok(fs.existsSync(libPath), `Cost library should exist at ${libPath}`);
 
-    const costModule = await import('../lib/cost.mjs');
+    const costModule = await import('../../lib/cost.js');
 
     // Check required functions
     assert.equal(typeof costModule.compareAllPlans, 'function', 'Should export compareAllPlans');
@@ -34,7 +34,7 @@ describe('cost calculation library', () => {
   });
 
   test('comparison function returns valid results', async () => {
-    const { compareAllPlans } = await import('../lib/cost.mjs');
+    const { compareAllPlans } = await import('../../lib/cost.js');
 
     // Test with simple usage
     const result = compareAllPlans({ input_tokens: 100000, output_tokens: 50000 });
@@ -60,7 +60,7 @@ describe('cost calculator view module', () => {
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderCalculator } = await import('../site/views/cost-calculator.mjs');
+    const { renderCalculator } = await import('../../site/views/cost-calculator.mjs');
 
     // Test with no data
     let html = renderCalculator();

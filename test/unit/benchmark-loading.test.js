@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('benchmark loading library', () => {
   test('loading library exists and exports correctly', async () => {
-    const libPath = 'lib/benchmark-loading.mjs';
+    const libPath = 'lib/benchmark-loading.js';
 
     assert.ok(fs.existsSync(libPath), `Loading library should exist at ${libPath}`);
 
-    const loadingModule = await import('../lib/benchmark-loading.mjs');
+    const loadingModule = await import('../../lib/benchmark-loading.js');
 
     // Check required functions
     assert.equal(
@@ -39,7 +39,7 @@ describe('benchmark loading library', () => {
   });
 
   test('tau-bench sorting works correctly', async () => {
-    const { sortTauBenchBySubmissionDate } = await import('../lib/benchmark-loading.mjs');
+    const { sortTauBenchBySubmissionDate } = await import('../../lib/benchmark-loading.js');
 
     const testData = [
       { model: 'Model C', submission_date: '2024-01-05' },
@@ -54,7 +54,7 @@ describe('benchmark loading library', () => {
   });
 
   test('benchmark entry validation works', async () => {
-    const { validateBenchmarkEntry } = await import('../lib/benchmark-loading.mjs');
+    const { validateBenchmarkEntry } = await import('../../lib/benchmark-loading.js');
 
     // Valid entry
     const valid = validateBenchmarkEntry({ model_name: 'Test', score: 0.8, rank: 1 });
@@ -62,7 +62,7 @@ describe('benchmark loading library', () => {
 
     // Invalid entry (missing required fields)
     const invalid = validateBenchmarkEntry({ model_name: 'Test' });
-    assert.equal(valid.valid, false, 'Invalid entry should fail');
+    assert.equal(invalid.valid, false, 'Invalid entry should fail');
     assert.ok(invalid.errors.length > 0, 'Should report errors');
   });
 });
@@ -81,10 +81,10 @@ describe('benchmark loading view module', () => {
   });
 
   test('rendering handles lazy loading mode correctly', async () => {
-    const { renderBenchmark } = await import('../site/views/benchmark-loading.mjs');
+    const { renderBenchmark } = await import('../../site/views/benchmark-loading.mjs');
 
     // Test with lazy load enabled
-    let html = renderBenchmark({ lazyLoad: true, directory: null });
+    const html = renderBenchmark({ lazyLoad: true, directory: null });
     assert.ok(
       html.includes('Lazy Loading') || html.includes('lazy'),
       'Should show lazy loading instructions',

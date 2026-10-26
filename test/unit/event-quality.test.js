@@ -8,11 +8,11 @@ import fs from 'node:fs';
 
 describe('event quality library', () => {
   test('quality library exists and exports correctly', async () => {
-    const libPath = 'lib/event-quality.mjs';
+    const libPath = 'lib/event-quality.js';
 
     assert.ok(fs.existsSync(libPath), `Quality library should exist at ${libPath}`);
 
-    const qualityModule = await import('../lib/event-quality.mjs');
+    const qualityModule = await import('../../lib/event-quality.js');
 
     // Check required functions
     assert.equal(
@@ -26,7 +26,7 @@ describe('event quality library', () => {
   });
 
   test('AI relevance scoring works correctly', async () => {
-    const { calculateAiRelevance } = await import('../lib/event-quality.mjs');
+    const { calculateAiRelevance } = await import('../../lib/event-quality.js');
 
     // Test high relevance event
     const highScore = calculateAiRelevance(
@@ -46,7 +46,7 @@ describe('event quality library', () => {
   });
 
   test('region extraction handles various formats', async () => {
-    const { extractRegion, REGION_DICTIONARY } = await import('../lib/event-quality.mjs');
+    const { extractRegion } = await import('../../lib/event-quality.js');
 
     // Test ISO code detection
     let region = extractRegion('Event in CN');
@@ -74,7 +74,7 @@ describe('event quality view module', () => {
   });
 
   test('rendering handles missing data gracefully', async () => {
-    const { renderQuality } = await import('../site/views/event-quality.mjs');
+    const { renderQuality } = await import('../../site/views/event-quality.mjs');
 
     // Test with no events
     let html = renderQuality({ events: [] });

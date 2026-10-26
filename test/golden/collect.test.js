@@ -1,7 +1,7 @@
 /**
  * 采集 golden（T0.4 · S1.4）。
  *
- * 在回放模式下用固定时钟跑一遍 `collect.mjs`，把 data.json / bench.json /
+ * 在回放模式下用固定时钟跑一遍编排器（`pipeline/orchestrator.mjs`），把 data.json / bench.json /
  * news-archive.json 与 `fixtures/golden/` 逐字节比较。
  *
  * 三条硬约束：
@@ -34,7 +34,7 @@ function runCollect(outDir) {
   return new Promise((resolve) => {
     const child = spawn(
       process.execPath,
-      ['--import', './test/support/http-replay.js', './collect.mjs'],
+      ['--import', './test/support/http-replay.js', './pipeline/orchestrator.mjs'],
       {
         cwd: ROOT,
         env: {

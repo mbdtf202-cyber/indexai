@@ -7,13 +7,12 @@
  * 3. 发布新的快照到 data 分支
  */
 
-import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(HERE, '..');
+const _ROOT = join(HERE, '..');
 
 /** 创建或更新 data 分支的快照 */
 export function snapshotLayer(layer, data) {
@@ -24,7 +23,7 @@ export function snapshotLayer(layer, data) {
 
   // 稳定排序后写入 JSON 文件
   const filepath = join(snapshotsDir, `${layer}.json`);
-  writeFileSync(filepath, JSON.stringify(data, null, 2) + '\n');
+  writeFileSync(filepath, `${JSON.stringify(data, null, 2)}\n`);
   console.log(`[snapshot] ${layer} saved to ${filepath}`);
 }
 
@@ -32,8 +31,8 @@ export function snapshotLayer(layer, data) {
 export function loadSnapshot(layer) {
   const filepath = `.data/snapshots/${layer}.json`;
   try {
-    return JSON.parse(require('fs').readFileSync(filepath, 'utf8'));
-  } catch (e) {
+    return JSON.parse(require('node:fs').readFileSync(filepath, 'utf8'));
+  } catch (_e) {
     console.warn(`[snapshot] No snapshot found for ${layer}`);
     return null;
   }
@@ -42,12 +41,12 @@ export function loadSnapshot(layer) {
 /** 记录尝试状态到 ndjson 日志 */
 export function recordAttempt(layer, attempt) {
   const statusFile = `.data/status/${layer}.ndjson`;
-  require('fs').appendFileSync(
+  require('node:fs').appendFileSync(
     statusFile,
-    JSON.stringify({
+    `${JSON.stringify({
       timestamp: new Date().toISOString(),
       ...attempt,
-    }) + '\n',
+    })}\n`,
   );
 }
 

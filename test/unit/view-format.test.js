@@ -8,7 +8,7 @@ import fs from 'node:fs';
 
 describe('format helpers module structure', () => {
   test('file exists and is readable', () => {
-    const modulePath = 'site/views/format.mjs';
+    const _modulePath = 'site/views/format.mjs';
     const actualPath = 'site/views/format.js';
 
     assert.ok(fs.existsSync(actualPath), `Module should exist at ${actualPath}`);

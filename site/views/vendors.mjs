@@ -64,7 +64,7 @@ function renderVendorCard(vendor) {
     80,
   );
   const modelCount = formatModelCount(vendor.model_count);
-  const urlDisplay = truncate(vendor.url, 40);
+  const _urlDisplay = truncate(vendor.url, 40);
 
   return `
     <article class="vendor-card" data-vendor-id="${vendor.id}">

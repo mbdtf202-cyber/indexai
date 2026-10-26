@@ -22,7 +22,7 @@ const outDir = mkdtempSync(join(tmpdir(), 'indexai-golden-update-'));
 const code = await new Promise((resolve) => {
   const child = spawn(
     process.execPath,
-    ['--import', './test/support/http-replay.js', './pipeline/index.mjs'],
+    ['--import', './test/support/http-replay.js', './pipeline/orchestrator.mjs'],
     {
       cwd: ROOT,
       stdio: 'inherit',

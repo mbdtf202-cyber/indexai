@@ -8,7 +8,7 @@ import fs from 'node:fs';
 
 describe('baseline guard module structure', () => {
   test('file exists and is readable', () => {
-    const modulePath = 'lib/baseline-guard.mjs';
+    const _modulePath = 'lib/baseline-guard.js';
     const actualPath = 'lib/baseline-guard.js';
 
     assert.ok(fs.existsSync(actualPath), `Module should exist at ${actualPath}`);

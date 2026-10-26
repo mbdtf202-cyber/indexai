@@ -4,11 +4,12 @@
  * Interactive calculator comparing subscription plans vs pay-as-you-go pricing
  */
 
-import { money } from '../styles/tokens.mjs';
-import { compareAllPlans, parseUsageFromURL, formatNumber } from '../../lib/cost.mjs';
+import { money } from './format.js';
+import { parseUsageFromURL, formatNumber } from '../../lib/cost.js';
 
 export function renderCalculator(data = {}) {
-  const { preset, usage, result, showResults = false } = data;
+  // preset 决定表单里哪一档被预选；缺省按最轻的 casual（与页面默认的典型用法一致）。
+  const { result, showResults = false, preset = 'casual' } = data;
 
   return `
     <div id="calculator" class="page calculator-page">
@@ -118,7 +119,7 @@ function renderOptionRow(option, rank, isBest) {
                 .map((m) => m.replace(/_/g, '-'))
                 .join(
                   ', ',
-                )}${option.details.included_models.length > 3 ? '+' + (option.details.included_models.length - 3) : ''}</div>`
+                )}${option.details.included_models.length > 3 ? `+${option.details.included_models.length - 3}` : ''}</div>`
             : ''
         }
       </div>

@@ -5,7 +5,7 @@
  * Zero global state dependencies - accepts data object as input, returns HTML string
  */
 
-import { money, pct, kfmt, ctx } from './format.js';
+import { money, kfmt } from './format.js';
 
 /**
  * Render models comparison page HTML
@@ -79,7 +79,7 @@ function renderFilters(currentFilters) {
   `;
 }
 
-function renderSortControls(currentSortBy, currentSortOrder) {
+function renderSortControls(_currentSortBy, _currentSortOrder) {
   return `
     <div class="sort-controls">
       <span>Sort by:</span>

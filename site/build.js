@@ -24,7 +24,9 @@ const DIST = join(ROOT, 'dist');
 const STATIC_FILES = ['index.html', 'favicon.svg', '_headers'];
 
 /** 页面用 import 共享的模块（S9.1：构建期与浏览器共用同一份视图代码的基础）。 */
-const SHARED_MODULES = ['lib/url.js', 'lib/cost.js'];
+// 页面共用的纯函数模块：构建期复制进 dist/lib/，浏览器直接 import（S9.1）。
+// effective-cost 是有效成本公式与画像的唯一来源，中转站与比价页都读它。
+const SHARED_MODULES = ['lib/url.js', 'lib/cost.js', 'lib/effective-cost.js'];
 
 /** 静态资源目录：整目录复制（自托管字体在这里，S9.6）。 */
 const ASSET_DIRS = ['assets'];

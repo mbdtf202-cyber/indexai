@@ -5,7 +5,7 @@
  */
 
 import { truncate } from './format.js';
-import { money, pct } from '../styles/tokens.mjs';
+import { money, pct } from './format.js';
 
 export function renderChanges(data = {}) {
   const {
