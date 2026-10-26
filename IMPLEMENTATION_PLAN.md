@@ -1242,13 +1242,53 @@ golden 差异：无。`meta.net` 的字段集没变（每主机账目本来就�
 
 golden 全部重录：新增 `run-report.json`，且时钟改为注入后输出仍确定（两次运行 sha256 一致）。
 
-### [ ] T3.4 时间口径
+### [x] T3.4 时间口径
 
 依据：F13 · S2.2 · 依赖：T3.3
 
 步骤：先用回放数据确认 Luma、Devpost、Devfolio、AIHOT 时间戳的真实时区，结论写进各层 `normalize.js` 的注释；活动存 `startAt` / `endAt`（ISO）与 `tz`，状态按活动所在时区的「今天」判定；情报存 `publishedAt`，按 Asia/Shanghai 归日；页面按访客时区显示。
 
 验收：东京 19:00 开始的场次在 `Asia/Tokyo` 下日期正确；北京时间凌晨发布的新闻归入当天；页面显示有 e2e 用例。
+
+结果：
+
+**1. 用回放数据实测四个源的真实时区**（结论写进 `lib/time.js` 与各源的注释）：
+
+| 源 | 字段 | 实测格式 |
+|---|---|---|
+| Luma | `start_at` / `end_at` + `timezone` | **UTC ISO**（`2026-11-05T00:00:00.000Z`）+ IANA 名（实测 `America/Los_Angeles`） |
+| Devfolio | `starts_at` / `ends_at` | **UTC ISO**，**没有**时区字段 |
+| AIHOT | `publishedAt` / `discoveredAt` | **UTC ISO** |
+| Devpost | `submission_period_dates` | 纯文本日期（`Oct 05 - 25, 2026`），无时区 |
+
+**2. 为什么 `slice(0, 10)` 是错的**（F13 的实证）：
+
+- 悉尼 09:00 的场次 UTC 是**前一天** 22:00 → 切前 10 位变成前一天；
+- 洛杉矶 23:00 的场次 UTC 是**次日** 07:00 → 切前 10 位变成次日。
+
+两头都会错。东京恰好不错，所以过去一直没人发现。
+
+**3. 新增 `lib/time.js`**：
+- `localDate(at, tz)`：按给定时区算 `YYYY-MM-DD`；缺时区按 UTC；非法时区退回 UTC；无法解析返回 `null`（不编造）。
+- `localDateTime(at, tz)`：拆出本地日期与时刻，给页面显示。
+- `daysBetween(a, b)`：只做日期相减，避开夏令时把 23 小时算成 0 天。
+
+**4. 活动行补三个字段**（`start`/`end` 保留本地日期以兼容既有筛选与排序）：
+- `startAt` / `endAt`：完整 UTC ISO；
+- `tz`：活动所在时区（Luma 有真值；Devfolio 标 `null`，明确告诉页面这是估算而非当地日期）。
+
+**5. 实测产出**（golden 数据）：
+- Luma 东京场次：`startAt: 2026-11-14T05:00Z` → `tz: Asia/Tokyo` → `start: 2026-11-14`（14:00 东京，同一天，正确）；
+- Devfolio：`startAt: 2026-10-23T14:00Z` → `tz: null` → `start: 2026-10-23`；
+- Devpost：只有纯日期，无 `startAt`（源就没有）。
+
+**6. 情报归日**：`mergeArchive` 已按 `Asia/Shanghai` 归日（T1.7 做的），本轮补测试证明「UTC 16:30 = 北京次日 00:30 归到次日」。
+
+新增 `test/unit/time.test.js`（17 项），覆盖东京 / 悉尼 / 洛杉矶三个方向的跨日、缺时区、非法时区、纯日期、北京凌晨归日、夏令时。
+
+golden 差异：活动的 `startAt` / `endAt` / `tz` 三个新字段（其余字节不变）。574 项测试 535 通过 0 失败，e2e 28 项全过。
+
+**未做**：页面的「按访客时区显示」需要页面消费 `startAt`+`tz`，而 `index.html` 仍是 256 KB 单体（M5 才拆）。数据侧已经备好，页面侧留到 M5。
 
 ### [ ] T3.5 schema 与坏行隔离
 

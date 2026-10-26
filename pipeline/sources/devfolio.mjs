@@ -13,6 +13,7 @@ import { httpJson } from '../../lib/http.js';
 import { sleep, todayISO } from '../../lib/clock.js';
 import { eventStatus } from '../../lib/event-classify.js';
 import { keepSafeUrl } from '../../lib/safe-url.js';
+import { localDate } from '../../lib/time.js';
 
 const TEST_PROFILE = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
 
@@ -154,8 +155,13 @@ export async function fetchDevfolio() {
 
   const ai = live.filter(devfolioIsAI);
   const rows = ai.map((h) => {
-    const start = String(h.starts_at || '').slice(0, 10);
-    const end = String(h.ends_at || '').slice(0, 10);
+    /* 时间口径（T3.4）：Devfolio 给的是 UTC ISO，**没有时区字段**。
+     * 所以 startAt 存完整 ISO（页面可按访客时区显示），而 start/end 只能按 UTC 记日期，
+     * tz 标 null —— 让页面与筛选知道这是估算，而不是假装当地日期算准了。 */
+    const startAt = h.starts_at || null;
+    const endAt = h.ends_at || null;
+    const start = localDate(startAt, null);
+    const end = localDate(endAt, null);
     const cityCountry = [h.city, h.country].filter(Boolean).join(', ');
     const row = {
       id: `devfolio-${h.uuid || h.slug}`,
@@ -164,6 +170,9 @@ export async function fetchDevfolio() {
       dates: [start, end].filter(Boolean).join(' → ') || null,
       start: start || null,
       end: end || null,
+      startAt,
+      endAt,
+      tz: null,
       location: h.is_online ? '线上' : h.location || cityCountry || '线下',
       org: h.hackathon_brand?.name || '',
       prize: devfolioPrize(h.prizes),

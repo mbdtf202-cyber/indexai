@@ -13,6 +13,7 @@
 import { httpGet } from '../../lib/http.js';
 import { sleep, mark, since } from '../../lib/clock.js';
 import { eventStatus } from '../../lib/event-classify.js';
+import { localDate } from '../../lib/time.js';
 import {
   AI_EVENT_RE,
   EV_LUMA_CITIES,
@@ -259,7 +260,16 @@ export async function fetchLuma() {
       // calendar 名照旧参与匹配（现在为空，但源一旦补上就能自动生效）
       const hay = `${name} ${cal} ${addressText}`;
       if (!re.test(hay)) continue;
-      const start = String(ev.start_at || '').slice(0, 10);
+      /* 时间口径（T3.4）：源给的是 **UTC ISO**（`2026-11-05T00:00:00.000Z`）
+       * 加一个 `timezone` 字段（IANA 名，实测如 America/Los_Angeles）。
+       * 直接取前 10 位会把东京 19:00 的场次算到前一天，所以：
+       *   - startAt / endAt 存完整 ISO（UTC），供页面按访客时区显示；
+       *   - tz 存活动所在时区，供「今天」的判定用；
+       *   - start / end 保留本地日期（在该 tz 下），兼容既有筛选与排序。 */
+      const tz = ev.timezone || null;
+      const startAt = ev.start_at || null;
+      const endAt = ev.end_at || null;
+      const start = localDate(startAt, tz);
       const geo = ev.geo_address_info || {};
       const cityFallback = ev.__geoCity ? EV_LUMA_CITY_BY_SLUG.get(ev.__geoCity) : null;
       const row = {
@@ -268,7 +278,10 @@ export async function fetchLuma() {
         url: `https://luma.com/${ev.url}`,
         dates: start,
         start,
-        end: String(ev.end_at || '').slice(0, 10),
+        end: localDate(endAt, tz),
+        startAt,
+        endAt,
+        tz,
         // 城市 + 国家都留着：eventRegion 要按国家判，只存城市名会让东京/首尔的场次落 other
         location:
           ev.location_type === 'online'
