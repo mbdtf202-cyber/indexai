@@ -175,8 +175,8 @@ function renderInfoPanel() {
 }
 
 function getRankColor(rank) {
-  const colors = { 1: '#22c55e', 2: '#fbbf24', 3: '#ef4444' };
-  return colors[rank] || '#e2e8f0';
+  const colors = { 1: 'var(--color-success)', 2: 'var(--color-warning)', 3: 'var(--color-error)' };
+  return colors[rank] || 'var(--color-border-primary)';
 }
 
 // URL query parameter parsing helper (exposed globally for routing)

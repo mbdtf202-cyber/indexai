@@ -1,0 +1,214 @@
+/**
+ * 设计令牌（T5.6 · S9.5）。
+ *
+ * ## 规矩
+ *
+ * 1. **所有**颜色、间距、字号、圆角、动效时长都定义在这里；
+ * 2. 组件样式只**引用**令牌，不写死具体值；
+ * 3. 深色模式只换令牌值，不写第二套组件样式；
+ * 4. 默认跟随 `prefers-color-scheme`，`[data-theme]` 手动覆盖。
+ *
+ * 第三条最容易破：写 `.card { background: #fff }` 再加一条
+ * `[data-theme=dark] .card { background: #000 }`，就变成了两套组件样式——
+ * 以后改卡片结构要改两处，迟早不一致。
+ */
+
+:root {
+  /* ── 颜色 ── */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8fafc;
+  --color-bg-tertiary: #f1f5f9;
+  --color-text-primary: #1e293b;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
+  --color-border-primary: #e2e8f0;
+  --color-border-focus: #3b82f6;
+  --color-accent-primary: #3b82f6;
+  --color-accent-hover: #2563eb;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* ── 间距（4px 基准）── */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-xxl: 3rem;
+
+  /* ── 字号阶梯 ──
+   * 下限是 S9.4 的硬要求：任何文字 ≥ 10px，正文 ≥ 11px。
+   * 用 rem 而不是 px，跟随用户的浏览器字号设置。 */
+  --font-size-xs: 0.6875rem; /* 11px — 正文下限 */
+  --font-size-sm: 0.8125rem; /* 13px */
+  --font-size-base: 1rem; /* 16px */
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.5rem;
+  --font-size-xxl: 2rem;
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+
+  /* ── 圆角 ── */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 9999px;
+
+  /* ── 阴影 ── */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+  /* ── 动效时长 ── */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: var(--duration-fast) var(--ease-standard);
+  --transition-normal: var(--duration-normal) var(--ease-standard);
+
+  /* ── 站点主调色板（原 index.html 的 :root，T5.6 迁入）── */
+  --site-bg: #ffffff;
+  --site-panel: #ffffff;
+  --site-panel2: #fafafa;
+  --site-panel3: #f2f2f2;
+  --site-ink: #0a0a0a;
+  --site-dim: #4f4f4f;
+  --site-faint: #6d6d6d;
+  --site-line: #e4e4e4;
+  --site-line2: #bdbdbd;
+  --site-accent: #e11d48;
+  --site-accent-soft: #fdf0f3;
+  --site-accent-ink: #ffffff;
+  --site-good: #0f7b4f;
+  --site-good-soft: #edf7f2;
+  --site-warn: #8a5b00;
+  --site-bad: #a4261d;
+
+  --site-kind-hackathon: #0a0a0a;
+  --site-kind-conference: #e11d48;
+  --site-kind-meetup: #0f7b4f;
+  --site-kind-other: #b9b9b9;
+
+  --site-topic-1: #e11d48;
+  --site-topic-2: #0f7b4f;
+  --site-topic-3: #7c3aed;
+  --site-topic-4: #0f766e;
+  --site-topic-5: #b91c1c;
+  --site-topic-6: #0369a1;
+
+  --site-level-bad: #c2410c;
+  --site-progress: #e11d48;
+
+  --site-selection-ink: #ffffff;
+  --site-mask-ink: #000000;
+  --site-story-dim: #7c7f72;
+  --site-mute: #8b8b8b;
+  --site-warm-ink: #0d0e0c;
+}
+
+/* ── 深色：默认跟随系统 ──
+ *
+ * 只在用户**没有**明确选过浅色时才应用。这样：
+ *   系统深 + 未选  → 深
+ *   系统深 + 选浅  → 浅（下面 [data-theme=light] 覆盖）
+ *   系统浅 + 选深  → 深（下面 [data-theme=dark] 覆盖）
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-primary: #0f172a;
+    --color-bg-secondary: #1e293b;
+    --color-bg-tertiary: #334155;
+    --color-text-primary: #f1f5f9;
+    --color-text-secondary: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-border-primary: #334155;
+    --color-border-focus: #60a5fa;
+    --color-accent-primary: #60a5fa;
+    --color-accent-hover: #3b82f6;
+    --color-success: #4ade80;
+    --color-warning: #fbbf24;
+    --color-error: #f87171;
+    --color-info: #60a5fa;
+
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  }
+}
+
+[data-theme="dark"] {
+  --site-bg: #0a0b0a;
+  --site-panel: #111210;
+  --site-panel2: #161815;
+  --site-panel3: #1e201c;
+  --site-ink: #e9e7df;
+  --site-dim: #a9ada3;
+  --site-faint: #8f9389;
+  --site-line: #252822;
+  --site-line2: #3a3e36;
+  --site-accent: #fb5f7a;
+  --site-accent-soft: #2a1218;
+  --site-accent-ink: #0a0b0a;
+  --site-good: #6ee7a8;
+  --site-good-soft: #10241a;
+  --site-warn: #e0b34d;
+  --site-bad: #ff7a6b;
+  /* 深色下四类都换亮色，保证与 #0a0b0a 背景对比度 ≥ 3:1 */
+  --site-kind-hackathon: #e9e7df;
+  --site-kind-conference: #fb5f7a;
+  --site-kind-meetup: #6ee7a8;
+  --site-kind-other: #8f9389;
+
+  /* 深色下话题色整体提亮，保证与 --site-bg 的对比度 */
+  --site-topic-1: #fb5f7a;
+  --site-topic-2: #6ee7a8;
+  --site-topic-3: #a78bfa;
+  --site-topic-4: #2dd4bf;
+  --site-topic-5: #ff7a6b;
+  --site-topic-6: #38bdf8;
+
+  --site-level-bad: #fb923c;
+  --site-progress: #fb5f7a;
+
+  --site-selection-ink: #0a0b0a;
+  --site-mask-ink: #ffffff;
+  --site-story-dim: #7c7f72;
+  --site-mute: #8b8b8b;
+  --site-warm-ink: #e9e7df;
+
+  /* 站点深色调色板 */
+  --color-bg-primary: #0f172a;
+  --color-bg-secondary: #1e293b;
+  --color-bg-tertiary: #334155;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-border-primary: #334155;
+  --color-border-focus: #60a5fa;
+  --color-accent-primary: #60a5fa;
+  --color-accent-hover: #3b82f6;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+}
+
+/* ── 手动切换（覆盖系统设置）── */
+
+/* ── 减弱动效（S9.4）── */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+  }
+}

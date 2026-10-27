@@ -27,6 +27,8 @@ export const ENABLED = {
   R6: true, // T2.6
   R3: ['pipeline', 'lib'], // T3.1c（site 部分留到 T5.2）
   R12: true, // T0.6
+  R4: true, // T5.6：十六进制颜色只在 tokens.css
+  R11: true, // T5.6：每个 CSS 选择器只定义一次
 };
 
 /** 需要扫描的源码目录与根目录文件后缀。 */
@@ -492,6 +494,161 @@ function checkR8() {
 }
 
 /**
+ * R4：十六进制颜色只出现在 site/styles/tokens.css（T5.6 · S9.5）。
+ *
+ * 理由：颜色写散在组件里，改主题时要翻遍所有文件找 `#fff`。
+ * 深色模式更是直接失控——每加一个写死的颜色，就多一处深色下看不见的角落。
+ *
+ * 允许的例外：tokens.css 本身（它就是定义颜色的地方），
+ * 以及 data: URL 里的内嵌 SVG（那是图形内容，不是主题色）。
+ */
+function checkR4() {
+  const violations = [];
+  const ALLOWED = join(ROOT, 'site', 'styles', 'tokens.css');
+
+  /* 明确登记的例外。每一条都要写清「为什么 CSS 变量解决不了」——
+   * 例外清单不写理由，就会变成「反正加进来就过了」。
+   *
+   * 形式：文件相对路径 → 允许的字面量集合（null 表示只允许该文件出现颜色）。 */
+  const EXCEPTIONS = new Map([
+    /* <meta name="theme-color"> 是浏览器读的，不吃 CSS 变量。 */
+    [join('site', 'routes', 'prerender.mjs'), new Set(['#0b0d10'])],
+    /* 色板兜底：某个分类没有配色时用中性灰。这个值要和 tokens.css 的
+     * --color-text-muted 一致；写法在 JS 里，CSS 变量取不到，只能重复一次。 */
+    [join('site', 'scripts', 'app.js'), new Set(['#b9b9b9'])],
+    /* <meta name="theme-color"> 是浏览器读的（地址栏配色），不吃 CSS 变量。 */
+    ['index.html', new Set(['#ffffff', '#0a0b0a'])],
+  ]);
+
+  const files = [];
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (
+          ['node_modules', 'dist', '.git', '.data', 'fixtures', 'test-results'].includes(e.name)
+        ) {
+          continue;
+        }
+        walk(p);
+      } else if (/\.(css|js|mjs|html)$/.test(e.name)) {
+        files.push(p);
+      }
+    }
+  };
+  walk(join(ROOT, 'site'));
+  files.push(join(ROOT, 'index.html'));
+
+  for (const file of files) {
+    if (file === ALLOWED) continue;
+
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+
+    /* 去掉注释与 data: URL，再看还有没有 #rgb / #rrggbb。 */
+    const code = text
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/data:[^"')]+/g, '');
+
+    const hits = code.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+    /* 排除 CSS 选择器里的 id 与锚点链接：#view、#compare */
+    const allowedHere = EXCEPTIONS.get(relative(ROOT, file)) || new Set();
+    const real = hits
+      .filter((h) => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(h))
+      .filter((h) => !allowedHere.has(h.toLowerCase()));
+
+    if (real.length) {
+      violations.push({
+        file: relative(ROOT, file),
+        line: 1,
+        message: `R4 违反：十六进制颜色 ${[...new Set(real)].join(' ')} 应当移到 tokens.css`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * R11：每个 CSS 选择器只定义一次（T5.6 · S9.5）。
+ *
+ * 理由：同一选择器在两处出现，后一处会静默覆盖前一处——改样式时改了没生效，
+ * 或者生效了但不知道是哪一条。这类问题在字体、间距上尤其难查。
+ *
+ * 例外：媒体查询里的同名选择器是合法的（那是不同条件）；
+ * 本规则只查**同一文件内、同一层嵌套深度**的重复。
+ */
+function checkR11() {
+  const violations = [];
+  const CSS_DIR = join(ROOT, 'site', 'styles');
+
+  let files = [];
+  try {
+    files = readdirSync(CSS_DIR).filter((f) => f.endsWith('.css'));
+  } catch {
+    return [];
+  }
+
+  for (const name of files) {
+    let text;
+    try {
+      text = readFileSync(join(CSS_DIR, name), 'utf8');
+    } catch {
+      continue;
+    }
+
+    /* 只取顶层规则的选择器（跳过 @media / @supports 内部）。 */
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, '');
+    const seen = new Map();
+    const dupes = [];
+
+    /* 逐字符扫，记录花括号深度；深度 0 处的选择器才算顶层。 */
+    let depth = 0;
+    let buf = '';
+    for (let i = 0; i < stripped.length; i += 1) {
+      const ch = stripped[i];
+      if (ch === '{') {
+        const sel = buf.trim().replace(/\s+/g, ' ');
+        if (depth === 0 && sel && !sel.startsWith('@')) {
+          if (seen.has(sel)) dupes.push(sel);
+          else seen.set(sel, true);
+        }
+        depth += 1;
+        buf = '';
+      } else if (ch === '}') {
+        depth = Math.max(0, depth - 1);
+        buf = '';
+      } else if (ch === ';' && depth === 0) {
+        buf = '';
+      } else {
+        buf += ch;
+      }
+    }
+
+    if (dupes.length) {
+      violations.push({
+        file: relative(ROOT, join(CSS_DIR, name)),
+        line: 1,
+        message: `R11 违反：选择器重复定义 ${[...new Set(dupes)].slice(0, 5).join(' / ')}`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
  * R13：每层必须声明合并策略，且策略名有实现（T3.6 · S3.3）。
  *
  * 为什么值得一条规则：拆层最容易丢的就是合并语义——层还在、`merge` 还叫这个名字，
@@ -749,6 +906,16 @@ export const RULES = [
     id: 'R12',
     description: 'workflow 的 uses 固定 SHA，无 npx --yes 与 Node 20',
     check: checkR12,
+  },
+  {
+    id: 'R4',
+    description: '十六进制颜色只出现在 site/styles/tokens.css',
+    check: checkR4,
+  },
+  {
+    id: 'R11',
+    description: '每个 CSS 选择器只定义一次',
+    check: checkR11,
   },
 ];
 

@@ -14,11 +14,19 @@ describe('design tokens infrastructure', () => {
       throw new Error(`Design tokens should exist at ${tokensPath}`);
     }
 
+    /* T5.6 · R4：令牌的值全在 tokens.css 里，JS 模块只负责切换主题。
+     * 这两件事分开之后，「改颜色」只有一个地方要去。 */
     const content = fs.readFileSync(tokensPath, 'utf8');
-    assert.ok(content.includes('colorTokens'), 'Should export color tokens');
-    assert.ok(content.includes('spacingTokens'), 'Should export spacing tokens');
-    assert.ok(content.includes('typographyTokens'), 'Should export typography tokens');
-    assert.ok(content.includes('setTheme'), 'Should have theme switching functions');
+    assert.ok(content.includes('setTheme'), '要有主题切换');
+    assert.ok(content.includes('getTheme'), '要有读取当前主题');
+    assert.equal(content.includes('colorTokens'), false, '颜色值不该在 JS 里');
+
+    const cssPath = 'site/styles/tokens.css';
+    assert.ok(fs.existsSync(cssPath), '令牌值要在 tokens.css');
+    const css = fs.readFileSync(cssPath, 'utf8');
+    assert.ok(css.includes('--color-bg-primary'), '要有颜色令牌');
+    assert.ok(css.includes('--space-md'), '要有间距令牌');
+    assert.ok(css.includes('--font-size-base'), '要有字号令牌');
   });
 
   test('theme toggle component exists', () => {

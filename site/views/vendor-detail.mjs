@@ -111,16 +111,16 @@ function renderPriceHistory(history) {
       <h2>Pricing History</h2>
       <div class="price-chart">
         <svg viewBox="0 0 ${history.length * 50} 200" preserveAspectRatio="none">
-          <line x1="0" y1="200" x2="${history.length * 50}" y2="200" stroke="#e2e8f0" stroke-width="1"/>
+          <line x1="0" y1="200" x2="${history.length * 50}" y2="200" stroke="var(--color-border-primary)" stroke-width="1"/>
           ${history
             .map((h, i) => {
               const x = i * 50;
               const y = 200 - ((h.price - minPrice) / range) * 150 - 25;
-              return `<circle cx="${x}" cy="${y}" r="4" fill="#3b82f6"/>`;
+              return `<circle cx="${x}" cy="${y}" r="4" fill="var(--color-accent-primary)"/>`;
             })
             .join('')}
           <polyline points="${history.map((h, i) => `${i * 50},${200 - ((h.price - minPrice) / range) * 150 - 25}`).join(' ')}" 
-                    fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    fill="none" stroke="var(--color-accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="price-timeline">

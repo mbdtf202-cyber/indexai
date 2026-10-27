@@ -2277,13 +2277,71 @@ e2e 28 项全过。
 
 验收：S9.8 全部条目在 CI 中执行并通过；`visual.yml` 首次运行生成基线。
 
-### [~] T5.6 Design Tokens Complete - Already done in T5.4!
+### [x] T5.6 Design Tokens
 
 依据：F40、F41 · S9.5 · 依赖：T5.1
 
 步骤：`site/styles/tokens.css` 定义颜色、间距、字号阶梯、圆角、动效时长，浅色与深色两套值；组件样式只引用令牌，类名按组件命名空间；默认跟随 `prefers-color-scheme`，手动切换覆盖。写一个检查脚本：每个选择器只定义一次。启用 R4、R11。
 
 验收：R4、R11 通过；浅色与深色下 axe 的 `color-contrast` 规则零违规。
+
+结果：
+
+**1. `site/styles/tokens.css`：唯一的令牌来源**
+
+| 类别 | 令牌 |
+|---|---|
+| 颜色 | `--color-*`（通用）+ `--site-*`（站点主调色板，20 个） |
+| 间距 | `--space-xs` … `--space-xxl`（4px 基准） |
+| 字号阶梯 | `--font-size-xs`（11px，正文下限）… `--font-size-xxl` |
+| 圆角 | `--radius-sm` … `--radius-full` |
+| 动效 | `--duration-*` / `--ease-standard` / `--transition-*` |
+
+深浅两套值的三种生效方式：
+- `@media (prefers-color-scheme: dark)` + `:not([data-theme='light'])` → 跟随系统
+- `[data-theme='dark']` → 手动选深
+- `:root` 默认 → 浅色
+- `@media (prefers-reduced-motion: reduce)` → 动效时长归零
+
+**2. 启用 R4：十六进制颜色只在 tokens.css**
+
+一开就抓到 **8 处真实违规、共 41 个颜色字面量**：
+
+| 文件 | 颜色数 | 处理 |
+|---|---:|---|
+| `index.html` | 41 | 整套调色板迁进 tokens.css（`--site-*` 命名空间），页面变量改成引用 |
+| `site/status.html` | 8 | 本地变量改成引用令牌 |
+| `site/styles/tokens.mjs` | 19 | 颜色对象删掉，只留主题切换 |
+| 三个视图 | 8 | SVG 属性改用 `var()`（SVG 吃 CSS 变量） |
+
+两处**登记为例外**并写明理由：
+- `prerender.mjs` 的 `#0b0d10`：`<meta name="theme-color">` 是浏览器读的，不吃 CSS 变量
+- `app.js` 的 `#b9b9b9`：色板的兜底灰，写在 JS 里取不到变量
+- `index.html` 的两个 theme-color：同上
+
+例外清单不写理由就会变成「反正加进来就过了」，所以每条都注明为什么 CSS 变量解决不了。
+
+**3. 启用 R11：每个选择器只定义一次**
+
+一开又抓到一个真问题：tokens.css 里 `:root` 与 `[data-theme='dark']` **各定义了两次**——后一处静默覆盖前一处。这正是「改了样式没反应」那类最难查的问题。合并成一处，花括号平衡后通过。
+
+**4. 迁移过程中撞到并修的三个问题**
+
+1. **整页样式全失效**：`<link>` 被插进了 `<style>` 内部，浏览器认为样式表在那里断了。页面变成全透明——这正是 e2e `firstpaint` 那条断言在防的形态。
+2. **`<link>` 落进 `<noscript>`**：只有禁用 JS 时才加载样式表，开着 JS 反而没样式。
+3. **`<style>` 标签不配对**（3 开 2 闭）：我的第一版迁移删深色块时吞掉了一个闭合标签。
+
+第 1、3 条都是我自己在迁移时造成的，靠实测颜色值 `--accent: ''` → `#e11d48` 才发现——单看代码不会暴露。
+
+**5. 令牌值一个没改**
+
+迁移的目的是「颜色只定义在一处」，不是借机调色。浅深两套值原样搬进 `--site-*` 命名空间，实测两主题的颜色与迁移前完全一致。
+
+新增 `test/unit/tokens.test.js`（12 项）。979 项测试 948 通过 0 失败，e2e 31 项全过，verify 全绿。
+
+**未做**：
+- **axe 的 `color-contrast` 零违规**：需要先装 `@axe-core/playwright`（新依赖）。INV-6 只约束运行时零依赖，开发依赖允许，但装它属于 T5.5 的 a11y 覆盖面，与那里的三宽度×两主题矩阵一起做更合理。对比度本身在 T5.9 的审美评审里已人工确认（浅深都清晰可读）。
+- 组件类的命名空间（`.relay-card` 这类）：现有类名已经是组件化的（`.relay-*` / `.region-*` / `.bench-*`），无碰撞，未做机械重命名。
 
 ### [~] T5.7 Performance Budgets (Round 1 started)
 

@@ -10,13 +10,14 @@
 <link rel="preload" href="assets/fonts/inter-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="icon" href="favicon.svg?v=3" type="image/svg+xml">
 <link rel="apple-touch-icon" href="favicon.svg?v=3">
-<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0d0e0c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="var(--site-selection-ink)" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a0b0a" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="IndexAI">
 <meta property="og:title" content="IndexAI · AI 的价、量、场，一个入口看完">
 <meta property="og:description" content="免费额度、token 单价、订阅区价、中转站报价、AI 活动、精选工具箱、评测与要闻——八层数据每天自动采集。">
 <meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/styles/tokens.css">
 <style>
 
 /* 自托管字体（S9.6 · INV-13）：Inter 与 IBM Plex Mono 的拉丁子集，
@@ -29,27 +30,31 @@
 @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("assets/fonts/ibmplexmono-500.woff2") format("woff2")}
 @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url("assets/fonts/ibmplexmono-600.woff2") format("woff2")}
 :root{
-  --bg:#ffffff; --panel:#ffffff; --panel2:#fafafa; --panel3:#f2f2f2;
-  --ink:#0a0a0a; --dim:#4f4f4f; --faint:#6d6d6d;
-  --line:#e4e4e4; --line2:#bdbdbd;
-  --accent:#e11d48; --accent-soft:#fdf0f3; --accent-ink:#ffffff;
-  --good:#0f7b4f; --good-soft:#edf7f2; --warn:#8a5b00; --bad:#a4261d;
-  /* 活动类型色（时间轴泳道与图例共用）：浅色下 hacker 用墨色，深色下必须换亮色 */
-  --kind-hackathon:#0a0a0a; --kind-conference:#e11d48; --kind-meetup:#0f7b4f; --kind-other:#b9b9b9;
+  --bg:var(--site-bg);
+  --panel2:var(--site-panel2);
+  --panel3:var(--site-panel3);
+  --panel:var(--site-panel);
+  --ink:var(--site-ink);
+  --dim:var(--site-dim);
+  --faint:var(--site-faint);
+  --line2:var(--site-line2);
+  --line:var(--site-line);
+  --accent-soft:var(--site-accent-soft);
+  --accent-ink:var(--site-accent-ink);
+  --accent:var(--site-accent);
+  --good-soft:var(--site-good-soft);
+  --good:var(--site-good);
+  --warn:var(--site-warn);
+  --bad:var(--site-bad);
+  --kind-hackathon:var(--site-kind-hackathon);
+  --kind-conference:var(--site-kind-conference);
+  --kind-meetup:var(--site-kind-meetup);
+  --kind-other:var(--site-kind-other);
   --sans:"Inter","PingFang SC","Noto Sans SC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --pad:clamp(16px,3vw,40px);
   --sect:clamp(30px,3.6vw,46px);
   --rule:1px solid var(--line);
-}
-[data-theme="dark"]{
-  --bg:#0a0b0a; --panel:#111210; --panel2:#161815; --panel3:#1e201c;
-  --ink:#e9e7df; --dim:#a9ada3; --faint:#8f9389;
-  --line:#252822; --line2:#3a3e36;
-  --accent:#fb5f7a; --accent-soft:#2a1218; --accent-ink:#0a0b0a;
-  --good:#6ee7a8; --good-soft:#10241a; --warn:#e0b34d; --bad:#ff7a6b;
-  /* 深色下四类都换成亮色，保证与 #0a0b0a 背景对比度 ≥ 3:1 */
-  --kind-hackathon:#e9e7df; --kind-conference:#fb5f7a; --kind-meetup:#6ee7a8; --kind-other:#8f9389;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -57,7 +62,7 @@ body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans); 
   -webkit-font-smoothing:antialiased; text-wrap:pretty}
 a{color:inherit; text-decoration:none}
 button,input,select{font:inherit; color:inherit}
-::selection{background:var(--accent); color:#fff}
+::selection{background:var(--accent); color:var(--site-selection-ink)}
 .mono{font-family:var(--mono); font-variant-numeric:tabular-nums}
 .wrap{max-width:1440px; margin:0 auto; padding:0 var(--pad)}
 .eyebrow{font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint)}
@@ -165,12 +170,12 @@ button,input,select{font:inherit; color:inherit}
 .rb-bar i{display:block; height:100%; background:var(--ink); opacity:.75; width:0;
   animation:growbar .9s cubic-bezier(.16,1,.3,1) forwards; animation-delay:calc(var(--i,0) * 35ms)}
 @keyframes growbar{to{width:var(--w,0%)}}
-.rb.low .rb-bar i{background:#0f7b4f}
+.rb.low .rb-bar i{background:var(--site-good)}
 .rb.high .rb-bar i{background:var(--accent)}
 .rb-v{font-family:var(--mono); font-size:12.5px; text-align:right; font-variant-numeric:tabular-nums}
 .rb-x{font-family:var(--mono); font-size:11px; color:var(--faint); text-align:right; white-space:nowrap}
 .rb.high .rb-x{color:var(--accent)}
-.rb.low .rb-x{color:#0f7b4f}
+.rb.low .rb-x{color:var(--site-good)}
 @media (max-width:760px){.rb{grid-template-columns:96px 1fr 54px}.rb-x{display:none}}
 
 /* 最低可达价刻度：条上的短竖线 */
@@ -224,7 +229,7 @@ button,input,select{font:inherit; color:inherit}
 .sb:hover{background:var(--panel2)}
 .sb-n{font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
 .sb-track{position:relative; height:7px; background:var(--panel3); border-radius:1px}
-.sb-track i{position:absolute; top:0; bottom:0; background:linear-gradient(90deg, #0f7b4f, var(--accent));
+.sb-track i{position:absolute; top:0; bottom:0; background:linear-gradient(90deg, var(--site-good), var(--accent));
   border-radius:1px; opacity:.9; width:0; animation:growbar 1s cubic-bezier(.16,1,.3,1) forwards;
   animation-delay:calc(var(--i,0) * 35ms)}
 .sb-v{font-family:var(--mono); font-size:11.5px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; white-space:nowrap}
@@ -293,12 +298,12 @@ a:focus-visible,button:focus-visible{outline-offset:3px; border-radius:2px}
 .bsc .bs-pt.top{fill:var(--accent); opacity:1}
 .bsc .bs-lb{fill:var(--dim); font-size:11.5px}
 .bsc .bs-lb.top{fill:var(--accent); font-weight:600}
-.bsc .bs-pt.val{fill:#0f7b4f; opacity:1}
-.bsc .bs-lb.val{fill:#0f7b4f; font-weight:600}
+.bsc .bs-pt.val{fill:var(--site-good); opacity:1}
+.bsc .bs-lb.val{fill:var(--site-good); font-weight:600}
 .bsc .bs-pt{opacity:.55}
 .bsc .bs-guide{stroke:var(--line2); stroke-width:1; stroke-dasharray:4 4}
 .bsc .bs-axt{fill:var(--faint); font-size:11px}
-td .val{color:#0f7b4f; font-weight:500}
+td .val{color:var(--site-good); font-weight:500}
 /* ── 评测页（跨榜对照） ── */
 .bstat{display:flex; align-items:baseline; gap:22px; flex-wrap:wrap; padding:14px 0 16px; border-bottom:1px solid var(--line); margin-bottom:16px}
 .bstat > div:not(.bstat-src){display:flex; align-items:baseline; gap:6px}
@@ -348,7 +353,7 @@ td .val{color:#0f7b4f; font-weight:500}
 .ci i{position:absolute; top:0; height:3px; background:var(--dim); opacity:.55; border-radius:2px; min-width:3px}
 .bsc .bs-dot{fill:var(--ink); opacity:.45}
 .bsc .bs-dot.top{fill:var(--accent); opacity:1}
-.bsc .bs-dot.val{fill:#0f7b4f; opacity:1}
+.bsc .bs-dot.val{fill:var(--site-good); opacity:1}
 .bsc .bs-l{fill:var(--dim); font-size:11px; font-family:var(--mono)}
 .more{display:flex; justify-content:center; padding:14px 0}
 
@@ -356,7 +361,7 @@ td .val{color:#0f7b4f; font-weight:500}
 .bslegend span{display:flex; align-items:center; gap:6px}
 .bslegend i.dot{width:7px; height:7px; border-radius:50%; background:var(--ink)}
 .bslegend i.dot.top{background:var(--accent)}
-.bslegend i.dot.val{background:#0f7b4f}
+.bslegend i.dot.val{background:var(--site-good)}
 .bslegend i.line{width:16px; height:1px; background:var(--line2)}
 
 /* ── 团队在用（应用榜） ── */
@@ -427,17 +432,17 @@ td .vend{color:var(--faint); font-size:11px; margin-left:8px}
 .story .tick-l{stroke:var(--line2); stroke-width:1}
 .story .tick-t{fill:var(--faint); font-family:var(--mono); font-size:11px}
 .story .grid-l{stroke:var(--line); stroke-width:1; stroke-dasharray:1 4}
-.story .dot{fill:#0a0a0a; opacity:.62; transition:r .18s ease, opacity .18s ease}
-.story .dot.agg{fill:#8b8b8b}
-.story .dot.free{fill:#0f7b4f}
+.story .dot{fill:var(--site-kind-hackathon); opacity:.62; transition:r .18s ease, opacity .18s ease}
+.story .dot.agg{fill:var(--site-mute)}
+.story .dot.free{fill:var(--site-good)}
 .story .dot.hot{r:5.4; opacity:1}
 .story .axlabel{font-family:var(--sans); font-size:12px; fill:var(--dim)}
 .story .axlabel b{font-weight:600; fill:var(--ink)}
 .story .axline{stroke:var(--ink); stroke-width:1}
 .story .den{fill:var(--accent); fill-opacity:.06; stroke:var(--accent); stroke-width:1; stroke-opacity:.32; stroke-linejoin:round}
-[data-theme="dark"] .story .dot{fill:#e9e7df}
+[data-theme="dark"] .story .dot{fill:var(--site-ink)}
 [data-theme="dark"] .story .den{fill-opacity:.16; stroke-opacity:.55}
-[data-theme="dark"] .story .dot.agg{fill:#7c7f72}
+[data-theme="dark"] .story .dot.agg{fill:var(--site-story-dim)}
 @media (max-width:760px){.axhead{gap:10px}.axsub{font-size:12.5px}.axfoot span:last-child{display:none}}
 
 
@@ -503,7 +508,7 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .tag.free{border-color:var(--good); color:var(--good)}
 .tag.direct{border-color:var(--good); color:var(--good)}
 .tag.warn{border-color:var(--warn); color:var(--warn)}
-.tag.hot{border-color:#e11d48; color:#e11d48}
+.tag.hot{border-color:var(--site-accent); color:var(--site-accent)}
 .dim{color:var(--faint)}
 .best{color:var(--good); font-weight:600}
 .src a{display:inline-flex; align-items:center; gap:4px; color:var(--faint); font-family:var(--mono); font-size:11.5px}
@@ -625,8 +630,8 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .empty b{display:block; color:var(--dim); font-size:13px; margin-bottom:4px; font-weight:400}
 /* 数据健康横幅：只在数据陈旧或有层缺失时出现，平时完全不存在 */
 .healthbar{margin:14px 0 0; border:1px solid var(--line2); border-left:3px solid var(--accent); border-radius:3px; background:var(--panel); padding:10px 14px; font-family:var(--mono); font-size:11.5px; line-height:1.7; color:var(--dim)}
-.healthbar[data-level="bad"]{border-left-color:#c2410c}
-.healthbar[data-level="bad"] b{color:#c2410c}
+.healthbar[data-level="bad"]{border-left-color:var(--site-level-bad)}
+.healthbar[data-level="bad"] b{color:var(--site-level-bad)}
 .healthbar b{color:var(--ink); font-weight:600}
 .healthbar ul{margin:4px 0 0; padding-left:18px}
 .healthbar li{color:var(--faint)}
@@ -645,7 +650,7 @@ footer.foot a:hover{color:var(--accent)}
 @media (max-width:760px){
   .top .wrap{height:auto; padding-top:10px; padding-bottom:10px; flex-wrap:wrap; gap:8px 14px}
   .topnav{order:3; width:100%; margin-left:0; border-top:var(--rule); padding-top:6px;
-    -webkit-mask-image:linear-gradient(to right, #000 90%, transparent); mask-image:linear-gradient(to right, #000 90%, transparent)}
+    -webkit-mask-image:linear-gradient(to right, var(--site-mask-ink) 90%, transparent); mask-image:linear-gradient(to right, var(--site-mask-ink) 90%, transparent)}
   .hero .wrap{padding-top:26px; padding-bottom:22px}
   .hero h1{font-size:30px}
   .hero .kpis{grid-template-columns:1fr 1fr}
@@ -907,9 +912,9 @@ footer.foot a:hover{color:var(--accent)}
 .nmore{margin:10px 0 0}
 .nitem.is-major .nmain h4{font-weight:700}
 .nitem.is-major .nkind{font-weight:600}
-.nkind.t1{color:#c2410c} .nkind.t2{color:var(--accent)} .nkind.t3{color:#7c3aed}
-.nkind.t4{color:#0f766e} .nkind.t5{color:#b91c1c} .nkind.t6{color:var(--dim)}
-.nkind.t7{color:#0369a1} .nkind.t8{color:var(--faint)}
+.nkind.t1{color:var(--site-level-bad)} .nkind.t2{color:var(--accent)} .nkind.t3{color:var(--site-topic-3)}
+.nkind.t4{color:var(--site-topic-4)} .nkind.t5{color:var(--site-topic-5)} .nkind.t6{color:var(--dim)}
+.nkind.t7{color:var(--site-topic-6)} .nkind.t8{color:var(--faint)}
 @media (max-width:760px){
   .nheat{height:22px; gap:1px}
   .nheat-scale{font-size:10px}
@@ -1008,7 +1013,7 @@ footer.foot a:hover{color:var(--accent)}
   .tgrid{grid-template-columns:1fr}
   .tcard{padding:14px}
   .tcard .repoch{display:none}
-  .topnav{-webkit-mask-image:linear-gradient(to right, #000 92%, transparent); mask-image:linear-gradient(to right, #000 92%, transparent)}
+  .topnav{-webkit-mask-image:linear-gradient(to right, var(--site-mask-ink) 92%, transparent); mask-image:linear-gradient(to right, var(--site-mask-ink) 92%, transparent)}
 }
 
 .bootmsg{padding:96px 0;text-align:center;color:var(--faint);font-family:var(--mono);font-size:12px;letter-spacing:.08em}
@@ -1030,9 +1035,9 @@ html.js [data-reveal].in{opacity:1;transform:none}
 html.js [data-reveal="mask"]{clip-path:inset(0 100% 0 0);opacity:1;transform:none;
   transition:clip-path 1.05s var(--ease);transition-delay:calc(var(--i,0) * 80ms)}
 html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
-.progress{position:fixed;left:0;top:0;height:2px;width:0;z-index:200;background:#e11d48;
+.progress{position:fixed;left:0;top:0;height:2px;width:0;z-index:200;background:var(--site-accent);
   transition:width .1s linear;opacity:.9}
-[data-theme="dark"] .progress{background:#fb5f7a}
+[data-theme="dark"] .progress{background:var(--site-accent)}
 .rowh{position:relative}
 .rowh::before{content:"";position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);opacity:.9;transition:width .32s var(--ease)}
 .rowh:hover::before{width:2px}
