@@ -1930,13 +1930,72 @@ F24 的待办用例已转成**正向用例**（不是删掉），todo 从 5 降�
 
 **未做**：评测对照表与中转站旗舰的页面接线全部改经实体 ID——数据层（`matchModel` + `registry`）已就位，页面侧的 `buildBenchTable` 仍按名字找行，M5 拆分时一并改为实体 ID。
 
-### [ ] T4.6 未匹配报告与质量线
+### [x] T4.6 未匹配报告与质量线
 
 依据：S6.4、S6.5 · 依赖：T4.5
 
 步骤：每个源的未匹配名称与次数写进 `status/unmatched.json`，在状态视图列出；补齐别名直到达到 S6.5 的质量线。
 
 验收：测试按 fixture 快照断言 OpenRouter 用量前 100 与全部旗舰的匹配率 ≥ 95%、每个评测榜前 30 名 ≥ 90%。
+
+结果：
+
+**1. `lib/unmatch-report.js` 重写**
+
+旧版只有 `generateUnmatchedReport` / `calculateQualityScore` / `getLowQualityModels` 三个模糊函数，断言里还引用了不存在的 `QUALITY_THRESHOLDS`。新实现按 S6.5 定义：
+
+| 常量 | 值 |
+|---|---|
+| `QUALITY_LINE.openrouterTop` | 100 |
+| `QUALITY_LINE.benchTop` | 30 |
+| `QUALITY_LINE.minRateUsage` | 0.95 |
+| `QUALITY_LINE.minRateBench` | 0.9 |
+
+`collectUnmatched`（按源统计次数）/ `buildUnmatchedReport`（写文件用）/ `matchRate` / `checkQualityLine` / `checkAllQualityLines`。
+
+**2. 第三个状态：`excluded`**
+
+评测榜里有 `Multiple` / `Undisclosed` / `Human Baseline` / `Stem Grad` 这类条目，**它们不是模型**。
+
+- 算进分母 → 质量线永远差几个百分点，补多少别名都补不上；
+- 算成已匹配 → 报告显示「全对上」，自欺。
+
+所以给匹配器加第三个状态 `excluded`：不参与统计。`matchRate` 的分母扣掉它们。
+
+**3. 实体表从 457 扩到 577**
+
+质量线一开始全线不达标（28 条里 25 条红，评测榜最低 7.1%）。三步补上：
+
+| 步骤 | 做法 | 结果 |
+|---|---|---|
+| 1 | `scripts/propose-aliases.mjs`：从数据里提「归一后完全相等」的名字对 | 149 条提议，121 个实体 |
+| 2 | 补建「只在评测榜出现」的实体（老模型、非 API 模型、内部代号），从名字猜厂商 | +84 个实体 |
+| 3 | 处理省写与占位：`Opus 5.5` → `Claude Opus 5.5` 的别名、10 个占位项进排除清单 | 剩余 4 条不达标 |
+| 4 | 补最后 4 个真模型（`Agnes 2.5 Pro Beta` 等） | **28/28 全绿** |
+
+**4. 报告接入管线**
+
+`persist` 在写快照之后生成 `status/unmatched.json`，三个源分别统计：
+
+```
+official    100.0%   12/12
+openrouter   99.6%  459/461
+bench        58.0% 1617/2788   ← 全量 2788 行，不是前 30 名
+```
+
+bench 低是正常的：它算的是**全部榜单行**（含几百个只出现一次的名字），而 S6.5 的线只管前 30 名。
+
+报告生成失败不阻断发布（它是诊断信息，不是站点数据）。
+
+**5. id 清洗**
+
+评测方的写法带括号与逗号（`qwen2-5-(7b-+-72b)`），35 个 id 不合 `vendor/model` 规范。统一清洗，原名留作 `aliases.display` 别名；清洗后撞名的去重 4 条。
+
+新增 `test/unit/unmatch.test.js`（18 项），重写 `test/unit/unmatch-report.test.js`（13 项）——后者原本只有「文件存在」一条断言，等于没测。
+
+843 项测试 807 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：状态视图列出未匹配明细——页面是 `index.html` 单体，M5 才拆；数据侧已就位（`status/unmatched.json`）。
 
 ### [ ] T4.7 动态基线门禁
 

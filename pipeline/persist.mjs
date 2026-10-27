@@ -10,8 +10,10 @@
  */
 
 import { writeFile, mkdir, rename, rm } from 'node:fs/promises';
+import { readFileSync, mkdirSync } from 'node:fs';
 import { buildManifest, manifestEntry, VERDICT } from './manifest.mjs';
 import { snapshotLayer, recordAttempt, writeNewsShards } from '../scripts/data-scripts.mjs';
+import { buildUnmatchedReport } from '../lib/unmatch-report.js';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -52,6 +54,12 @@ export function resolveOutDir() {
   const test = String(process.env.INDEXAI_PROFILE || '').toLowerCase() === 'test';
   if (test) return join(ROOT, 'fixtures', 'data');
   return join(ROOT, '.data');
+}
+
+/** 确保目录存在并返回它的路径。 */
+function ensureDir(dir) {
+  mkdirSync(dir, { recursive: true });
+  return dir;
 }
 
 /** 门禁判定结果（T3.6 · S3.4）。 */
@@ -248,6 +256,51 @@ export async function persist(outDir, data, opt = {}) {
         { status: r.status, count: r.n, ms: r.ms, error: r.error, reason: r.reason },
         { root: opt.dataDir, at: report.finished_at },
       );
+    }
+
+    /* 未匹配报告（T4.6 · S6.4）：每个源认不出的模型名与次数。
+     * 写进 status/unmatched.json，状态视图会列出来；补别名是一类常规任务。
+     *
+     * 三个源分别统计：openrouter / official / bench。合成一个总数会掩盖
+     * 「哪个源在退」，而那正是要看的。 */
+    try {
+      const sources = [];
+      const byKind = new Map();
+      for (const m of Array.isArray(data.models) ? data.models : []) {
+        const kind = m.channelKind === 'aggregator' ? 'openrouter' : 'official';
+        if (!byKind.has(kind)) byKind.set(kind, []);
+        byKind.get(kind).push(m.id);
+      }
+      for (const [src, names] of byKind) sources.push({ source: src, names });
+
+      /* 评测榜的名字来自 bench.json（data.json 只留目录，T4.1 起 boards 已拆出去）。 */
+      const benchNames = [];
+      try {
+        const benchRaw = JSON.parse(readFileSync(join(outDir, 'bench.json'), 'utf8'));
+        for (const board of Object.values(benchRaw?.boards || {})) {
+          for (const row of board?.rows || []) {
+            if (row?.model) benchNames.push(String(row.model));
+          }
+        }
+      } catch {
+        /* 首次运行没有 bench.json：评测这一源就跳过 */
+      }
+      if (benchNames.length) sources.push({ source: 'bench', names: benchNames });
+
+      if (sources.length) {
+        const statusDir = ensureDir(join(opt.dataDir, 'status'));
+        await writeFileAtomic(
+          join(statusDir, 'unmatched.json'),
+          JSON.stringify(
+            buildUnmatchedReport(sources, { at: report?.finished_at || null }),
+            null,
+            2,
+          ),
+        );
+      }
+    } catch (e) {
+      /* 报告写不出来不该阻断发布：它是诊断信息，不是站点数据。 */
+      console.warn('[persist] 未匹配报告生成失败：', e.message);
     }
   }
 
