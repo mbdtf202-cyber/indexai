@@ -1749,13 +1749,74 @@ e2e 28 项全过。
 
 **未做**：页面「状态」视图（`/status/`）——`index.html` 是 256 KB 单体，M5 才拆。数据侧契约已就位（`status.mjs`），M5 换渲染层即可。
 
-### [ ] T4.3 变化引擎与 Atom 源
+### [x] T4.3 变化引擎与 Atom 源
 
 依据：S5.2 · F29 · 依赖：T4.1
 
 步骤：`pipeline/derive/changes.js` 比较今天与上一版快照，产出 S5.2 表中的全部事件类型，写入 data 分支的 `changes/<date>.json`；构建生成 `dist/feeds/changes.xml`（Atom）；评测页标出「较上次下降」的分数；README 与评测页头恢复相应描述。
 
 验收：两份 fixture 快照的 golden 覆盖每一类事件；Atom 源通过结构校验（解析成功、必填元素齐全）。
+
+结果：
+
+**1. `pipeline/derive/changes-engine.mjs`：六类事件全覆盖**
+
+| 层 | 事件类型 |
+|---|---|
+| 模型 | `model_new` / `model_removed` / `model_price_{input,output,cache_read,cache_write}` / `model_ctx` |
+| 免费额度 | `offer_new` / `offer_removed` / `offer_quota` |
+| 订阅 | `sub_new` / `sub_removed` / `sub_price`（阈值 1%） |
+| 中转站 | `relay_new` / `relay_up` / `relay_down` / `relay_price`（逐旗舰模型比） |
+| 评测 | `bench_new_board` / `bench_rank`（前 20 名）/ `bench_score_down`（F29） |
+| 活动 | `event_high_value`（奖池 ≥ $10k 或报名 ≥ 500） |
+
+**纯度**：不读文件、不看时钟（`date` 由调用方传），全部可测。
+
+**2. 四类价格各自独立报**
+
+旧实现是「任一价格变了就报一条 `model_price_increase`」。后果：只改输入价时，输出价也被写进事件里（值没变），读者看到「输出价也变了」。
+
+现在四个字段各自比、各自报，`change` 里带 `old` / `new` / `delta` / `pct`。
+
+**3. 浮点比较**
+
+`priceDelta` 用相对误差 0.1% 判等：`0.140845` 与 `0.1408450001` 视为没变。价格量级差两个数量级（$0.01 到 $10），绝对误差不稳。
+
+**4. Atom 源合规（验收）**
+
+`pipeline/derive/atom.mjs`：
+- feed 级三个必填（`title` / `id` / `updated`）+ `link rel=self` + `author`
+- 每条 entry 三个必填（`title` / `id` / `updated`）+ `link` + `category`
+- 条目 id 用 `tag:` URI，**不带时间戳**——带时间戳会让同一件事在两个时刻生成两个 id，读者看到重复条目
+- feed 的 `<updated>` 取最新事件的日期，不是生成时刻：内容没变时 feed 不该跳，否则订阅者每天收到一次「更新」
+
+**5. 构建接入**
+
+`npm run build -- --data <dir> --prev <snapshots>` 产出：
+- `dist/feeds/changes.xml`
+- `dist/data/changes.json`（含 `events` 与 `counts`，首页「今日变化」用）
+
+上一版来源：`--prev` 显式指定 → data 目录的 `snapshots/` → 都没有就跳过（首次构建不该产出空 feed 冒充「有变化」）。
+
+**6. 实测**（`fixtures/prev` vs `fixtures/data`）
+
+```
+19 条事件 / 11 类：
+bench_new_board 9, model_new 1, model_removed 1,
+model_price_input 1, model_price_output 1,
+model_price_cache_read 1, model_ctx 1,
+offer_new 1, offer_quota 1, sub_price 1, relay_up 1
+```
+
+Atom 结构：19 个 entry，每个都有 title/id/updated。
+
+新增 `test/unit/changes.test.js`（38 项），覆盖六类事件、浮点比较、确定性排序、Atom 结构校验（含 XML 转义与条目上限）。
+
+768 项测试 729 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：
+- 「评测页标出较上次下降的分数」与「README 恢复描述」——页面是 `index.html` 单体，M5 才拆；`bench_score_down` 事件已产出，页面接线留 M5。
+- `series/` 价格序列属于 T4.8。
 
 ### [ ] T4.4 厂商表
 

@@ -1,0 +1,1095 @@
+[
+ {
+  "domain": "api.laozhang.ai",
+  "name": "老张 API",
+  "auto": true,
+  "status": "http_500",
+  "url": "https://api.laozhang.ai/api/pricing",
+  "models": 210,
+  "prices": {
+   "sonnet55": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.1,
+    "cacheRatio": 0.05,
+    "model": "claude-sonnet-5-5",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 3.469,
+    "vsOfficial": 1
+   },
+   "opus55": {
+    "kind": "per_1m",
+    "input": 4,
+    "output": 20,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.2,
+    "cacheRatio": 0.05,
+    "model": "claude-opus-5-5",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 6.938,
+    "vsOfficial": 1
+   },
+   "gpt61sol": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "cacheRead": 0.1,
+    "cacheWrite": 2.5,
+    "comp": 5,
+    "tier": "≤ 272K",
+    "via": "expr",
+    "branches": [
+     {
+      "name": "≤ 272K",
+      "input": 2,
+      "output": 10,
+      "cacheRead": 0.1
+     },
+     {
+      "name": "> 272K",
+      "input": 4,
+      "output": 15,
+      "cacheRead": 0.2
+     }
+    ],
+    "longContext": {
+     "name": "> 272K",
+     "input": 4,
+     "output": 15
+    },
+    "group": "default",
+    "groupKnown": true,
+    "model": "gpt-6.1-sol",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 3.469,
+    "vsOfficial": 1
+   },
+   "gemini4argon": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "model": "gemini-4-argon",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 4.4,
+    "vsOfficial": 1
+   }
+  },
+  "samples": [
+   {
+    "n": "text-embedding-3-small",
+    "i": 0.02,
+    "o": 0.02,
+    "c": 1
+   },
+   {
+    "n": "qwen3.5-flash-2026-02-23",
+    "i": 0.03,
+    "o": 0.3,
+    "c": 10
+   },
+   {
+    "n": "qwen3.5-35b-a3b",
+    "i": 0.06,
+    "o": 0.48,
+    "c": 8
+   },
+   {
+    "n": "claude-haiku-5-5",
+    "i": 0.1,
+    "o": 0.5,
+    "c": 5
+   },
+   {
+    "n": "gpt-6-luna",
+    "i": 0.1,
+    "o": 0.5,
+    "c": 5
+   },
+   {
+    "n": "text-embedding-ada-002",
+    "i": 0.1,
+    "o": 0.1,
+    "c": 1
+   },
+   {
+    "n": "qwen-plus",
+    "i": 0.1143,
+    "o": 0.2857,
+    "c": 2.5
+   },
+   {
+    "n": "text-embedding-3-large",
+    "i": 0.13,
+    "o": 0.13,
+    "c": 1
+   },
+   {
+    "n": "gpt-4o-mini-2024-07-18",
+    "i": 0.15,
+    "o": 0.6,
+    "c": 4
+   },
+   {
+    "n": "gpt-5.4-nano",
+    "i": 0.2,
+    "o": 1.25,
+    "c": 6.25
+   },
+   {
+    "n": "grok-4-fast-non-reasoning",
+    "i": 0.2,
+    "o": 0.5,
+    "c": 2.5
+   },
+   {
+    "n": "wan2.7-t2v",
+    "i": 0.2057,
+    "o": 0.2057,
+    "c": 1
+   },
+   {
+    "n": "gpt-5-mini-2025-08-07",
+    "i": 0.25,
+    "o": 2,
+    "c": 8
+   },
+   {
+    "n": "qwen3.7-plus",
+    "i": 0.2857,
+    "o": 1.1429,
+    "c": 4
+   },
+   {
+    "n": "gemini-3.5-flash-lite",
+    "i": 0.3,
+    "o": 2.502,
+    "c": 8.34
+   },
+   {
+    "n": "gpt-4.1-mini-2025-04-14",
+    "i": 0.4,
+    "o": 1.6,
+    "c": 4
+   },
+   {
+    "n": "deepseek-v4-flash",
+    "i": 0.44,
+    "o": 1.32,
+    "c": 3
+   },
+   {
+    "n": "gpt-3.5-turbo-0125",
+    "i": 0.5,
+    "o": 1.5,
+    "c": 3
+   },
+   {
+    "n": "glm-5",
+    "i": 0.56,
+    "o": 2.52,
+    "c": 4.5
+   },
+   {
+    "n": "gpt-5.4-mini",
+    "i": 0.75,
+    "o": 4.5,
+    "c": 6
+   },
+   {
+    "n": "gpt-3.5-turbo-1106",
+    "i": 1,
+    "o": 2,
+    "c": 2
+   },
+   {
+    "n": "o3-mini",
+    "i": 1.1,
+    "o": 4.4,
+    "c": 4
+   },
+   {
+    "n": "o3-mini-2025-01-31-medium",
+    "i": 1.1,
+    "o": 4.4,
+    "c": 4
+   },
+   {
+    "n": "o4-mini-2025-04-16",
+    "i": 1.1,
+    "o": 4.4,
+    "c": 4
+   },
+   {
+    "n": "gemini-2.5-pro",
+    "i": 1.25,
+    "o": 10,
+    "c": 8
+   },
+   {
+    "n": "gpt-5.1-2025-11-13",
+    "i": 1.25,
+    "o": 10,
+    "c": 8
+   },
+   {
+    "n": "grok-4.3",
+    "i": 1.25,
+    "o": 2.5,
+    "c": 2
+   },
+   {
+    "n": "qwen-max",
+    "i": 1.6,
+    "o": 6.4,
+    "c": 4
+   },
+   {
+    "n": "gpt-5.2",
+    "i": 1.75,
+    "o": 14,
+    "c": 8
+   },
+   {
+    "n": "gemini-3.1-pro-preview",
+    "i": 2,
+    "o": 12,
+    "c": 6
+   },
+   {
+    "n": "gpt-5.6-terra",
+    "i": 2,
+    "o": 12,
+    "c": 6
+   },
+   {
+    "n": "grok-4.5",
+    "i": 2,
+    "o": 6,
+    "c": 3
+   },
+   {
+    "n": "qwen3-omni-flash",
+    "i": 2,
+    "o": 20,
+    "c": 10
+   },
+   {
+    "n": "gpt-5.4",
+    "i": 2.5,
+    "o": 15,
+    "c": 6
+   },
+   {
+    "n": "gpt-3.5-turbo-16k-0613",
+    "i": 3,
+    "o": 3.9,
+    "c": 1.3
+   },
+   {
+    "n": "o3-2025-04-16",
+    "i": 3,
+    "o": 12,
+    "c": 4
+   },
+   {
+    "n": "gpt-5.6-sol",
+    "i": 4,
+    "o": 20,
+    "c": 5
+   },
+   {
+    "n": "gpt-4o-2024-05-13",
+    "i": 5,
+    "o": 15,
+    "c": 3
+   },
+   {
+    "n": "gpt-image-1.5-2025-12-16",
+    "i": 5,
+    "o": 32,
+    "c": 6.4
+   },
+   {
+    "n": "gpt-image-2.5-sunburst",
+    "i": 5,
+    "o": 30,
+    "c": 6
+   }
+  ],
+  "groups": {
+   "count": 7,
+   "min": 0.1714,
+   "max": 1.2,
+   "spread": 7,
+   "names": [
+    "GPT_Image_2_Enterprise",
+    "SeeDance2",
+    "Wan",
+    "claude_code",
+    "default",
+    "gpt_image_2_reverse",
+    "sora_official"
+   ]
+  },
+  "checked_at": "2026-10-24",
+  "stale": false,
+  "comparable": 4,
+  "grayGroups": 0
+ },
+ {
+  "domain": "api.bltcy.ai",
+  "name": "柏拉图 API",
+  "auto": true,
+  "status": "ok",
+  "url": "https://api.bltcy.ai/api/pricing",
+  "models": 1135,
+  "prices": {
+   "sonnet55": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.2,
+    "cacheRatio": 0.1,
+    "model": "claude-sonnet-5-5",
+    "anomaly": false,
+    "variants": 2,
+    "groups": 1,
+    "floor": {
+     "input": 1.6,
+     "output": 8,
+     "group": "cc",
+     "disc": 0.8
+    },
+    "eff": 3.518,
+    "vsOfficial": 1
+   },
+   "opus55": {
+    "kind": "per_1m",
+    "input": 5,
+    "output": 25,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.5,
+    "cacheRatio": 0.1,
+    "model": "claude-opus-5-5",
+    "anomaly": false,
+    "variants": 2,
+    "groups": 1,
+    "floor": {
+     "input": 4,
+     "output": 20,
+     "group": "cc",
+     "disc": 0.8
+    },
+    "eff": 8.795,
+    "vsOfficial": 1.25
+   },
+   "gpt61sol": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.1,
+    "cacheRatio": 0.05,
+    "model": "gpt-6.1-sol",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 3.469,
+    "vsOfficial": 1
+   },
+   "gemini4argon": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "comp": 5,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.2,
+    "cacheRatio": 0.1,
+    "model": "gemini-4-argon",
+    "anomaly": false,
+    "variants": 4,
+    "groups": 1,
+    "eff": 3.518,
+    "vsOfficial": 1
+   },
+   "deepseekflash": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 8,
+    "comp": 4,
+    "group": "default",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.04,
+    "cacheRatio": 0.02,
+    "model": "deepseek-v4.1-flash-1017",
+    "anomaly": true,
+    "variants": 3,
+    "groups": 1,
+    "grayGroups": 1,
+    "eff": 2.8396,
+    "vsOfficial": 14.205
+   }
+  },
+  "samples": [
+   {
+    "n": "qwen3-reranker-8b",
+    "i": 0.0022,
+    "o": 0.0022,
+    "c": 1
+   },
+   {
+    "n": "gpt-4o-mini",
+    "i": 0.15,
+    "o": 0.6,
+    "c": 4
+   },
+   {
+    "n": "netease-youdao/bce-reranker-base_v1",
+    "i": 0.2,
+    "o": 0.2,
+    "c": 1
+   },
+   {
+    "n": "qwen-turbo",
+    "i": 0.3,
+    "o": 0.6,
+    "c": 2
+   },
+   {
+    "n": "gpt-4.1-mini-2025-04-14",
+    "i": 0.4,
+    "o": 0.8,
+    "c": 2
+   },
+   {
+    "n": "qwen3-vl-8b-thinking",
+    "i": 0.5,
+    "o": 5,
+    "c": 10
+   },
+   {
+    "n": "qwen3-30b-a3b-thinking-2507",
+    "i": 0.76,
+    "o": 7.5,
+    "c": 9.8684
+   },
+   {
+    "n": "qwen-vl-plus-latest",
+    "i": 0.8,
+    "o": 2,
+    "c": 2.5
+   },
+   {
+    "n": "qwen2-vl-7b-instruct",
+    "i": 1,
+    "o": 5,
+    "c": 5
+   },
+   {
+    "n": "o3-mini-2025-01-31-low",
+    "i": 1.1,
+    "o": 4.4,
+    "c": 4
+   },
+   {
+    "n": "gpt-5-codex-medium",
+    "i": 1.25,
+    "o": 10,
+    "c": 8
+   },
+   {
+    "n": "gemini-3.7-flash-thinking-low",
+    "i": 1.5,
+    "o": 7.5,
+    "c": 5
+   },
+   {
+    "n": "gpt-5.1-codex-medium",
+    "i": 1.75,
+    "o": 14,
+    "c": 8
+   },
+   {
+    "n": "claude-sonnet-5-thinking",
+    "i": 2,
+    "o": 10,
+    "c": 5
+   },
+   {
+    "n": "hunyuan-t1",
+    "i": 2,
+    "o": 8,
+    "c": 4
+   },
+   {
+    "n": "qwen3-235b-a22b-thinking-2507",
+    "i": 2,
+    "o": 20,
+    "c": 10
+   },
+   {
+    "n": "qwen-max",
+    "i": 2.4,
+    "o": 9.6,
+    "c": 4
+   },
+   {
+    "n": "qwen3-max",
+    "i": 2.5,
+    "o": 25,
+    "c": 10
+   },
+   {
+    "n": "glm-4.5",
+    "i": 3,
+    "o": 14.0001,
+    "c": 4.6667
+   },
+   {
+    "n": "gpt-4o-audio-preview-2024-12-17",
+    "i": 3.75,
+    "o": 15,
+    "c": 4
+   },
+   {
+    "n": "kimi-k2-0711-preview",
+    "i": 4,
+    "o": 16,
+    "c": 4
+   },
+   {
+    "n": "MiniMax-M2.7-highspeed",
+    "i": 4.2,
+    "o": 16.8,
+    "c": 4
+   },
+   {
+    "n": "gpt-5.6-sol",
+    "i": 5,
+    "o": 30,
+    "c": 6
+   },
+   {
+    "n": "qwen1.5-110b-chat",
+    "i": 7,
+    "o": 14,
+    "c": 2
+   },
+   {
+    "n": "qwen2.5-vl-32b-instruct",
+    "i": 8,
+    "o": 24,
+    "c": 3
+   },
+   {
+    "n": "deepseek-v4-pro",
+    "i": 12,
+    "o": 24,
+    "c": 2
+   },
+   {
+    "n": "tts-1",
+    "i": 15,
+    "o": 15,
+    "c": 1
+   },
+   {
+    "n": "tts-1-hd",
+    "i": 30,
+    "o": 30,
+    "c": 1
+   },
+   {
+    "n": "claude-sonnet-4-5",
+    "i": 75,
+    "o": 375,
+    "c": 5
+   },
+   {
+    "n": "gpt-4-net",
+    "i": 75,
+    "o": 150,
+    "c": 2
+   },
+   {
+    "n": "hailuo-feed",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "llama-3.1-405b-instruct",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "pixverse_v1-video",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "qwen-max-0403",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "qwen3-livetranslate-flash",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "runway-v1",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "suno-feed-uploads",
+    "i": 75,
+    "o": 75,
+    "c": 1
+   },
+   {
+    "n": "codex-mini",
+    "i": 112.5,
+    "o": 112.5,
+    "c": 1
+   },
+   {
+    "n": "gpt-realtime",
+    "i": 112.5,
+    "o": 225,
+    "c": 2
+   },
+   {
+    "n": "gemini-2.5-flash-lite-thinking-*",
+    "i": 150,
+    "o": 600,
+    "c": 4
+   }
+  ],
+  "groups": {
+   "count": 28,
+   "min": 0.6,
+   "max": 8,
+   "spread": 13.3,
+   "names": [
+    "AZ-优质",
+    "aws-claude",
+    "azure特价组",
+    "cc",
+    "cc优质",
+    "claude-10",
+    "claude官",
+    "claude正价",
+    "claude逆",
+    "default",
+    "fal.ai-all",
+    "gemini-t3",
+    "gemini优质",
+    "gpt-image-2-official-mix",
+    "image2-4k",
+    "openai官-优质",
+    "openai画图官方格式-origin",
+    "openai画图官方格式-官优质",
+    "origin",
+    "sd-global",
+    "ssvip",
+    "svip",
+    "veo&grok-备用1",
+    "veo&grok-备用2",
+    "vip",
+    "vvip",
+    "国产特价",
+    "国产特价2"
+   ]
+  },
+  "checked_at": "2026-10-24",
+  "stale": false,
+  "comparable": 5,
+  "grayGroups": 1
+ },
+ {
+  "domain": "api.right.codes",
+  "name": "Right Code",
+  "auto": true,
+  "status": "ok",
+  "url": "https://api.right.codes/api/pricing",
+  "models": 41,
+  "prices": {
+   "sonnet55": {
+    "kind": "per_1m",
+    "input": 4,
+    "output": 20,
+    "comp": 5,
+    "group": "Claude Code",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.4,
+    "cacheRatio": 0.1,
+    "model": "claude-sonnet-5-5",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "floor": {
+     "input": 0.6,
+     "output": 3,
+     "group": "Claude awsq",
+     "disc": 0.15
+    },
+    "eff": 7.036,
+    "vsOfficial": 2
+   },
+   "opus55": {
+    "kind": "per_1m",
+    "input": 8,
+    "output": 40,
+    "comp": 5,
+    "group": "Claude Code",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.4,
+    "cacheRatio": 0.05,
+    "model": "claude-opus-5-5",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "floor": {
+     "input": 1.2,
+     "output": 6,
+     "group": "Claude awsq",
+     "disc": 0.15
+    },
+    "eff": 13.876,
+    "vsOfficial": 2
+   },
+   "gpt61sol": {
+    "kind": "per_1m",
+    "input": 2,
+    "output": 10,
+    "cacheRead": 0.1,
+    "cacheWrite": 2.5,
+    "comp": 5,
+    "tier": "short",
+    "via": "expr",
+    "branches": [
+     {
+      "name": "short",
+      "input": 2,
+      "output": 10,
+      "cacheRead": 0.1
+     },
+     {
+      "name": "long",
+      "input": 4,
+      "output": 15,
+      "cacheRead": 0.2
+     }
+    ],
+    "longContext": {
+     "name": "long",
+     "input": 4,
+     "output": 15
+    },
+    "group": "Codex无限制",
+    "groupKnown": true,
+    "model": "gpt-6.1-sol",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 3.469,
+    "vsOfficial": 1
+   },
+   "gemini4argon": {
+    "kind": "per_1m",
+    "input": 3,
+    "output": 15,
+    "comp": 5,
+    "group": "Gemini-slb",
+    "groupKnown": true,
+    "via": "ratio",
+    "cacheRead": 0.15,
+    "cacheRatio": 0.05,
+    "model": "gemini-4-argon",
+    "anomaly": false,
+    "variants": 1,
+    "groups": 1,
+    "eff": 5.2035,
+    "vsOfficial": 1.5
+   }
+  },
+  "samples": [
+   {
+    "n": "claude-haiku-5-5",
+    "i": 0.1,
+    "o": 0.5,
+    "c": 5
+   },
+   {
+    "n": "gemini-3-flash-preview",
+    "i": 0.3,
+    "o": 1.8,
+    "c": 6
+   },
+   {
+    "n": "gemini-2.5-flash",
+    "i": 0.45,
+    "o": 3.75,
+    "c": 8.3333
+   },
+   {
+    "n": "deepseek-v4-flash",
+    "i": 0.5,
+    "o": 1,
+    "c": 2
+   },
+   {
+    "n": "codex-auto-review",
+    "i": 1,
+    "o": 6,
+    "c": 6
+   },
+   {
+    "n": "deepseek-flash",
+    "i": 1,
+    "o": 4,
+    "c": 4
+   },
+   {
+    "n": "gemini-3.7-flash",
+    "i": 1.125,
+    "o": 5.625,
+    "c": 5
+   },
+   {
+    "n": "gemini-3.8-flash",
+    "i": 1.125,
+    "o": 5.625,
+    "c": 5
+   },
+   {
+    "n": "gemini-3.1-pro",
+    "i": 1.2,
+    "o": 7.2,
+    "c": 6
+   },
+   {
+    "n": "claude-haiku-4-5-20251001",
+    "i": 2,
+    "o": 10,
+    "c": 5
+   },
+   {
+    "n": "gpt-6-sol",
+    "i": 2,
+    "o": 10,
+    "c": 5
+   },
+   {
+    "n": "gpt-6.1-sol",
+    "i": 2,
+    "o": 10,
+    "c": 5
+   },
+   {
+    "n": "gemini-3.5-flash",
+    "i": 2.25,
+    "o": 13.5,
+    "c": 6
+   },
+   {
+    "n": "gemini-3.6-flash",
+    "i": 2.25,
+    "o": 11.25,
+    "c": 5
+   },
+   {
+    "n": "deepseek-v4-pro",
+    "i": 3,
+    "o": 6,
+    "c": 2
+   },
+   {
+    "n": "gemini-3.1-pro-preview",
+    "i": 3,
+    "o": 18,
+    "c": 6
+   },
+   {
+    "n": "gemini-4-argon",
+    "i": 3,
+    "o": 15,
+    "c": 5
+   },
+   {
+    "n": "claude-sonnet-5",
+    "i": 4,
+    "o": 20,
+    "c": 5
+   },
+   {
+    "n": "claude-sonnet-5-5",
+    "i": 4,
+    "o": 20,
+    "c": 5
+   },
+   {
+    "n": "glm-5.3",
+    "i": 4,
+    "o": 14,
+    "c": 3.5
+   },
+   {
+    "n": "gpt-5.5",
+    "i": 5,
+    "o": 30,
+    "c": 6
+   },
+   {
+    "n": "gpt-5.6-sol",
+    "i": 5,
+    "o": 30,
+    "c": 6
+   },
+   {
+    "n": "grok-4.5",
+    "i": 5,
+    "o": 15,
+    "c": 3
+   },
+   {
+    "n": "grok-4.6",
+    "i": 5,
+    "o": 15,
+    "c": 3
+   },
+   {
+    "n": "grok-4.7",
+    "i": 5,
+    "o": 15,
+    "c": 3
+   },
+   {
+    "n": "claude-sonnet-4-6",
+    "i": 6,
+    "o": 30,
+    "c": 5
+   },
+   {
+    "n": "claude-opus-5-5",
+    "i": 8,
+    "o": 40,
+    "c": 5
+   },
+   {
+    "n": "claude-opus-4-6",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "claude-opus-4-7",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "claude-opus-4-8",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "claude-opus-5",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "gpt-5.6-terra",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "gpt-6-astra",
+    "i": 10,
+    "o": 50,
+    "c": 5
+   },
+   {
+    "n": "claude-fable-5",
+    "i": 20,
+    "o": 100,
+    "c": 5
+   },
+   {
+    "n": "claude-fable-5-1",
+    "i": 20,
+    "o": 100,
+    "c": 5
+   }
+  ],
+  "groups": {
+   "count": 12,
+   "min": 0.1,
+   "max": 2.5,
+   "spread": 25,
+   "names": [
+    "Claude Code",
+    "Claude awsq",
+    "Codex无限制",
+    "Codex正价自营",
+    "DeepSeek",
+    "Gemini",
+    "Gemini-slb",
+    "cursor逆向",
+    "deepseek-v4-flash",
+    "grok",
+    "grok官key",
+    "image"
+   ]
+  },
+  "checked_at": "2026-10-24",
+  "stale": false,
+  "comparable": 4,
+  "grayGroups": 0
+ }
+]

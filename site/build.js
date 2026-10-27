@@ -24,7 +24,10 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { join, dirname } from 'node:path';
+
+import { computeChanges, countByType, describeChange } from '../pipeline/derive/changes-engine.mjs';
+import { renderAtom } from '../pipeline/derive/atom.mjs';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -55,7 +58,8 @@ function parseDataDir(argv) {
   return dir;
 }
 
-const dataDir = parseDataDir(process.argv.slice(2));
+const argv = process.argv.slice(2);
+const dataDir = parseDataDir(argv);
 
 if (!existsSync(dataDir)) {
   console.error(`[build] 数据目录不存在：${dataDir}`);
@@ -173,6 +177,84 @@ if (existsSync(collectManifestPath)) {
 writeFileSync(join(DATA_DIR, 'manifest.json'), JSON.stringify(merged, null, 2), 'utf8');
 rmSync(join(DATA_DIR, 'manifest.json.build'), { force: true });
 copiedData.push('data/manifest.json');
+
+/* 变化引擎与 Atom 源（T4.3 · S5.2）。
+ *
+ * 需要「上一版快照」。来源优先级：
+ *   1. `--prev <目录>` 显式指定的快照目录
+ *   2. data 目录里的 snapshots/（真实运行时）
+ *   3. 没有上一版 → 跳过（首次构建不该产出空 feed 冒充「有变化」）
+ */
+const prevDir = (() => {
+  const at = argv.indexOf('--prev');
+  if (at >= 0 && argv[at + 1]) return resolve(argv[at + 1]);
+  const fromData = join(dataDir, 'snapshots');
+  return existsSync(fromData) ? fromData : null;
+})();
+
+if (prevDir) {
+  const readLayer = (dir, name) => {
+    for (const cand of [name, name.replace(/s$/, '')]) {
+      const p = join(dir, `${cand}.json`);
+      if (existsSync(p)) {
+        try {
+          return JSON.parse(readFileSync(p, 'utf8'));
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
+  };
+
+  const prevData = {};
+  for (const layer of ['models', 'offers', 'subs', 'relays', 'events']) {
+    const v = readLayer(prevDir, layer);
+    if (v) prevData[layer] = v;
+  }
+
+  const prevBench = join(prevDir, 'bench.json');
+  const prevBenchObj = existsSync(prevBench) ? JSON.parse(readFileSync(prevBench, 'utf8')) : null;
+
+  const currData = JSON.parse(readFileSync(join(dataDir, 'data.json'), 'utf8'));
+  const currBench = existsSync(join(dataDir, 'bench.json'))
+    ? JSON.parse(readFileSync(join(dataDir, 'bench.json'), 'utf8'))
+    : currData.bench;
+
+  if (Object.keys(prevData).length) {
+    const events = computeChanges(
+      { data: prevData, bench: prevBenchObj },
+      { data: currData, bench: currBench },
+      { date: currData.meta?.date || '' },
+    );
+
+    mkdirSync(join(DIST, 'feeds'), { recursive: true });
+    writeFileSync(
+      join(DIST, 'feeds', 'changes.xml'),
+      renderAtom({
+        events,
+        updated: `${currData.meta?.date || '1970-01-01'}T00:00:00Z`,
+        describe: describeChange,
+      }),
+      'utf8',
+    );
+
+    /* 变化数据也给页面用（首页「今日变化」模块）。 */
+    writeFileSync(
+      join(DATA_DIR, 'changes.json'),
+      JSON.stringify(
+        { date: currData.meta?.date || '', events, counts: countByType(events) },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+    copiedData.push('feeds/changes.xml', 'data/changes.json');
+    console.log(
+      `[build] 变化 ${events.length} 条（${Object.keys(countByType(events)).length} 类）→ feeds/changes.xml`,
+    );
+  }
+}
 
 if (!copiedData.includes('data.json')) {
   console.error(`[build] ${dataDir} 里没有 data.json，页面无数据可渲染`);

@@ -435,7 +435,7 @@ function checkR8() {
   /* dist/ 部分（T3.9）：构建产物里只该有「构建能生成的东西」。
    * 混进手写文件是 F37 的形态——它会被发布出去，却不在任何构建清单里，
    * 下次谁都不知道它是哪来的、还敢不敢删。 */
-  const DIST_ALLOWED_DIRS = new Set(['assets', 'data', 'lib', 'news']);
+  const DIST_ALLOWED_DIRS = new Set(['assets', 'data', 'lib', 'news', 'feeds']);
   const DIST_ALLOWED_FILE =
     /^(?:index\.html|favicon\.svg|_headers|data\.json|bench\.json|news-(?:archive|milestones)\.json|manifest\.json)$/;
 
