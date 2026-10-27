@@ -9,6 +9,7 @@ import {
   FORMULA as COST_FORMULA,
   FORMULA_ZH,
 } from '/lib/effective-cost.js';
+import { quotaLabel, sortByQuotaValue } from '/lib/offers.js';
 
 /* ══════ motion（独立于主 IIFE，主流程可以随时调 MOTION.arm()） ══════ */
 const MOTION = (() => {
@@ -307,6 +308,7 @@ const MOTION = (() => {
     outShare: profileOf('compare').s,
     region: 'all',
     cat: 'all',
+    offerSort: 'default',
     sigSrc: 'all',
     limit: 80,
     cmpView: 'models',
@@ -1292,12 +1294,15 @@ const MOTION = (() => {
     const offers = state.data.offers;
     if (!offers.length)
       return `<div class="empty"><b>免费额度这一层还没入库</b>运行 <code>node collect.mjs</code>。</div>`;
-    const cats = [...new Set(offers.map((o) => o.category))];
-    const list = offers.filter(
+    const active = offers.filter((o) => o.status !== 'archived');
+    const archived = offers.filter((o) => o.status === 'archived');
+    const cats = [...new Set(active.map((o) => o.category))];
+    const filtered = active.filter(
       (o) =>
         (state.region === 'all' || o.region === state.region || o.region === 'BOTH') &&
         (state.cat === 'all' || o.category === state.cat),
     );
+    const list = state.offerSort === 'value' ? sortByQuotaValue(filtered) : filtered;
     return `
       <div class="controls">
         <div class="chips" role="group" aria-label="地区">
@@ -1316,7 +1321,11 @@ const MOTION = (() => {
           <button class="chip" data-cat="all" aria-pressed="${state.cat === 'all'}">全部类型</button>
           ${cats.map((c) => `<button class="chip" data-cat="${esc(c)}" aria-pressed="${state.cat === c}">${esc(catLabel(c))}</button>`).join('')}
         </div>
-        <span class="spacer"></span><span class="eyebrow">${list.length} 条在架</span>
+        <div class="chips" role="group" aria-label="额度排序">
+          <button class="chip" data-offersort="default" aria-pressed="${state.offerSort === 'default'}">默认顺序</button>
+          <button class="chip" data-offersort="value" aria-pressed="${state.offerSort === 'value'}">按额度价值</button>
+        </div>
+        <span class="spacer"></span><span class="eyebrow">${list.length} 条在架${archived.length ? ` · ${archived.length} 条已结束` : ''}</span>
       </div>
       ${
         list.length === 0
@@ -1336,7 +1345,7 @@ const MOTION = (() => {
             </div>
             <p>${esc(o.claim)}</p>
             <dl>
-              <dt>额度</dt><dd class="mono" style="font-size:12px">${esc(o.quota || '未公开')}</dd>
+              <dt>额度</dt><dd class="mono" style="font-size:12px" title="${esc(o.quota_raw || '')}">${esc(quotaLabel(o.quota) || o.quota_raw || '未公开')}</dd>
               <dt>期限</dt><dd>${esc(o.free_scope || '—')}</dd>
               ${(o.models || []).length ? `<dt>模型</dt><dd><div class="mchips">${o.models.map((m) => `<span class="mchip">${esc(m)}</span>`).join('')}</div></dd>` : ''}
               ${o.requirements ? `<dt>门槛</dt><dd>${esc(o.requirements)}</dd>` : ''}
@@ -1358,7 +1367,8 @@ const MOTION = (() => {
           )
           .join('')}
       </div>`
-      }`;
+      }
+      ${archived.length ? `<div class="shead" style="padding-top:26px"><h2>已结束</h2><span class="right">${archived.length} 条</span></div><div class="grid">${archived.map((o) => `<article class="card"><div class="hd"><div style="flex:1;min-width:0"><h3>${esc(o.product)}</h3><div class="sub">${esc(o.vendor || '')} · ${esc(o.expires_at || '已结束')}</div></div></div><p>${esc(o.claim || '')}</p></article>`).join('')}</div>` : ''}`;
   }
 
   /* ── subs ── */
@@ -3947,7 +3957,7 @@ ${esc(COST_FORMULA)}</div>
         return;
       }
       const t = ev.target.closest(
-        '[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn',
+        '[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-offersort],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn',
       );
       if (!t) return;
       if (t.dataset.tab) {
@@ -4153,6 +4163,11 @@ ${esc(COST_FORMULA)}</div>
       }
       if (t.dataset.cat) {
         state.cat = t.dataset.cat;
+        render();
+        return;
+      }
+      if (t.dataset.offersort) {
+        state.offerSort = t.dataset.offersort;
         render();
         return;
       }

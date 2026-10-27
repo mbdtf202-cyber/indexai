@@ -50,11 +50,13 @@ export default {
         quarantined.push({ reason: '缺少 source，无法回溯', product: o?.product });
         continue;
       }
+      const today = ctx.today?.() || '9999-12-31';
       withBacking.push({
         ...o,
         conf: o.conf || o.confidence || 'med',
         srcType: o.srcType || o.source_type || 'official',
         sources,
+        status: o.expires_at && o.expires_at < today ? 'archived' : 'active',
       });
     }
     const deduped = ctx.dedupeOffers(withBacking);

@@ -23,10 +23,10 @@ function parseTemplate(text) {
   }
   const bodyStart = text.indexOf('\nbody:');
   const bodyText = bodyStart >= 0 ? text.slice(bodyStart) : '';
-  const chunks = bodyText.split(/\n  - type:\s*/).slice(1);
+  const chunks = bodyText.split(/\n {2}- type:\s*/).slice(1);
   const body = chunks.map((chunk) => {
     const type = chunk.slice(0, chunk.indexOf('\n')).trim();
-    const id = (chunk.match(/\n    id:\s*(.+)/) || [])[1]?.trim();
+    const id = (chunk.match(/\n {4}id:\s*(.+)/) || [])[1]?.trim();
     return { type, id, chunk };
   });
   return { top, body };

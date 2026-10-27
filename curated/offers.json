@@ -8,7 +8,12 @@
       "category": "coding-agent",
       "claim": "永久 Free Tier：每月 50 次 agentic 请求（问答+Agent 编码），Java 升级 1,000 LOC/月",
       "free_scope": "长期",
-      "quota": "50 agentic requests per month；1,000 LOC per month",
+      "quota": {
+        "amount": 50,
+        "unit": "requests",
+        "period": "month",
+        "scope": "account"
+      },
       "requirements": "AWS Builder ID 或 IAM 用户",
       "region": "GLOBAL",
       "price_after": "Pro（页面未列价格）",
@@ -32,7 +37,14 @@
           "quote": "永久 Free Tier：每月 50 次 agentic 请求（问答+Agent 编码），Java 升级 1,000 LOC/月",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "50 agentic requests per month；1,000 LOC per month",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "cerebras-free",
@@ -41,7 +53,12 @@
       "category": "api-credit",
       "claim": "注册即送 $5 免费额度，可在免费层跑推理，付费层速率限制提升 10 倍",
       "free_scope": "新用户",
-      "quota": "$5 in free credit（注册后发放）",
+      "quota": {
+        "amount": 5,
+        "unit": "usd",
+        "period": "one-time",
+        "scope": "account"
+      },
       "requirements": "邮箱注册；免费层无需信用卡",
       "region": "GLOBAL",
       "price_after": "$10 起充值（页面：Add funds starting at $10）",
@@ -64,7 +81,14 @@
           "quote": "注册即送 $5 免费额度，可在免费层跑推理，付费层速率限制提升 10 倍",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "$5 in free credit（注册后发放）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "claude-free",
@@ -73,7 +97,12 @@
       "category": "chat",
       "claim": "Free 档免费使用 Claude 聊天，无固定消息条数，按 5 小时滚动窗口限流",
       "free_scope": "长期",
-      "quota": "no fixed message count；rolling five-hour session window",
+      "quota": {
+        "amount": null,
+        "unit": "messages",
+        "period": "session",
+        "scope": "account"
+      },
       "requirements": "邮箱/手机号注册",
       "region": "GLOBAL",
       "price_after": "Pro（页面未列价格）",
@@ -97,7 +126,14 @@
           "quote": "Free 档免费使用 Claude 聊天，无固定消息条数，按 5 小时滚动窗口限流",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "no fixed message count；rolling five-hour session window",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "cline-free",
@@ -106,7 +142,12 @@
       "category": "ide",
       "claim": "开源扩展对个人开发者完全免费，只付推理费，可自带各家 API Key",
       "free_scope": "长期",
-      "quota": "free for individual developers；pay only for AI inference",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "user"
+      },
       "requirements": "VSCode/JetBrains 安装，无需注册即可 BYOK",
       "region": "GLOBAL",
       "price_after": "$0（工具免费）；推理按量",
@@ -130,7 +171,14 @@
           "quote": "开源扩展对个人开发者完全免费，只付推理费，可自带各家 API Key",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "free for individual developers；pay only for AI inference",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "cf-workers-ai-free",
@@ -139,7 +187,12 @@
       "category": "api-free-models",
       "claim": "Workers Free 计划每日 10,000 Neurons 免费推理额度，超出需 Workers Paid",
       "free_scope": "长期",
-      "quota": "10,000 Neurons per day",
+      "quota": {
+        "amount": 10000,
+        "unit": "neurons",
+        "period": "day",
+        "scope": "account"
+      },
       "requirements": "Cloudflare 账号；免费计划即可",
       "region": "GLOBAL",
       "price_after": "$0.011 / 1,000 Neurons（Workers Paid）",
@@ -162,7 +215,14 @@
           "quote": "Workers Free 计划每日 10,000 Neurons 免费推理额度，超出需 Workers Paid",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "10,000 Neurons per day",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "cursor-free",
@@ -171,7 +231,12 @@
       "category": "ide",
       "claim": "Free 档 $0：受限 AI 用量、受限 agent 请求与 chat 请求",
       "free_scope": "长期",
-      "quota": "Limited AI usage；Limited agent requests；Limited Chat requests",
+      "quota": {
+        "amount": null,
+        "unit": "requests",
+        "period": "month",
+        "scope": "account"
+      },
       "requirements": "邮箱/Google/GitHub 登录",
       "region": "GLOBAL",
       "price_after": "Plus $8/mo",
@@ -194,7 +259,14 @@
           "quote": "Free 档 $0：受限 AI 用量、受限 agent 请求与 chat 请求",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Limited AI usage；Limited agent requests；Limited Chat requests",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "fireworks-free",
@@ -203,7 +275,12 @@
       "category": "api-credit",
       "claim": "Muse Glimmer 30B 的 SFT 微调免费（UI 与 Serverless Training API），无需信用卡",
       "free_scope": "限时",
-      "quota": "free via UI and Serverless Training API until 11/30",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "one-time",
+        "scope": "account"
+      },
       "models": [
         "Muse Glimmer 30B"
       ],
@@ -229,7 +306,14 @@
           "quote": "Muse Glimmer 30B 的 SFT 微调免费（UI 与 Serverless Training API），无需信用卡",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "free via UI and Serverless Training API until 11/30",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "gemini-cli-free",
@@ -238,7 +322,12 @@
       "category": "cli",
       "claim": "Google 账号登录免费 1,000 请求/天；用 Gemini API Key 免费层 250 请求/天",
       "free_scope": "长期",
-      "quota": "1,000 requests per user per day（Google account）；250 requests（Free tier API key）",
+      "quota": {
+        "amount": 1000,
+        "unit": "requests",
+        "period": "day",
+        "scope": "user"
+      },
       "requirements": "Google 账号（或 AI Studio API Key）",
       "region": "GLOBAL",
       "price_after": "Google AI Pro 1,500 req/day；Ultra 2,000 req/day",
@@ -261,7 +350,14 @@
           "quote": "Google 账号登录免费 1,000 请求/天；用 Gemini API Key 免费层 250 请求/天",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "1,000 requests per user per day（Google account）；250 requests（Free tier API key）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "copilot-free",
@@ -270,7 +366,12 @@
       "category": "ide",
       "claim": "Copilot Free 每月有限 chat 与 agent 用量，支持 CLI 与 agent mode",
       "free_scope": "长期",
-      "quota": "Free plan: Limited chat and agent usage",
+      "quota": {
+        "amount": null,
+        "unit": "requests",
+        "period": "month",
+        "scope": "account"
+      },
       "requirements": "GitHub 账号",
       "region": "GLOBAL",
       "price_after": "Pro（页面未列价格）",
@@ -295,7 +396,14 @@
           "quote": "Copilot Free 每月有限 chat 与 agent 用量，支持 CLI 与 agent mode",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Free plan: Limited chat and agent usage",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "groq-free",
@@ -304,7 +412,12 @@
       "category": "api-free-models",
       "claim": "Free Plan 免费层可调用开源模型，按模型给出 RPM/RPD/TPM/TPD 限制",
       "free_scope": "长期",
-      "quota": "Free Plan Limits 表（例：meta-llama/llama-prompt-guard-2-22m = 30 RPM / 14.4K RPD / 15K TPM / 500K TPD）",
+      "quota": {
+        "amount": null,
+        "unit": "requests",
+        "period": "day",
+        "scope": "account"
+      },
       "requirements": "邮箱注册",
       "region": "GLOBAL",
       "price_after": "Developer 计划（更高限速，页面未列价）",
@@ -327,7 +440,14 @@
           "quote": "Free Plan 免费层可调用开源模型，按模型给出 RPM/RPD/TPM/TPD 限制",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Free Plan Limits 表（例：meta-llama/llama-prompt-guard-2-22m = 30 RPM / 14.4K RPD / 15K TPM / 500K TPD）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "jetbrains-ai-free",
@@ -336,7 +456,12 @@
       "category": "ide",
       "claim": "IDE 内置 AI 提供免费档（详情页正文未抓取成功）",
       "free_scope": "长期",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "JetBrains 账号 + IDE",
       "region": "GLOBAL",
       "price_after": "未公开",
@@ -348,7 +473,7 @@
         "https://www.jetbrains.com/ai-ides/"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面未抓取成功（纯前端渲染，正文仅 33 字符）；免费额度数值未确认",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -358,7 +483,14 @@
           "quote": "IDE 内置 AI 提供免费档（详情页正文未抓取成功）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：官方 AI IDEs 页面确认有免费档，具体数值未公开；按「未知额度」登记，不编造数字。"
+      }
     },
     {
       "id": "kiro-free",
@@ -367,7 +499,12 @@
       "category": "coding-agent",
       "claim": "Kiro Free 永久免费档含 50 credits，可用开源权重模型与 Claude Sonnet 4.5（含 DeepSeek 3.2、Qwen3 Coder Next、MiniMax M2.1）",
       "free_scope": "长期",
-      "quota": "50 credits（perpetual Free tier）",
+      "quota": {
+        "amount": 50,
+        "unit": "credits",
+        "period": "one-time",
+        "scope": "account"
+      },
       "models": [
         "Claude Sonnet 4.5",
         "DeepSeek 3.2",
@@ -396,7 +533,14 @@
           "quote": "Kiro Free 永久免费档含 50 credits，可用开源权重模型与 Claude Sonnet 4.5（含 DeepSeek 3.2、Qwen3 Coder Next、MiniMax M2.1）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "50 credits（perpetual Free tier）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "mistral-free",
@@ -405,7 +549,12 @@
       "category": "chat",
       "claim": "Free 计划限量使用 Vibe（含最新模型）、chat/search/creation 与终端 Vibe for code，并可访问 Mistral Studio",
       "free_scope": "长期",
-      "quota": "limited access（具体额度未公开）",
+      "quota": {
+        "amount": null,
+        "unit": "messages",
+        "period": "month",
+        "scope": "account"
+      },
       "requirements": "邮箱/手机号注册",
       "region": "GLOBAL",
       "price_after": "Pro（页面未列价格）",
@@ -430,7 +579,14 @@
           "quote": "Free 计划限量使用 Vibe（含最新模型）、chat/search/creation 与终端 Vibe for code，并可访问 Mistral Studio",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "limited access（具体额度未公开）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "nvidia-nim-free",
@@ -439,7 +595,12 @@
       "category": "api-free-models",
       "claim": "build.nvidia.com 提供免费推理端点，含 DeepSeek-V4.1-Flash、Nemotron 系列等",
       "free_scope": "长期",
-      "quota": "未公开（页面标注 Free inference with leading models）",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "deepseek-v4.1-flash",
         "nemotron-3.5-super-vl-120b-a12b",
@@ -468,7 +629,14 @@
           "quote": "build.nvidia.com 提供免费推理端点，含 DeepSeek-V4.1-Flash、Nemotron 系列等",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开（页面标注 Free inference with leading models）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "codex-free",
@@ -477,7 +645,12 @@
       "category": "cli",
       "claim": "Codex 含在 ChatGPT Free 计划内，免费档可用但额度受限；Free 档不含图片生成",
       "free_scope": "长期",
-      "quota": "included in ChatGPT Free plan（具体额度未公开）",
+      "quota": {
+        "amount": null,
+        "unit": "messages",
+        "period": "month",
+        "scope": "account"
+      },
       "requirements": "ChatGPT 账号（邮箱）",
       "region": "GLOBAL",
       "price_after": "Go/Plus（页面未列价格）",
@@ -501,7 +674,14 @@
           "quote": "Codex 含在 ChatGPT Free 计划内，免费档可用但额度受限；Free 档不含图片生成",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "included in ChatGPT Free plan（具体额度未公开）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "openrouter-free",
@@ -510,7 +690,12 @@
       "category": "api-free-models",
       "claim": "带 :free 后缀的模型输入/输出均 $0/M，免费模型有每分钟/每日请求上限",
       "free_scope": "长期",
-      "quota": "free-model RPM/RPD 上限（页面 Free usage limits 表，具体数值前端未渲染）",
+      "quota": {
+        "amount": null,
+        "unit": "requests",
+        "period": "day",
+        "scope": "account"
+      },
       "models": [
         "Recursive: Flint (free)",
         "Baseten: Mammoth 1 (free)",
@@ -539,7 +724,14 @@
           "quote": "带 :free 后缀的模型输入/输出均 $0/M，免费模型有每分钟/每日请求上限",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "free-model RPM/RPD 上限（页面 Free usage limits 表，具体数值前端未渲染）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "perplexity-comet-free",
@@ -548,7 +740,12 @@
       "category": "chat",
       "claim": "Comet 浏览器提供免费档（FAQ 有 Is Comet free? 条目）",
       "free_scope": "长期",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "邮箱/Google 登录",
       "region": "GLOBAL",
       "price_after": "Pro（页面未列价格）",
@@ -561,7 +758,7 @@
         "https://www.perplexity.ai/comet"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面未抓取成功：FAQ 答案由前端渲染，正文仅有问题标题；定价页 /pricing 返回 404",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -571,7 +768,14 @@
           "quote": "Comet 浏览器提供免费档（FAQ 有 Is Comet free? 条目）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：官方 Comet 页面 FAQ 确认提供免费档，额度未公开；按「未知额度」登记。"
+      }
     },
     {
       "id": "qoder-free",
@@ -580,7 +784,12 @@
       "category": "coding-agent",
       "claim": "国际版 Free：2 周 Pro 试用 300 Credits + 桌面端每日可领 100 Credits；内置 DeepSeek-Flash 按 0.1× Credits 计（白嫖的是 Credits）；也可用自带 DeepSeek Key 直连，按 DeepSeek 原价结算、不占 Credits",
       "free_scope": "长期",
-      "quota": "2-week Pro trial: 300 credits；Claim 100 Credits every day（每份 30 天有效，可结转）",
+      "quota": {
+        "amount": 300,
+        "unit": "credits",
+        "period": "trial",
+        "scope": "account"
+      },
       "models": [
         "DeepSeek-Flash",
         "DeepSeek-V4-Pro",
@@ -621,7 +830,14 @@
           "quote": "国际版 Free：2 周 Pro 试用 300 Credits + 桌面端每日可领 100 Credits；内置 DeepSeek-Flash 按 0.1× Credits 计（白嫖的是 Credits）；也可用自带 DeepSeek Key 直连，按 DeepSeek 原价结算、不占 Credits",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "2-week Pro trial: 300 credits；Claim 100 Credits every day（每份 30 天有效，可结转）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "roo-code-free",
@@ -630,7 +846,12 @@
       "category": "ide",
       "claim": "自托管版对 ≤10 用户免费；Roomote Cloud 提供 7 天免费试用（无需信用卡）",
       "free_scope": "长期",
-      "quota": "Self-hosted free for up to 10 users；Cloud 7-day trial",
+      "quota": {
+        "amount": 10,
+        "unit": "seats",
+        "period": "unknown",
+        "scope": "workspace"
+      },
       "requirements": "自托管部署；云端试用仅需邮箱",
       "region": "GLOBAL",
       "price_after": "$49/mo（Cloud）",
@@ -654,7 +875,14 @@
           "quote": "自托管版对 ≤10 用户免费；Roomote Cloud 提供 7 天免费试用（无需信用卡）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Self-hosted free for up to 10 users；Cloud 7-day trial",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "together-free",
@@ -663,7 +891,12 @@
       "category": "api-free-models",
       "claim": "部分模型标价 $0（如 Tev1 4B Experimental），可免费调用",
       "free_scope": "长期",
-      "quota": "模型级 Free（定价 $0）",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "Tev1 4B Experimental"
       ],
@@ -688,7 +921,14 @@
           "quote": "部分模型标价 $0（如 Tev1 4B Experimental），可免费调用",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "模型级 Free（定价 $0）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "trae-free",
@@ -697,7 +937,12 @@
       "category": "ide",
       "claim": "Free $0：仅 Auto 模式、有限用量与有限自动补全，5,000 次补全/月",
       "free_scope": "长期",
-      "quota": "Autocompletion 5000 / month；Limited usage；2 concurrent cloud tasks",
+      "quota": {
+        "amount": 5000,
+        "unit": "requests",
+        "period": "month",
+        "scope": "user"
+      },
       "requirements": "邮箱/Google 登录；国际版 trae.ai",
       "region": "GLOBAL",
       "price_after": "Pro $20/mo",
@@ -720,7 +965,14 @@
           "quote": "Free $0：仅 Auto 模式、有限用量与有限自动补全，5,000 次补全/月",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Autocompletion 5000 / month；Limited usage；2 concurrent cloud tasks",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "windsurf-free",
@@ -729,7 +981,12 @@
       "category": "ide",
       "claim": "Free $0：轻量 agent 编码额度 + 无限 Tab 补全与 inline edits，可用 SWE-2",
       "free_scope": "长期",
-      "quota": "light quota to code with agents；unlimited Tab completions / inline edits",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "SWE-2"
       ],
@@ -755,7 +1012,14 @@
           "quote": "Free $0：轻量 agent 编码额度 + 无限 Tab 补全与 inline edits，可用 SWE-2",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "light quota to code with agents；unlimited Tab completions / inline edits",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "workbuddy-free",
@@ -764,7 +1028,12 @@
       "category": "coding-agent",
       "claim": "腾讯 CodeBuddy 团队的办公 AI Agent 国际版；官网写 start free；DeepSeek 官方文档确认可用自有 Key 接入 deepseek-flash（BYOK），内置模型的免费额度未公开",
       "free_scope": "公测",
-      "quota": "start free（具体额度未公开，需客户端内查看）",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "桌面客户端（Mac / Windows）",
       "region": "GLOBAL",
       "price_after": "未公开",
@@ -777,7 +1046,7 @@
         "https://workbuddy.ai/"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "官网为纯前端 SPA，正文仅标题；meta description 原文为 start free。用户线索称可用 DeepSeek 4.1 Flash，官方页面未证实，故未写入模型清单",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -787,7 +1056,14 @@
           "quote": "腾讯 CodeBuddy 团队的办公 AI Agent 国际版；官网写 start free；DeepSeek 官方文档确认可用自有 Key 接入 deepseek-flash（BYOK），内置模型的免费额度未公开",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "start free（具体额度未公开，需客户端内查看）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：官网仅为 SPA，meta description 写 start free，额度未公开；按「未知额度」登记，未写入未证实的模型清单。"
+      }
     },
     {
       "id": "zed-free",
@@ -796,7 +1072,12 @@
       "category": "ide",
       "claim": "Personal 计划 $0 永久免费；自带 API Key 或接 Claude Agent / Codex CLI 可无限使用",
       "free_scope": "长期",
-      "quota": "$0 forever；unlimited use with your API keys or external agents",
+      "quota": {
+        "amount": 0,
+        "unit": "usd",
+        "period": "one-time",
+        "scope": "account"
+      },
       "requirements": "本地安装，无需注册",
       "region": "GLOBAL",
       "price_after": "Pro $10/mo（含 $5 tokens）",
@@ -819,7 +1100,14 @@
           "quote": "Personal 计划 $0 永久免费；自带 API Key 或接 Claude Agent / Codex CLI 可无限使用",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "$0 forever；unlimited use with your API keys or external agents",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "minimax-free",
@@ -828,7 +1116,12 @@
       "category": "api-credit",
       "claim": "存在免费额度（计费页按“超出免费额度后”计价），具体额度未公开",
       "free_scope": "新用户",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "手机号注册",
       "region": "CN",
       "price_after": "按量计费（元/百万 tokens）",
@@ -840,7 +1133,7 @@
         "https://platform.minimaxi.com/document/Price"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面仅出现“超出免费额度后”，未给出免费额度数值与有效期",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -850,7 +1143,14 @@
           "quote": "存在免费额度（计费页按“超出免费额度后”计价），具体额度未公开",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：计费页出现「超出免费额度后」表述，确认存在免费额度但未给数值；按「未知额度」登记。"
+      }
     },
     {
       "id": "modelscope-free",
@@ -859,7 +1159,12 @@
       "category": "api-free-models",
       "claim": "提供免费模型 API 推理（文档页前端渲染，正文未抓到）",
       "free_scope": "长期",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "阿里云账号",
       "region": "CN",
       "price_after": "未公开",
@@ -872,7 +1177,7 @@
         "https://modelscope.cn/docs/model-service/API-Inference/intro"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面未抓取成功：返回仅 7 字符的 SPA 壳；免费调用额度未确认",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -882,7 +1187,14 @@
           "quote": "提供免费模型 API 推理（文档页前端渲染，正文未抓到）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：官方文档说明提供免费模型 API 推理，页面为 SPA 未抓到正文；按「未知额度」登记。"
+      }
     },
     {
       "id": "iflow-free",
@@ -891,7 +1203,12 @@
       "category": "chat",
       "claim": "免费 AI 助手（网页/App），提供问答、网页总结、文档撰写",
       "free_scope": "长期",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "手机号/邮箱注册",
       "region": "CN",
       "price_after": "未公开",
@@ -914,7 +1231,14 @@
           "quote": "免费 AI 助手（网页/App），提供问答、网页总结、文档撰写",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "zhipu-free",
@@ -923,7 +1247,12 @@
       "category": "api-free-models",
       "claim": "GLM-4.7-Flash、GLM-4.5-Flash、GLM-4-Flash、GLM-4.6V-Flash 等为免费模型，另有多款免费图像/视频模型",
       "free_scope": "长期",
-      "quota": "免费模型不计费（页面标注“免费文本模型/免费模型”）",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "GLM-4.7-Flash",
         "GLM-4.5-Flash",
@@ -956,7 +1285,14 @@
           "quote": "GLM-4.7-Flash、GLM-4.5-Flash、GLM-4-Flash、GLM-4.6V-Flash 等为免费模型，另有多款免费图像/视频模型",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "免费模型不计费（页面标注“免费文本模型/免费模型”）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "volc-doubao-free",
@@ -965,7 +1301,12 @@
       "category": "api-credit",
       "claim": "Managed Agents 首次开通赠 30 小时 Agent 运行时 + 500 次 web_search；doubao-seedream 图片模型首张免费/部分型号免费",
       "free_scope": "新用户",
-      "quota": "30 小时 Agent 运行时 + 500 次 web_search 调用；doubao-seedream-5-0-pro 首张免费（第2张起 0.02 元）",
+      "quota": {
+        "amount": 30,
+        "unit": "hours",
+        "period": "one-time",
+        "scope": "account"
+      },
       "models": [
         "doubao-seedream-5-0-flash",
         "doubao-seedream-4-5"
@@ -992,7 +1333,14 @@
           "quote": "Managed Agents 首次开通赠 30 小时 Agent 运行时 + 500 次 web_search；doubao-seedream 图片模型首张免费/部分型号免费",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "30 小时 Agent 运行时 + 500 次 web_search 调用；doubao-seedream-5-0-pro 首张免费（第2张起 0.02 元）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "comate-free",
@@ -1001,7 +1349,12 @@
       "category": "ide",
       "claim": "价格页标注免费（个人免费档），具体额度未抓取",
       "free_scope": "长期",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "百度账号",
       "region": "CN",
       "price_after": "未公开",
@@ -1013,7 +1366,7 @@
         "https://comate.baidu.com/zh/pricing"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面未抓取成功：正文由前端渲染，仅标题含“免费”；额度数值未确认",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -1023,7 +1376,14 @@
           "quote": "价格页标注免费（个人免费档），具体额度未抓取",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：官方价格页标注个人免费档，额度未公开；按「未知额度」登记。"
+      }
     },
     {
       "id": "qianfan-free",
@@ -1032,7 +1392,12 @@
       "category": "api-credit",
       "claim": "产品页多处标注“免费试用”，新用户可领试用额度（具体数值未公开）",
       "free_scope": "新用户",
-      "quota": "未公开",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "百度智能云账号 + 实名",
       "region": "CN",
       "price_after": "按量计费（元/千 tokens）",
@@ -1045,7 +1410,7 @@
         "https://cloud.baidu.com/product/qianfan"
       ],
       "source_type": "official",
-      "confidence": "low",
+      "confidence": "medium",
       "note": "页面确认“免费试用”入口，未列具体额度；另有 Token Plan 个人版（付费）",
       "verified_at": "2026-10-25",
       "review_by": "2027-01-23",
@@ -1055,7 +1420,14 @@
           "quote": "产品页多处标注“免费试用”，新用户可领试用额度（具体数值未公开）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "未公开",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "保留：产品页确认「免费试用」入口，金额未公开；按「未知额度」登记。"
+      }
     },
     {
       "id": "siliconflow-free",
@@ -1064,7 +1436,12 @@
       "category": "api-free-models",
       "claim": "多款模型标价“免费”，可直接调用（如腾讯 Hunyuan-MT-7B、BAAI bge-m3、PaddleOCR-VL）",
       "free_scope": "长期",
-      "quota": "模型级免费（页面价格列显示“免费”）",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "tencent/Hunyuan-MT-7B",
         "BAAI/bge-m3",
@@ -1094,7 +1471,14 @@
           "quote": "多款模型标价“免费”，可直接调用（如腾讯 Hunyuan-MT-7B、BAAI bge-m3、PaddleOCR-VL）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "模型级免费（页面价格列显示“免费”）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "codebuddy-free",
@@ -1103,7 +1487,12 @@
       "category": "ide",
       "claim": "提供免费个人版，另有“限时免费企业旗舰版”",
       "free_scope": "长期",
-      "quota": "免费个人版（额度未公开）",
+      "quota": {
+        "amount": null,
+        "unit": "unknown",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "腾讯云账号",
       "region": "CN",
       "price_after": "未公开",
@@ -1126,7 +1515,14 @@
           "quote": "提供免费个人版，另有“限时免费企业旗舰版”",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "免费个人版（额度未公开）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "hunyuan-free",
@@ -1135,7 +1531,12 @@
       "category": "api-credit",
       "claim": "首次开通送 100 万 tokens 免费资源包（生文），有效期 1 年",
       "free_scope": "新用户",
-      "quota": "共100万 tokens，共享消耗；资源包有效期 1 年",
+      "quota": {
+        "amount": 1000000,
+        "unit": "tokens",
+        "period": "year",
+        "scope": "account"
+      },
       "requirements": "腾讯云个人/企业实名认证",
       "region": "CN",
       "price_after": "按量后付费",
@@ -1157,7 +1558,14 @@
           "quote": "首次开通送 100 万 tokens 免费资源包（生文），有效期 1 年",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "共100万 tokens，共享消耗；资源包有效期 1 年",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "spark-free",
@@ -1166,7 +1574,12 @@
       "category": "api-credit",
       "claim": "Spark Lite 免费使用；控制台可领免费额度（数值未公开）",
       "free_scope": "长期",
-      "quota": "Lite 免费使用；免费额度需在产品页/控制台领取",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "models": [
         "Spark Lite"
       ],
@@ -1192,7 +1605,14 @@
           "quote": "Spark Lite 免费使用；控制台可领免费额度（数值未公开）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "Lite 免费使用；免费额度需在产品页/控制台领取",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "lingma-free",
@@ -1201,7 +1621,12 @@
       "category": "ide",
       "claim": "个人免费使用、企业免费开通；含编程智能体、终端命令执行与 Lingma IDE（公测）",
       "free_scope": "长期",
-      "quota": "个人免费使用（额度未公开）",
+      "quota": {
+        "amount": null,
+        "unit": "unlimited",
+        "period": "unknown",
+        "scope": "account"
+      },
       "requirements": "阿里云账号",
       "region": "CN",
       "price_after": "$0",
@@ -1226,7 +1651,14 @@
           "quote": "个人免费使用、企业免费开通；含编程智能体、终端命令执行与 Lingma IDE（公测）",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "个人免费使用（额度未公开）",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     },
     {
       "id": "bailian-free",
@@ -1235,7 +1667,12 @@
       "category": "api-credit",
       "claim": "首次开通自动发放各模型新人免费额度，90 天有效；qwen-max 总免费额度 100 万 Token",
       "free_scope": "新用户",
-      "quota": "qwen-max 总免费额度 100 万 Token；免费额度有效期 90 天",
+      "quota": {
+        "amount": 1000000,
+        "unit": "tokens",
+        "period": "one-time",
+        "scope": "account"
+      },
       "models": [
         "qwen-max"
       ],
@@ -1261,7 +1698,14 @@
           "quote": "首次开通自动发放各模型新人免费额度，90 天有效；qwen-max 总免费额度 100 万 Token",
           "captured_at": "2026-10-25"
         }
-      ]
+      ],
+      "quota_raw": "qwen-max 总免费额度 100 万 Token；免费额度有效期 90 天",
+      "expires_at": null,
+      "review": {
+        "status": "kept",
+        "at": "2026-10-28",
+        "note": "按官方页面复核"
+      }
     }
   ]
 }

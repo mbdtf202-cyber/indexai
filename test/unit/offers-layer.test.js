@@ -77,6 +77,18 @@ describe('offers 层（T3.1c7）', () => {
     assert.equal(row.conf, 'high', '置信度高的那条优先');
   });
 
+  test('到期记录自动归档为 archived（T6.11）', () => {
+    const out = layer.normalize(
+      [
+        { product: 'Old', source: 'https://x', expires_at: '2026-10-01' },
+        { product: 'New', source: 'https://y', expires_at: '2027-01-01' },
+      ],
+      { dedupeOffers, today: () => '2026-10-28' },
+    );
+    assert.equal(out.records.rows.find((x) => x.product === 'Old').status, 'archived');
+    assert.equal(out.records.rows.find((x) => x.product === 'New').status, 'active');
+  });
+
   test('空名单被隔离而不是静默产出空数组', () => {
     const out = layer.normalize([], { dedupeOffers });
     assert.equal(out.records, null);

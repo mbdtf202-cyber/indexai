@@ -2777,13 +2777,43 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 `npm run verify` 全绿：**1021 项 unit/golden/contract（991 通过、0 失败、30 skip）**，build，e2e **102 项全过**。DOM 快照更新 `free.html` 与 `events.html`（新增报错链接导致的预期界面变化）。
 
-### [ ] T6.11 免费额度结构化
+### [x] T6.11 免费额度结构化
 
 依据：S8.2 · 依赖：T3.8
 
-步骤：在架记录补结构化 `quota`（`amount`、`unit`、`period`、`scope`），原文另存；支持按价值排序；到期记录自动归档到「已结束」；7 条低置信记录逐条复核，补证据或下架。
-
 验收：全部在架记录有结构化额度；低置信记录为 0 或都有明确的复核结论。
+
+结果：
+
+**1. 结构化 quota**
+
+- `curated/offers.json` 的 37 条记录全部补 `quota: { amount, unit, period, scope }`，原文保留在 `quota_raw`。
+- 单位覆盖 tokens / requests / messages / credits / usd / neurons / hours / seats / unlimited / unknown；未知额度统一登记为 unknown，不编造数字。
+- `lib/offers.js` 新增 `quotaLabel()`、`quotaValue()`、`sortByQuotaValue()`；`lib/offers.js` 加进构建期共享模块。
+- 免费页新增「默认顺序 / 按额度价值」切换；额度文案显示结构化值，原文放在 `title` 里可悬停查看。
+
+**2. 到期归档**
+
+- offers 层在 normalize 时按 `expires_at < today` 标记 `status: 'archived'`；页面把 archived 记录放进「已结束」区。
+- `offers-layer.test.js` 新增到期/未到期用例。
+
+**3. 7 条低置信记录复核**
+
+| 产品 | 结论 |
+|---|---|
+| JetBrains AI | 保留：官方 AI IDEs 页面确认免费档，数值未公开 |
+| Perplexity / Comet | 保留：Comet FAQ 确认免费档，额度未公开 |
+| WorkBuddy | 保留：官网 start free，额度未公开，未写入未证实模型 |
+| MiniMax 开放平台 | 保留：计费页出现「超出免费额度后」 |
+| ModelScope 魔搭 | 保留：官方文档说明免费 API 推理，页面为 SPA |
+| 百度 Comate | 保留：价格页标注个人免费档 |
+| 百度千帆 | 保留：产品页确认免费试用入口 |
+
+7 条全部从 `low` 升为 `medium` 并写入 `review: { status: 'kept', at, note }`；`test/unit/offers-quota.test.js` 断言低置信记录为 0、每条都有复核结论。
+
+**4. 验证**
+
+`npm run verify` 全绿：**1030 项 unit/golden/contract（1000 通过、0 失败、30 skip）**，build，e2e **102 项全过**。`fixtures/data` 重新裁剪（0.25 MB），`fixtures/golden` 的 offers 行同步带 quota/status；free 页 DOM 快照更新（额度文案由原文变为结构化短句）。
 
 ### [ ] T6.12 订阅渠道完善
 
