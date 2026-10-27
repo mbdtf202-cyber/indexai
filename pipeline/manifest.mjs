@@ -22,6 +22,7 @@
  */
 
 import { createHash } from 'node:crypto';
+import { checkShrink } from './baseline.mjs';
 
 import { now as nowClock } from '../lib/clock.js';
 
@@ -75,14 +76,25 @@ export function runLayerGate(layer, rows, ctx = {}) {
     escalate(VERDICT.RED, `条数 ${list.length} 低于下限 ${h.floor}`);
   }
 
-  /* 2. 缩水：相对上一版。历史中位数要等 M4 的 7 次快照，暂时沿用现有阈值。 */
-  if (h.shrink != null && ctx.prevCount != null && ctx.prevCount > 0) {
-    const ratio = list.length / ctx.prevCount;
-    if (ratio < h.shrink) {
-      escalate(
-        VERDICT.RED,
-        `缩水到上一版的 ${(ratio * 100).toFixed(0)}%（阈值 ${(h.shrink * 100).toFixed(0)}%）`,
-      );
+  /* 2. 缩水：相对**近 7 次成功快照的中位数**（T4.7 · S4.1 · F33）。
+   *
+   * 只看上一版是不行的：上一版本身可能是异常低值，拿它当基线会把「正常」判成缩水。
+   * 中位数对单日异常不敏感。历史不足 3 次时不做缩水判定，只查绝对下限。 */
+  if (h.shrink != null) {
+    const history = Array.isArray(ctx.history) && ctx.history.length ? ctx.history : null;
+    if (history) {
+      const s = checkShrink(list.length, history, { shrink: h.shrink });
+      if (s.verdict === 'shrink') escalate(VERDICT.RED, s.reason);
+    } else if (ctx.prevCount != null && ctx.prevCount > 0) {
+      /* 没有历史数组但给了上一版：仍然只用它做一次保守比较，
+       * 并在原因里说清这是「单点基线」而不是中位数。 */
+      const ratio = list.length / ctx.prevCount;
+      if (ratio < h.shrink) {
+        escalate(
+          VERDICT.RED,
+          `缩水到上一版的 ${(ratio * 100).toFixed(0)}%（阈值 ${(h.shrink * 100).toFixed(0)}%；历史不足，未用中位数）`,
+        );
+      }
     }
   }
 
@@ -138,6 +150,7 @@ export function rowsOf(data, id) {
  * @param {object} opt.layer
  * @param {object} opt.data 正在写的输出对象
  * @param {object|null} opt.prev 上一版（red 时用来回退）
+ * @param {number[]} [opt.history] 历次成功快照的条数（旧→新）
  * @param {string} opt.asOf
  * @returns {{verdict: string, reasons: string[], servedPrev: boolean}}
  */
@@ -148,6 +161,8 @@ export function gateAndFallback(opt) {
 
   const gate = runLayerGate(layer, rows, {
     prevCount: prevRows ? prevRows.length : null,
+    /* 历史计数（T4.7）：给中位数基线用。没有就退回「只看上一版」。 */
+    history: opt.history || null,
     now: asOf,
   });
 

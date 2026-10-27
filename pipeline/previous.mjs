@@ -66,3 +66,37 @@ export function readPrevBench(path) {
     return null;
   }
 }
+
+/**
+ * 造一个「读该层历史条数」的函数（T4.7 · S4.1）。
+ *
+ * 门禁要拿近 7 次成功快照的中位数当基线，数据来自 data 分支的
+ * `status/<layer>.ndjson`。没有数据目录时返回 null——门禁会退回
+ * 「只看上一版」并在原因里说明，而不是假装检查过。
+ *
+ * 结果带缓存：一次运行里每层只读一次文件。
+ *
+ * @param {string|null} dataDir
+ * @returns {(layerId: string) => number[]|null}
+ */
+export function createHistoryReader(dataDir) {
+  const cache = new Map();
+
+  return (layerId) => {
+    if (cache.has(layerId)) return cache.get(layerId);
+
+    let counts = null;
+    if (dataDir) {
+      try {
+        const rows = readAttempts(layerId, { root: dataDir });
+        const ok = rows.filter((r) => r.status === 'ok').map((r) => Number(r.count) || 0);
+        counts = ok.length ? ok : null;
+      } catch {
+        counts = null;
+      }
+    }
+
+    cache.set(layerId, counts);
+    return counts;
+  };
+}

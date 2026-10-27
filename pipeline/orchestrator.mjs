@@ -43,7 +43,7 @@ import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
 import { SCHEMAS } from './schemas/index.mjs';
 import { gateAndFallback, VERDICT } from './manifest.mjs';
 import { persist, resolveOutDir } from './persist.mjs';
-import { loadPrevious, readPrevBench } from './previous.mjs';
+import { createHistoryReader, loadPrevious, readPrevBench } from './previous.mjs';
 
 export { readPrevBench };
 
@@ -145,6 +145,9 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
   const dedupe = { aggregator_dropped: 0, unpriced_dropped: 0, offers_merged: 0 };
 
   /* 每层的隔离明细（T3.5）：进 run-report，页面不读。 */
+  /* 该层历史条数（T4.7）：交给 previous.mjs，结果带缓存。 */
+  const historyOf = createHistoryReader(dataDir);
+
   const quarantineReport = {};
   /* 分层门禁结论（T3.7）：进 manifest 与 report。 */
   const gateReport = {};
@@ -204,7 +207,15 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
     }
     /* 分层门禁（T3.7 · S4.1）：隔离管"行"，门禁管"层"。red 时
      * gateAndFallback 把上一版的行放回 out[layer.id]。 */
-    const g = gateAndFallback({ layer, data: out, prev, asOf: nowISO() });
+    /* 历史计数（T4.7 · S4.1）：从 data 分支的状态日志里取该层最近的成功条数。
+     * 没有 dataDir 时给 null，门禁会退回「只看上一版」并在原因里说明。 */
+    const g = gateAndFallback({
+      layer,
+      data: out,
+      prev,
+      history: historyOf(layer.id),
+      asOf: nowISO(),
+    });
     gateReport[layer.id] = { verdict: g.verdict, reasons: g.reasons };
 
     if (g.servedPrev) {
