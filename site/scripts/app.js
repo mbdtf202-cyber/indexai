@@ -517,6 +517,164 @@ const MOTION = (() => {
     return `<a href="${esc(safe)}" target="_blank" rel="noopener"${attrs}>${inner}</a>`;
   }
 
+  /* ── 报错入口（T6.10） ── */
+  const REPO_URL = 'https://github.com/mbdtf202-cyber/indexai';
+  function reportUrl(kind, id, source = '') {
+    const params = new URLSearchParams({
+      template: 'report.yml',
+      title: `[报错] ${kind} ${id || ''}`.trim(),
+      record_id: String(id || ''),
+      source: String(source || ''),
+    });
+    return `${REPO_URL}/issues/new?${params.toString()}`;
+  }
+  function reportLink(kind, id, source, label = '报错') {
+    return `<a class="rep" href="${esc(reportUrl(kind, id, source))}" target="_blank" rel="noopener">${label}</a>`;
+  }
+
+  /* ── 全站搜索（T6.10） ── */
+  let paletteOpen = false;
+  let paletteResults = [];
+  let paletteIndex = 0;
+  let paletteCache = null;
+  const PALETTE_KIND = { model: '模型', vendor: '厂商', offer: '免费额度', tool: '工具' };
+
+  function paletteIndexAll() {
+    if (paletteCache) return paletteCache;
+    const d = state.data || {};
+    const out = [];
+    for (const m of d.models || []) {
+      out.push({ kind: 'model', name: m.name, sub: `${m.vendor || ''} · ${m.id || ''}`, id: m.id, vendor: m.vendor });
+    }
+    const vendors = [...new Set((d.models || []).map((m) => m.vendor).filter(Boolean))];
+    for (const v of vendors) out.push({ kind: 'vendor', name: v, sub: '厂商' });
+    for (const o of d.offers || []) {
+      out.push({ kind: 'offer', name: o.product || o.vendor || '免费额度', sub: o.vendor || o.category || '', id: o.id || o.product });
+    }
+    for (const t of d.resources || []) {
+      out.push({ kind: 'tool', name: t.title || t.repo || '工具', sub: t.repo || t.useLabel || '', id: t.id || t.repo });
+    }
+    paletteCache = out;
+    return out;
+  }
+
+  function paletteSearch(query) {
+    const q = String(query || '').trim().toLowerCase();
+    const all = paletteIndexAll();
+    if (!q) return all.slice(0, 12);
+    const scored = [];
+    for (const item of all) {
+      const name = String(item.name || '').toLowerCase();
+      const sub = String(item.sub || '').toLowerCase();
+      const pos = name.indexOf(q);
+      if (pos < 0 && !sub.includes(q)) continue;
+      scored.push({ item, rank: pos === 0 ? 0 : pos > 0 ? 1 : 2 });
+    }
+    return scored.sort((a, b) => a.rank - b.rank).slice(0, 20).map((x) => x.item);
+  }
+
+  function paintPalette() {
+    paletteResults = paletteSearch($('#paletteInput')?.value || '');
+    if (paletteIndex >= paletteResults.length) paletteIndex = Math.max(0, paletteResults.length - 1);
+    const box = $('#paletteResults');
+    if (!box) return;
+    box.innerHTML = paletteResults.length
+      ? paletteResults
+          .map(
+            (item, i) =>
+              `<button type="button" class="palette-item" role="option" data-palette-i="${i}" aria-selected="${i === paletteIndex}">
+                <span class="palette-kind">${esc(PALETTE_KIND[item.kind] || item.kind)}</span>
+                <span class="palette-name">${esc(item.name)}</span>
+                <span class="palette-sub">${esc(item.sub || '')}</span>
+              </button>`,
+          )
+          .join('')
+      : '<div class="empty" style="padding:18px;font-size:12px">没有匹配的记录。</div>';
+  }
+
+  function openPalette() {
+    if (paletteOpen) return;
+    paletteOpen = true;
+    paletteIndex = 0;
+    const box = $('#palette');
+    const overlay = $('#paletteOverlay');
+    if (!box) return;
+    box.hidden = false;
+    box.setAttribute('aria-hidden', 'false');
+    if (overlay) {
+      overlay.hidden = false;
+      overlay.dataset.open = '1';
+    }
+    const input = $('#paletteInput');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    paintPalette();
+  }
+
+  function closePalette({ restore = true } = {}) {
+    if (!paletteOpen) return;
+    paletteOpen = false;
+    const box = $('#palette');
+    const overlay = $('#paletteOverlay');
+    if (box) {
+      box.hidden = true;
+      box.setAttribute('aria-hidden', 'true');
+    }
+    if (overlay) {
+      overlay.hidden = true;
+      overlay.dataset.open = '0';
+    }
+    if (restore) $('#paletteInput')?.blur();
+  }
+
+  function paletteJump(item) {
+    if (!item) return;
+    closePalette({ restore: false });
+    if (item.kind === 'model') {
+      state.tab = 'compare';
+      state.cmpView = 'models';
+      state.q = item.name;
+      render();
+      if (item.id) setTimeout(() => openDrawer(item.id), 0);
+      return;
+    }
+    if (item.kind === 'vendor') {
+      state.tab = 'compare';
+      state.cmpView = 'vendors';
+      state.q = '';
+      render();
+      setTimeout(() => {
+        const row = [...document.querySelectorAll('tr[data-vendor]')].find(
+          (tr) => tr.dataset.vendor === item.name,
+        );
+        row?.scrollIntoView({ block: 'center' });
+      }, 0);
+      return;
+    }
+    if (item.kind === 'offer') {
+      state.tab = 'free';
+      state.region = 'all';
+      state.cat = 'all';
+      render();
+      return;
+    }
+    if (item.kind === 'tool') {
+      state.tab = 'tools';
+      state.toolKind = 'all';
+      render();
+    }
+  }
+
+  function movePalette(delta) {
+    if (!paletteResults.length) return;
+    paletteIndex = (paletteIndex + delta + paletteResults.length) % paletteResults.length;
+    paintPalette();
+    const active = document.querySelector('.palette-item[aria-selected="true"]');
+    active?.scrollIntoView({ block: 'nearest' });
+  }
+
   /* 「NEW」判定（T5.9）。
    *
    * 旧实现用 Date.now()：违反 INV-7（同一输入两次运行结论可能不同），
@@ -1194,6 +1352,7 @@ const MOTION = (() => {
                 .join('')}
               ${(o.entries || []).map((e) => `<span class="tag">${esc(e)}</span>`).join('')}
               ${o.conf && o.conf !== 'high' ? `<span class="tag ${o.conf === 'low' ? 'warn' : ''}" title="信源置信度">${o.conf === 'low' ? '待核实' : '部分核实'}</span>` : ''}
+              ${reportLink('offer', o.id || o.product, o.source, '报错')}
             </div>
           </article>`,
           )
@@ -1821,7 +1980,7 @@ const MOTION = (() => {
           ${themes.length ? `<dt>主题</dt><dd><div class="mchips">${themes.map((t) => `<span class="mchip">${esc(t)}</span>`).join('')}</div></dd>` : ''}
         </dl>
         <div class="foot">
-          ${extLink(e.url, '活动页 ↗')}
+          ${extLink(e.url, '活动页 ↗')} ${reportLink('event', e.id, e.url)}
           <span class="evline"><span>${esc(EV_LABEL(EV_KIND, e.kind))}</span><span class="tag">${esc(EV_LABEL(EV_REGION, e.region))}</span></span>
         </div>
       </article>`;
@@ -3683,7 +3842,7 @@ ${esc(COST_FORMULA)}</div>
         <dt>置信度</dt><dd>${esc(m.conf)} <span class="dim">· ${esc(confTitle[m.conf] || '')}</span></dd>
         <dt>采集日</dt><dd class="mono">${esc(m.seen || '—')}</dd>
       </dl>
-      <p class="note"><a href="${esc(m.src)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">查看原始来源 ↗</a></p>`;
+      <p class="note">${reportLink('model', m.id, m.src)} · <a href="${esc(m.src)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">查看原始来源 ↗</a></p>`;
     drawerReturnFocus = document.activeElement;
     $('#drawer').dataset.open = '1';
     $('#drawer').setAttribute('aria-hidden', 'false');
@@ -3777,6 +3936,16 @@ ${esc(COST_FORMULA)}</div>
   /* ── events ── */
   function bind() {
     document.addEventListener('click', (ev) => {
+      const paletteItem = ev.target.closest('[data-palette-i]');
+      if (paletteItem) {
+        ev.preventDefault();
+        paletteJump(paletteResults[Number(paletteItem.dataset.paletteI)]);
+        return;
+      }
+      if (ev.target.id === 'paletteOverlay') {
+        closePalette();
+        return;
+      }
       const t = ev.target.closest(
         '[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn',
       );
@@ -4035,6 +4204,11 @@ ${esc(COST_FORMULA)}</div>
 
     document.addEventListener('input', (ev) => {
       const el = ev.target;
+      if (el.id === 'paletteInput') {
+        paletteIndex = 0;
+        paintPalette();
+        return;
+      }
       if (el.id === 'q') {
         state.q = el.value;
         state.limit = 80;
@@ -4061,6 +4235,34 @@ ${esc(COST_FORMULA)}</div>
       }
     });
     document.addEventListener('keydown', (ev) => {
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
+        ev.preventDefault();
+        openPalette();
+        return;
+      }
+      if (paletteOpen) {
+        if (ev.key === 'Escape') {
+          ev.preventDefault();
+          closePalette();
+          return;
+        }
+        if (ev.key === 'ArrowDown') {
+          ev.preventDefault();
+          movePalette(1);
+          return;
+        }
+        if (ev.key === 'ArrowUp') {
+          ev.preventDefault();
+          movePalette(-1);
+          return;
+        }
+        if (ev.key === 'Enter' && paletteResults[paletteIndex]) {
+          ev.preventDefault();
+          paletteJump(paletteResults[paletteIndex]);
+          return;
+        }
+        return;
+      }
       if (ev.key === 'Escape') closeDrawer();
       if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('th[data-sort], tr[data-id]')) {
         ev.preventDefault();

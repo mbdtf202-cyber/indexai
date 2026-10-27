@@ -2745,13 +2745,37 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 验收：两源走官方接口；旧抓取代码检索不到；回放数据里检索不到 key。
 
-### [ ] T6.10 纠错入口、投稿模板与全站搜索
+### [x] T6.10 纠错入口、投稿模板与全站搜索
 
 依据：D10 · 依赖：T5.4
 
-步骤：每条记录有「报错」链接，打开预填记录 ID 与来源的 GitHub issue；`.github/ISSUE_TEMPLATE/` 加「报错」「投稿免费额度」「投稿工具」三个模板；Ctrl / ⌘ + K 打开全站搜索，按名称跳到模型、厂商、免费额度。
-
 验收：e2e 覆盖搜索的键盘流程；模板文件通过 GitHub issue forms 的 schema 校验。
+
+结果：
+
+**1. 报错入口**
+
+- `reportUrl(kind, id, source)` 统一生成带 `template=report.yml`、`record_id`、`source` 与预填标题的 GitHub issue 链接。
+- 模型详情抽屉、免费额度卡片、活动卡片都带「报错」链接；工具页「提一个」指向投稿模板。
+- 仓库地址集中在 `REPO_URL`，改仓地址只改一处。
+
+**2. 三个 issue forms**
+
+- `.github/ISSUE_TEMPLATE/report.yml`：记录 ID（必填）、来源、错误说明、确认项。
+- `submit-offer.yml`：产品、厂商、额度、官方来源（必填）、截止日期。
+- `submit-tool.yml`：仓库、名称、类型（必填）、推荐理由（必填）、许可证。
+- `test/unit/issue-templates.test.js`：逐项校验顶层字段、body 元素类型、id 唯一与必填项。
+
+**3. 全站搜索**
+
+- `Ctrl / ⌘ + K` 打开命令面板，索引模型、厂商、免费额度、工具四类记录；输入即过滤，前缀匹配优先。
+- `↑` / `↓` 选择，`Enter` 跳转：模型打开详情抽屉、厂商定位到厂商表、免费额度切到免费页、工具切到工具箱。
+- `Esc` 关闭；`aria-modal` / `role="dialog"` / `role="listbox"` 与焦点管理齐全。
+- `test/e2e/search.spec.js` 3 项：键盘打开与选择、Esc 关闭、报错链接带 `record_id` 与模板参数。
+
+**4. 验证**
+
+`npm run verify` 全绿：**1021 项 unit/golden/contract（991 通过、0 失败、30 skip）**，build，e2e **102 项全过**。DOM 快照更新 `free.html` 与 `events.html`（新增报错链接导致的预期界面变化）。
 
 ### [ ] T6.11 免费额度结构化
 

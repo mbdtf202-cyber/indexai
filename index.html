@@ -608,6 +608,22 @@ td.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-n
 .srcs td{padding:7px 8px; border-bottom:var(--rule); word-break:break-all}
 .srcs td.u{font-family:var(--mono); font-size:11.5px; color:var(--dim)}
 
+
+/* ── 全站搜索（T6.10） ── */
+.palette{position:fixed; inset:8vh 0 auto; margin:0 auto; width:min(680px,92vw); background:var(--panel); border:1px solid var(--line2); border-radius:6px; z-index:80; box-shadow:0 24px 80px rgba(0,0,0,.25); padding:14px}
+.palette[hidden]{display:none}
+.palette-search{display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line); padding:2px 2px 12px}
+.palette-search input{flex:1; border:0; background:transparent; color:var(--ink); font-family:var(--mono); font-size:15px; outline:none}
+.palette-results{max-height:46vh; overflow:auto; padding:6px 0}
+.palette-item{display:flex; align-items:baseline; gap:12px; width:100%; text-align:left; background:none; border:0; padding:9px 10px; border-radius:3px; color:var(--ink); cursor:pointer; font:inherit}
+.palette-item:hover,.palette-item[aria-selected="true"]{background:var(--panel2)}
+.palette-kind{font-family:var(--mono); font-size:10.5px; color:var(--faint); letter-spacing:.08em; min-width:64px}
+.palette-name{font-size:13.5px; font-weight:600}
+.palette-sub{margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--faint); max-width:42%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.palette-hint{font-family:var(--mono); font-size:10.5px; color:var(--faint); padding:8px 2px 2px; border-top:1px solid var(--line)}
+.rep{font-family:var(--mono); font-size:10.5px; color:var(--faint); text-decoration:underline; text-underline-offset:2px}
+.rep:hover{color:var(--accent)}
+
 /* ── drawer ── */
 .overlay{position:fixed; inset:0; background:rgba(10,10,8,.42); opacity:0; pointer-events:none; transition:opacity .2s; z-index:60}
 .overlay[data-open="1"]{opacity:1; pointer-events:auto}
@@ -1132,6 +1148,16 @@ html.js [data-reveal="mask"].in{clip-path:inset(0 0 0 0)}
 <!-- 同步恢复主题，避免深色用户看到一帧浅色 -->
 
 <div class="overlay" id="overlay"></div>
+<div class="overlay" id="paletteOverlay" data-open="0" hidden></div>
+<div class="palette" id="palette" role="dialog" aria-modal="true" aria-label="全站搜索" aria-hidden="true" hidden>
+  <label class="palette-search"><span class="eyebrow">SEARCH</span>
+    <input id="paletteInput" type="search" placeholder="模型 / 厂商 / 免费额度 / 工具" autocomplete="off" aria-label="全站搜索">
+    <kbd>⌘K</kbd>
+  </label>
+  <div class="palette-results" id="paletteResults" role="listbox" aria-label="搜索结果"></div>
+  <div class="palette-hint">↑↓ 选择 · Enter 打开 · Esc 关闭</div>
+</div>
+
 <aside class="drawer" id="drawer" role="dialog" aria-modal="false" aria-hidden="true" aria-label="模型详情"></aside>
 <div class="grain" aria-hidden="true"></div>
 <noscript><div class="wrap empty">这个页面需要 JavaScript 渲染数据。</div></noscript>
