@@ -1818,13 +1818,60 @@ Atom 结构：19 个 entry，每个都有 title/id/updated。
 - 「评测页标出较上次下降的分数」与「README 恢复描述」——页面是 `index.html` 单体，M5 才拆；`bench_score_down` 事件已产出，页面接线留 M5。
 - `series/` 价格序列属于 T4.8。
 
-### [ ] T4.4 厂商表
+### [x] T4.4 厂商表
 
 依据：S6.1 · 依赖：T3.8
 
 步骤：`registry/vendors.json` 收录现有 `VENDOR` 映射与页面的 `VENDOR_RANK`（排序字段 `rank`）；各层的厂商名经它归一；未知厂商进未匹配报告。
 
 验收：代码里不再有 `VENDOR` 与 `VENDOR_RANK` 常量；归一有单元测试。
+
+结果：
+
+**1. `registry/vendors.json`：65 个厂商**
+
+每条含 `id` / `name` / `rank` / `aliases` / `homepage`。rank 从 1 连续到 65，按「读者最关心」排：OpenAI → Anthropic → Google → DeepSeek → Alibaba Qwen → Moonshot → Zhipu → MiniMax → xAI → Meta → Mistral …
+
+别名覆盖同一家的多种写法：
+- `x-ai` / `xai` / `grok` / `spacexai` → **xAI**
+- `z-ai` / `zai` / `zhipu` / `glm` → **Zhipu**
+- `moonshotai` / `kimi` → **Moonshot**
+- `qwen` / `tongyi` → **Alibaba Qwen**
+
+**2. `lib/vendors.js`：归一 + 排序 + 未匹配报告**
+
+`normalizeVendor` 的三条规则：
+1. 大小写与分隔符不敏感（`deep_seek` → `deepseek`）
+2. **剥掉 OpenRouter 的 `~` 变体前缀**（`~openai` 与 `openai` 是同一家，不剥会让 OpenAI 出现两次）
+3. 点号当分隔符（`Z.ai` → `z-ai`）
+
+只看精确匹配，不做模糊匹配：模糊会把 `Meta` / `Metamind` 混到一起。
+
+**3. 未匹配报告**
+
+认不出来的厂商：保留原文、`matched: false`、`rank` 给 `Number.MAX_SAFE_INTEGER`（排在末尾，而不是给 0 顶到最前）。
+
+第一次跑时 473 行里有 **69 行未匹配**（34 个不同的原始名）。全部补进表后 **473/473 零未匹配**。
+
+**4. 替换掉的三处硬编码**
+
+| 位置 | 原来 | 现在 |
+|---|---|---|
+| `pipeline/layers/subs/index.js` | `SUB_VENDOR = { chatgpt, claude, gemini, grok }` | `normalizeVendor(app.slug)` 查表 |
+| `pipeline/layers/models/index.js` | 17 条 `KNOWN` 对照表 | `normalizeVendor(prefix)` 查表 |
+| `index.html` | `VENDOR_RANK = [...13 条...]` | 读下发来的 `meta.vendorOrder` |
+
+页面侧改动：`FOCUS` 集合改成 `focusSet()` 函数（每次从数据读，不缓存模块级常量）。拿不到 `vendorOrder` 时退回空数组——排序按 99，功能不受影响，但**不会假装知道顺序**。
+
+**5. 副作用（是改进不是退化）**
+
+比价表首行从 `GPT-6 Luna` 变成 `Kimi K3.1 Pro`：过去 `rankOf` 对 13 个厂商之外的都返回 99，同分时按采集顺序排；现在 65 家都有真实 rank，排序更稳定也更符合「读者最关心」。DOM 快照已重录。
+
+新增 `test/unit/vendors.test.js`（19 项），含「代码里不再有常量」的静态检查（扫描全部 `.js`/`.mjs`/`.html`，只查真正的声明，注释里提到历史不算）。
+
+顺手修掉：`make-fixture-data.js` 的归档读取。T4.1 把归档迁到 data 分支后，fixture 脚本还在读根目录的单文件，导致 news 变成 0 条；改成优先读 `news/` 月度分片。
+
+787 项测试 748 通过 0 失败，e2e 28 项全过，verify 全绿。
 
 ### [ ] T4.5 模型表与匹配器
 

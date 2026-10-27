@@ -10,8 +10,11 @@
  * 「官方价与挂单价的口径必须一起变」——分开写很容易一边改了另一边忘。
  */
 
-/** 厂商与备注的人工映射。取不到厂商名时留空，不猜。 */
-const SUB_VENDOR = { chatgpt: 'OpenAI', claude: 'Anthropic', gemini: 'Google', grok: 'xAI' };
+import { normalizeVendor } from '../../../lib/vendors.js';
+
+/* 厂商归一交给 registry/vendors.json（T4.4）。
+ * 曾经这里是四条硬编码（chatgpt/claude/gemini/grok），新增一个订阅产品
+ * 就得改代码，而且与页面的 VENDOR_RANK 各自维护。 */
 
 const SUB_NOTE = {
   chatgpt: 'App Store 美国区内购价；网页版可能另有年付折扣',
@@ -121,7 +124,9 @@ function buildSubs(apple) {
   if (!apple) return [];
   const out = [];
   for (const app of apple.apps || []) {
-    const vendor = SUB_VENDOR[app.slug] || '';
+    /* slug 当成可能的别名去查表；认不出来时留空（不猜，也不当成新厂商）。 */
+    const vendorName = normalizeVendor(app.slug || app.title || '');
+    const vendor = vendorName.matched ? vendorName.name : '';
     for (const plan of app.plans || []) {
       const us = (plan.regions || []).find((r) => r.country_code === 'US');
       if (!us || !(Number(us.price_value) > 0)) continue;

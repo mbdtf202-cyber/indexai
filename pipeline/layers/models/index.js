@@ -13,39 +13,19 @@
  * 经 ctx 注入；层负责的是「两个源怎么合、谁该沿用谁不该」。
  */
 
+import { normalizeVendor } from '../../../lib/vendors.js';
+
 import { mergeCatalog } from '../../../lib/merge-strategies.js';
 
 /**
- * OpenRouter 的 id 前缀 → 可读厂商名。
+ * OpenRouter 的 id 前缀 → 规范厂商名（T4.4）。
  *
- * `moonshotai` → `MoonshotAI`、`deepseek` → `DeepSeek`、`x-ai` → `xAI`。
- * 只做首字母大写与连字符处理，不做词典映射——推不出来就是推不出来，
- * 比维护一张永远不全的对照表可靠。
+ * 归一交给 registry/vendors.json：曾经这里有一张 17 条的 KNOWN 对照表，
+ * 每发现一个新前缀就得改代码；而且它与页面的 VENDOR_RANK 各自维护，
+ * 两处一旦不一致，同一个厂在比价表与厂商分组里就成了两个。
  */
 function prettyVendor(prefix) {
-  const s = String(prefix || '').trim();
-  if (!s) return 'Unknown';
-  // 已知的品牌写法（都来自 OpenRouter 实际出现的前缀）
-  const KNOWN = {
-    'x-ai': 'xAI',
-    'z-ai': 'Z AI',
-    moonshotai: 'MoonshotAI',
-    deepseek: 'DeepSeek',
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    google: 'Google',
-    meta: 'Meta',
-    mistralai: 'Mistral',
-    qwen: 'Alibaba Qwen',
-    alibaba: 'Alibaba',
-    xiaomi: 'Xiaomi',
-    nvidia: 'NVIDIA',
-    cohere: 'Cohere',
-    perplexity: 'Perplexity',
-  };
-  const key = s.toLowerCase();
-  if (KNOWN[key]) return KNOWN[key];
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return normalizeVendor(prefix).name;
 }
 
 export default {

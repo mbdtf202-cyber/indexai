@@ -38,6 +38,7 @@ import * as sources from './sources/index.mjs';
 import { buildCtx } from './context.mjs';
 import { runLayer } from './budget.mjs';
 import { buildSources } from './sources-registry.mjs';
+import { vendorOrder } from '../lib/vendors.js';
 import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
 import { SCHEMAS } from './schemas/index.mjs';
 import { gateAndFallback, VERDICT } from './manifest.mjs';
@@ -300,6 +301,8 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
     dropped: unsafeUrlStats(),
     dedupe,
     vendors: vendorsList,
+    /* 厂商排序（T4.4）：页面按这个顺序排，不再自己维护一份 VENDOR_RANK。 */
+    vendorOrder: vendorOrder(),
     /* 旗舰清单（F19）：页面画「官方参考线」只读这份，不再用正则猜官方价。
      * 同时下发按中转画像算出的官方有效成本，避免页面自己算第二遍。 */
     flagships: FLAGSHIP.map((f) => {

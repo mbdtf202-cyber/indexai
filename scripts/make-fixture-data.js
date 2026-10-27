@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync } from 'n
 import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readNewsShards } from './data-scripts.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(ROOT, 'fixtures', 'data');
@@ -217,7 +218,22 @@ function pickNews(archive) {
 
 const data = load('data.json');
 const bench = load('bench.json');
-const archive = load('news-archive.json');
+/* 情报归档自 T4.1 起在 data 分支的 news/ 月度分片里（main 上已删）。
+ * 先试分片，再退回根目录的单文件（本地临时场景）。 */
+const archive = (() => {
+  try {
+    return readNewsShards({ root: process.env.INDEXAI_DATA_DIR || '.data' });
+  } catch {
+    return [];
+  }
+})();
+if (!archive.length) {
+  try {
+    archive.push(...load('news-archive.json'));
+  } catch {
+    console.warn('[make-fixture-data] 没有情报归档，news 分片留空');
+  }
+}
 let milestones = null;
 try {
   milestones = load('curated/milestones.json');

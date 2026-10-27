@@ -1275,10 +1275,22 @@ const MOTION = (() => {
     signals: { k: "INTELLIGENCE", t: "AI 圈在发生什么，<br>挑过再给你。", s: "每日要闻按价格、模型、融资、政策、安全分类打分精选；下面是 X 与官方的价格一手信号，只收抓到正文的。" },
     method: { k: "METHOD", t: "每个数字，<br>怎么来的。", s: "每一层数据的来源、去重规则、有效成本公式、汇率与评测口径，全写在页面上，可自行复核。" }
   };
-  const VENDOR_RANK = ["OpenAI","Anthropic","Google","DeepSeek","Alibaba Qwen","Moonshot","Zhipu","MiniMax","xAI","Meta","Mistral","ByteDance","Tencent"];
-  const RANK = new Map(VENDOR_RANK.map((v, i) => [v, i]));
-  const rankOf = (v) => (RANK.has(v) ? RANK.get(v) : 99);
-  const FOCUS = new Set(VENDOR_RANK);
+  /* 厂商顺序由采集端下发（meta.vendorOrder，来自 registry/vendors.json）。
+   * 曾经这里写死一份 13 条的数组，与采集侧的映射各自维护——
+   * 两处一旦不一致，同一个厂在比价表与厂商分组里就成了两个。
+   * 拿不到时退回空数组：排序按 99，功能不受影响，但不会假装知道顺序。 */
+  function vendorOrder() {
+    const list = state.data?.meta?.vendorOrder;
+    return Array.isArray(list) ? list : [];
+  }
+  function vendorRankMap() {
+    return new Map(vendorOrder().map((v, i) => [v, i]));
+  }
+  const rankOf = (v) => {
+    const m = vendorRankMap();
+    return m.has(v) ? m.get(v) : 99;
+  };
+  const focusSet = () => new Set(vendorOrder());
   const CAT_LABEL = { "coding-agent": "编程 Agent", "api-credit": "赠送金", "api-free-models": "免费模型", chat: "对话", ide: "IDE", cli: "CLI" };
   const REGION_LABEL = { GLOBAL: "国际", CN: "国内", BOTH: "双区" };
   const TOPIC_LABEL = { "free-tier": "免费额度", "price-cut": "降价", "new-model": "新模型", "cache-pricing": "缓存定价", "agent-launch": "Agent 发布" };
@@ -3310,7 +3322,7 @@ const MOTION = (() => {
       }
     }
     const rows = [...by.values()].sort((a, b) => {
-      const fa = FOCUS.has(a.vendor) ? 0 : 1, fb = FOCUS.has(b.vendor) ? 0 : 1;
+      const fa = focusSet().has(a.vendor) ? 0 : 1, fb = focusSet().has(b.vendor) ? 0 : 1;
       if (fa !== fb) return fa - fb;
       return (a.minIn ?? Infinity) - (b.minIn ?? Infinity);
     });
@@ -3324,7 +3336,7 @@ const MOTION = (() => {
         </tr></thead>
         <tbody>
         ${rows.map(v => `<tr data-vendor="${esc(v.vendor)}">
-          <td><b>${esc(v.vendor)}</b>${FOCUS.has(v.vendor) ? ' <span class="tag">主流</span>' : ""}</td>
+          <td><b>${esc(v.vendor)}</b>${focusSet().has(v.vendor) ? ' <span class="tag">主流</span>' : ""}</td>
           <td class="num">${v.n}</td>
           <td class="num">${v.minIn == null ? '<span class="dim">免费</span>' : "$" + money(v.minIn)}</td>
           <td class="num">${v.minOut == null ? '<span class="dim">—</span>' : "$" + money(v.minOut)}</td>
