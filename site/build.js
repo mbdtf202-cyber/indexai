@@ -65,6 +65,8 @@ function parseDataDir(argv) {
   return dir;
 }
 
+const { ROUTES } = await import('./routes/index.mjs');
+
 const argv = process.argv.slice(2);
 const dataDir = parseDataDir(argv);
 
@@ -410,6 +412,77 @@ function dirStats(dir) {
   };
   walk(dir);
   return { files, bytes };
+}
+
+/* ────────────────────────── 性能预算（T5.7 · S9.7） ──────────────────────────
+ *
+ * 按 brotli 算读者真正下载的量，不是未压缩字节数。
+ * 字体不算：它是并行请求，且 font-display: swap 不阻塞首屏。
+ *
+ * 超预算就**让构建失败**——预算是硬线，写在文档里但构建不管等于没有。
+ */
+{
+  const { BUDGET, firstPaintBytes, checkBudget, renderBudgetTable, brotliSize } = await import(
+    '../pipeline/budgets.mjs'
+  );
+
+  /** 读一个文件，读不到给空串。 */
+  const readOr = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : '');
+
+  /* 所有路由共用的 CSS 与 JS（首屏要下载的就是这些）。 */
+  const sharedCss = [
+    readOr(join(DIST, 'styles', 'tokens.css')),
+    readOr(join(DIST, 'styles', 'main.css')),
+  ];
+  const sharedJs = [readOr(join(DIST, 'scripts', 'boot.js'))];
+
+  const checks = [];
+
+  /* 1. 每个路由的首屏传输。 */
+  for (const route of [...ROUTES]) {
+    const html = readOr(
+      join(DIST, route.file === 'index.html' ? 'index.html' : `pages/${route.file}`),
+    );
+    if (!html) continue;
+
+    /* 主脚本：预渲染页用 client/main.js，旧首页用 scripts/app.js。 */
+    const mainJs =
+      route.file === 'index.html'
+        ? readOr(join(DIST, 'scripts', 'app.js'))
+        : readOr(join(DIST, 'client', 'main.js'));
+
+    const sizes = firstPaintBytes({
+      html,
+      css: sharedCss,
+      js: [...sharedJs, mainJs],
+    });
+
+    checks.push(checkBudget(`${route.path} 首屏`, sizes.total, BUDGET.firstPaintBytes));
+  }
+
+  /* 2. 懒加载数据请求。 */
+  const dataFiles = ['data.json', 'bench.json', 'news-milestones.json', 'data/changes.json'];
+  for (const name of dataFiles) {
+    const p = join(DIST, name.replace('data/', 'data/'));
+    if (!existsSync(p)) continue;
+    checks.push(checkBudget(`${name} 懒加载`, brotliSize(readFileSync(p)), BUDGET.lazyDataBytes));
+  }
+
+  /* 3. 汇总。 */
+  const failed = checks.filter((c) => !c.pass);
+  console.log('[build] 性能预算：');
+  for (const line of renderBudgetTable(checks).split('\n')) console.log(`[build]   ${line}`);
+
+  if (failed.length) {
+    console.error(`[build] ${failed.length} 项超预算：`);
+    for (const f of failed) {
+      console.error(
+        `[build]   ${f.label}：${(f.actual / 1024).toFixed(1)} KB > ${(f.limit / 1024).toFixed(1)} KB`,
+      );
+    }
+    /* S9.7：超预算即失败。只有超了才考虑引入压缩工具，不是一上来就加一层构建。 */
+    process.exitCode = 1;
+  }
 }
 
 const stats = dirStats(DIST);

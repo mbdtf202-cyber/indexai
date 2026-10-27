@@ -2343,13 +2343,57 @@ e2e 28 项全过。
 - **axe 的 `color-contrast` 零违规**：需要先装 `@axe-core/playwright`（新依赖）。INV-6 只约束运行时零依赖，开发依赖允许，但装它属于 T5.5 的 a11y 覆盖面，与那里的三宽度×两主题矩阵一起做更合理。对比度本身在 T5.9 的审美评审里已人工确认（浅深都清晰可读）。
 - 组件类的命名空间（`.relay-card` 这类）：现有类名已经是组件化的（`.relay-*` / `.region-*` / `.bench-*`），无碰撞，未做机械重命名。
 
-### [~] T5.7 Performance Budgets (Round 1 started)
+### [x] T5.7 Performance Budgets
 
 依据：S9.7 · 依赖：T5.2
 
 步骤：构建结束时按 brotli 计算每个路由的首屏传输量与每个懒加载数据文件的大小，超出 S9.7 即失败；e2e 在 4 倍 CPU 降速下记录 CLS 与长任务并断言上限。只有超预算才考虑引入 esbuild 压缩。
 
 验收：预算检查在构建与 e2e 中执行并通过。
+
+结果：
+
+**1. `pipeline/budgets.mjs`：四条线 + brotli 计量**
+
+| 指标 | 上限 |
+|---|---|
+| 首屏传输（HTML + CSS + JS，brotli，不含字体） | 120 KB |
+| 单个懒加载数据请求（brotli） | 300 KB |
+| CLS | 0.05 |
+| 4 倍降速下首屏长任务总时长 | 200 ms |
+
+按 brotli 算而不是未压缩字节：CDN 一定会压，读者真正下载的是压缩后的大小。`quality: 5` 与边缘压缩接近（用 11 太慢，等于过度乐观）。
+
+字体不计入：它是并行请求，且 `font-display: swap` 不阻塞首屏。
+
+**2. 构建期：超预算即失败**
+
+实测（fixtures 数据）：
+
+```
+/              首屏  77.7 KB / 120 KB  65%  ✅
+/models        首屏  11.7 KB / 120 KB  10%  ✅
+/benchmarks    首屏   7.6 KB / 120 KB   6%  ✅
+…（13 个路由全部 ≤ 65%）
+data.json      懒加载 32.1 KB / 300 KB  11%  ✅
+bench.json     懒加载  4.7 KB / 300 KB   2%  ✅
+```
+
+首页占用最高（77.7 KB）是因为它内嵌了首屏数据摘要 + 旧版主脚本 178 KB 压到 ~60 KB。预渲染页都在 12 KB 以下——那正是「不开 JS 也能读」的收益。
+
+**3. e2e：4 倍降速下量运行时两条**
+
+Playwright 没暴露 CPU 降速，用 CDP 的 `Emulation.setCPUThrottlingRate`。两条断言用 `PerformanceObserver` 量：
+- `layout-shift` 累计（`hadRecentInput` 之外的）→ CLS
+- `longtask` 总时长 → 长任务预算
+
+实测两条都通过。
+
+**4. S9.7 的「只有超预算才考虑压缩」**
+
+现在没有任何压缩步骤：源码直接发布。这一条被写进代码注释——如果哪天真超了，先量清是哪一块（HTML 内联样式？主脚本？），再决定要不要上 esbuild，而不是一上来就加一层构建。
+
+新增 `test/unit/budgets.test.js`（17 项）与 `test/e2e/performance.spec.js`（2 项）。996 项测试 965 通过 0 失败，e2e **33 项**全过，verify 全绿。
 
 ### [x] T5.8 安全响应头
 
