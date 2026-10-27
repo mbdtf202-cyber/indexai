@@ -1,0 +1,712 @@
+{
+  "schema": "status-weekly/v1",
+  "generated_at": "2026-10-28T00:00:00.000Z",
+  "weeks": [
+    {
+      "key": "2026-09-07",
+      "label": "09-07"
+    },
+    {
+      "key": "2026-09-14",
+      "label": "09-14"
+    },
+    {
+      "key": "2026-09-21",
+      "label": "09-21"
+    },
+    {
+      "key": "2026-09-28",
+      "label": "09-28"
+    },
+    {
+      "key": "2026-10-05",
+      "label": "10-05"
+    },
+    {
+      "key": "2026-10-12",
+      "label": "10-12"
+    },
+    {
+      "key": "2026-10-19",
+      "label": "10-19"
+    },
+    {
+      "key": "2026-10-26",
+      "label": "10-26"
+    }
+  ],
+  "layers": {
+    "models": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.93,
+        "quarantineRate": 0.008,
+        "count": 473
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.935,
+        "quarantineRate": 0.009,
+        "count": 476
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.94,
+        "quarantineRate": 0.01,
+        "count": 479
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.945,
+        "quarantineRate": 0.011,
+        "count": 482
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.95,
+        "quarantineRate": 0.012,
+        "count": 485
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.955,
+        "quarantineRate": 0.013,
+        "count": 488
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.96,
+        "quarantineRate": 0.014,
+        "count": 491
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": 0.965,
+        "quarantineRate": 0.015,
+        "count": 494
+      }
+    ],
+    "news": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 100
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 100
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 100
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 0.75,
+        "gateOk": false,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 100
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 100
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 100
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 100
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 100
+      }
+    ],
+    "bench": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 2788
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 2788
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 2788
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 2788
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 2788
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 2788
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 2788
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 2788
+      }
+    ],
+    "events": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 182
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 182
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 182
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 182
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 182
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 182
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 182
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 182
+      }
+    ],
+    "offers": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 37
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 37
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 37
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 37
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 37
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 37
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 37
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 37
+      }
+    ],
+    "relays": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 40
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 40
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 40
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 40
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 40
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 40
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 40
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 40
+      }
+    ],
+    "subs": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 12
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 12
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 12
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 12
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 12
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 12
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 12
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 12
+      }
+    ],
+    "resources": [
+      {
+        "week": "2026-09-07",
+        "label": "09-07",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.008,
+        "count": 20
+      },
+      {
+        "week": "2026-09-14",
+        "label": "09-14",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.009,
+        "count": 20
+      },
+      {
+        "week": "2026-09-21",
+        "label": "09-21",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.01,
+        "count": 20
+      },
+      {
+        "week": "2026-09-28",
+        "label": "09-28",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.011,
+        "count": 20
+      },
+      {
+        "week": "2026-10-05",
+        "label": "10-05",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.012,
+        "count": 20
+      },
+      {
+        "week": "2026-10-12",
+        "label": "10-12",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.013,
+        "count": 20
+      },
+      {
+        "week": "2026-10-19",
+        "label": "10-19",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.014,
+        "count": 20
+      },
+      {
+        "week": "2026-10-26",
+        "label": "10-26",
+        "runs": 7,
+        "okRate": 1,
+        "gateOk": true,
+        "matchRate": null,
+        "quarantineRate": 0.015,
+        "count": 20
+      }
+    ]
+  },
+  "labels": [
+    {
+      "id": "news-theme",
+      "name": "情报主题 macro-F1",
+      "values": [
+        0.9,
+        0.91,
+        0.92,
+        0.92,
+        0.93,
+        0.94,
+        0.94,
+        0.938
+      ]
+    }
+  ]
+}

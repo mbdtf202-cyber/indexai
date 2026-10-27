@@ -30,6 +30,7 @@ import { renderTools } from '../views/tools.mjs';
 import { renderSignals } from '../views/signals.mjs';
 import { renderMethods } from '../views/method.mjs';
 import { renderData } from '../views/data.mjs';
+import { renderStatus } from '../views/status.mjs';
 import { renderChanges } from '../views/changes.mjs';
 import { renderCalculator } from '../views/cost-calculator.mjs';
 
@@ -168,6 +169,15 @@ export const ROUTES = [
     data: 'datasets',
     nav: true,
     navLabel: '数据',
+  },
+  {
+    path: '/status',
+    file: 'status.html',
+    title: `数据质量 · ${SITE_NAME}`,
+    description: '最近 8 周各层门禁、匹配率、隔离率与标注集指标的周趋势。',
+    render: renderStatus,
+    data: 'status',
+    nav: false,
   },
   {
     path: '/methodology',

@@ -330,6 +330,23 @@ if (!copiedData.includes('data.json')) {
     }
   }
 
+  /* 数据质量周报（T7.3）：优先读预生成的 status.json；没有就用 dataDir/status/*.ndjson 现算。 */
+  try {
+    const statusJson = join(dataDir, 'status.json');
+    if (existsSync(statusJson)) {
+      fullData.status = JSON.parse(readFileSync(statusJson, 'utf8'));
+    } else {
+      const { weeklyStatusFromDir } = await import('../pipeline/status-report.mjs');
+      const day = fullData.meta?.date || '1970-01-01';
+      fullData.status = weeklyStatusFromDir(dataDir, {
+        now: new Date(`${day}T00:00:00Z`),
+        nowISO: `${day}T00:00:00Z`,
+      });
+    }
+  } catch {
+    fullData.status = { weeks: [], layers: {}, labels: [] };
+  }
+
   /* 变化数据（T4.3 已在上面生成）读回来喂给首页。 */
   let changes = null;
   try {

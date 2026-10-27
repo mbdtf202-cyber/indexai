@@ -122,6 +122,9 @@ export function recordAttempt(layer, attempt, opt = {}) {
     ms: attempt.ms ?? 0,
     ...(attempt.error ? { error: attempt.error } : {}),
     ...(attempt.reason ? { reason: attempt.reason } : {}),
+    ...(Number.isFinite(attempt.matchRate) ? { matchRate: attempt.matchRate } : {}),
+    ...(Number.isFinite(attempt.quarantineRate) ? { quarantineRate: attempt.quarantineRate } : {}),
+    ...(attempt.gate ? { gate: attempt.gate } : {}),
   };
 
   appendFileSync(path, `${JSON.stringify(line)}\n`, 'utf8');

@@ -12,8 +12,9 @@
 import { writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { readFileSync, mkdirSync } from 'node:fs';
 import { buildManifest, manifestEntry, VERDICT } from './manifest.mjs';
-import { snapshotLayer, recordAttempt, writeNewsShards } from '../scripts/data-scripts.mjs';
+import { snapshotLayer, writeNewsShards } from '../scripts/data-scripts.mjs';
 import { buildUnmatchedReport } from '../lib/unmatch-report.js';
+import { recordRunAttempts } from './status-report.mjs';
 import {
   appendPoint,
   seriesDoc,
@@ -259,13 +260,7 @@ export async function persist(outDir, data, opt = {}) {
     }
 
     /* 每次尝试都记一行：告警要判「连续两次 red」，靠的就是这份历史。 */
-    for (const r of report?.layers || []) {
-      recordAttempt(
-        r.id,
-        { status: r.status, count: r.n, ms: r.ms, error: r.error, reason: r.reason },
-        { root: opt.dataDir, at: report.finished_at },
-      );
-    }
+    recordRunAttempts({ dataDir: opt.dataDir, report, models: data.models });
 
     /* 未匹配报告（T4.6 · S6.4）：每个源认不出的模型名与次数。
      * 写进 status/unmatched.json，状态视图会列出来；补别名是一类常规任务。

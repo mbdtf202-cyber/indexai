@@ -2876,13 +2876,20 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 步骤：依赖更新；上游条款与署名复核；a11y 抽查（读屏、键盘）；性能预算余量；死代码与过期注释。结论追加到本节末尾（一行一次），问题转成新任务。做完后不打勾，把「下次执行」改为 30 天后。
 
-### [ ] T7.3 数据质量周报
+### [x] T7.3 数据质量周报
 
 依赖：T4.2
 
-步骤：各层门禁、匹配率、隔离率、标注集指标的周趋势，自动出现在状态视图。
-
 验收：状态视图展示最近 8 周的趋势，有 e2e。
+
+结果：
+
+- 新增 `pipeline/status-report.mjs`：把 `status/*.ndjson` 按 ISO 周聚合为最近 8 周的门禁通过率、匹配率、隔离率、采集量；`scripts/status-report.mjs` 可手动生成 `status.json`。
+- 新增 `/status` 路由与 `site/views/status.mjs`：每层一张周趋势表，标注集指标单独一张；`site/build.js` 优先读 `status.json`，没有则从 `dataDir/status/` 现算。
+- `persist.mjs` 现在把 `gate` / `matchRate` / `quarantineRate` 写进每次 attempt，真实运行会持续积累周趋势；`fixtures/data/status.json` 提供 8 周测试数据。
+- `test/unit/status-weekly.test.js` + `test/e2e/status.spec.js`：周聚合正确、8 列表格与「匹配率 / 隔离率 / 标注集」可见。
+
+**验证**：`npm run verify` 全绿：**1034 项 unit/golden/contract（1004 通过、0 失败、30 skip）**，build，e2e **104 项全过**。
 
 ### [ ] T7.4 大陆可达
 
