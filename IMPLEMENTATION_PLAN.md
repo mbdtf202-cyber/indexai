@@ -2815,13 +2815,28 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 `npm run verify` 全绿：**1030 项 unit/golden/contract（1000 通过、0 失败、30 skip）**，build，e2e **102 项全过**。`fixtures/data` 重新裁剪（0.25 MB），`fixtures/golden` 的 offers 行同步带 quota/status；free 页 DOM 快照更新（额度文案由原文变为结构化短句）。
 
-### [ ] T6.12 订阅渠道完善
+### [x] T6.12 订阅渠道完善
 
 依据：S8.3 · 依赖：T3.8、T4.3
 
-步骤：ChatGPT、Claude、Gemini 的官网价作为第二渠道人工维护并附证据；页面对比「App Store 价 vs 官网价」；区价变化进入变化流。
-
 验收：三个产品都有官网价与证据；区价变化有变化流用例。
+
+结果：
+
+**1. 官网价第二渠道**
+
+- 新增 `curated/subscription-official.json`：ChatGPT Plus $20/月、Claude Pro $20/月（年付约 $17/月）、Google AI Pro $19.99/月；每条带 `url`、`quote`、`captured_at`、`verified_at`。
+- `pipeline/context.mjs` 把 `curated.subsOfficial` 注入 subs 层；`buildSubs()` 按 productSlug + tier 精确挂到对应档位，`Pro Annual` 不会被误配成月付。
+- 订阅页每行显示「官网 $20 /月 · 证据 ↗」或「官网 同价」；证据链接直接打开官网定价页。
+
+**2. 区价变化进入变化流**
+
+- `changes-engine.mjs` 新增 `sub_region_price`：以 `app|plan` 分组，逐国家比较 `cny`，1% 阈值；`describeChange` 输出「ChatGPT ChatGPT Plus · 土耳其 ¥100 → ¥120」。
+- `test/unit/changes.test.js` 新增区价变化用例。
+
+**3. 验证**
+
+`npm run verify` 全绿：**1032 项 unit/golden/contract（1002 通过、0 失败、30 skip）**，build，e2e **103 项全过**（含 `subscriptions.spec.js` 的官网价与证据链接断言）。`fixtures/data` 订阅行已带 `official` 字段；`fixtures/golden` 与 `subs.html` / `narrow-subs.html` 快照同步更新。
 
 ---
 

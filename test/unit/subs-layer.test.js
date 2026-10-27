@@ -75,6 +75,25 @@ describe('subs 层（T3.1c6）', () => {
     assert.equal(out.records.subs[0].vendor, 'OpenAI');
   });
 
+  test('官网价作为第二渠道挂到对应档位（T6.12）', () => {
+    const official = [
+      {
+        productSlug: 'chatgpt',
+        tier: 'Plus',
+        price: 20,
+        currency: 'USD',
+        period: '1月',
+        url: 'https://openai.com/pricing',
+        note: '官网价',
+        verified_at: '2026-10-28',
+        evidence: [{ url: 'https://openai.com/pricing', quote: '$20' }],
+      },
+    ];
+    const out = layer.normalize({ apple, prod, official }, ctx);
+    assert.equal(out.records.subs[0].official.price, 20);
+    assert.equal(out.records.subs[0].official.url, 'https://openai.com/pricing');
+  });
+
   test('没有美国区价格的档位被跳过', () => {
     const noUs = {
       apps: [

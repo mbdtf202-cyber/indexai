@@ -160,6 +160,20 @@ describe('订阅事件', () => {
     assert.equal(SUB_PRICE_EPSILON, 0.01);
   });
 
+  test('区价变化进入变化流（T6.12）', () => {
+    const row = (cny) => ({
+      app: 'ChatGPT',
+      plan: 'ChatGPT Plus',
+      rows: [{ c: 'TR', n: '土耳其', cur: 'TRY', cny }],
+    });
+    const prev = { subsRegions: [row(100)] };
+    const next = { subsRegions: [row(120)] };
+    const events = computeChanges(snap(prev), snap(next), { date: 'd' });
+    assert.equal(events.length, 1);
+    assert.equal(events[0].type, 'sub_region_price');
+    assert.match(describeChange(events[0]), /土耳其/);
+  });
+
   test('新档位与下架', () => {
     const prev = { subs: [{ id: 'old', product: 'P', tier: 'A', price: 10, currency: 'USD' }] };
     const curr = { subs: [{ id: 'new', product: 'P', tier: 'B', price: 30, currency: 'USD' }] };

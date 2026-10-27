@@ -168,6 +168,29 @@ export function computeChanges(prev, current, ctx) {
     if (!currSubs.has(id)) push('sub_removed', { id, product: s.product, tier: s.tier });
   }
 
+  /* 区价变化也要进变化流（T6.12）。以 app|plan 为组，逐个国家比较 cny。 */
+  const prevRegions = new Map((pd.subsRegions || []).map((g) => [`${g.app}|${g.plan}`, g]));
+  for (const g of cd.subsRegions || []) {
+    const old = prevRegions.get(`${g.app}|${g.plan}`);
+    if (!old) continue;
+    const oldRows = new Map((old.rows || []).map((r) => [r.c, r]));
+    for (const row of g.rows || []) {
+      const before = oldRows.get(row.c);
+      if (!before) continue;
+      const d = priceDelta(before.cny, row.cny);
+      if (d && Math.abs(d.pct ?? 0) >= SUB_PRICE_EPSILON) {
+        push('sub_region_price', {
+          app: g.app,
+          plan: g.plan,
+          country: row.c,
+          countryLabel: row.n,
+          currency: row.cur,
+          change: d,
+        });
+      }
+    }
+  }
+
   /* ────────────────────────── 中转站 ────────────────────────── */
   const prevRelays = new Map((pd.relays || []).map((r) => [r.domain, r]));
   const currRelays = new Map((cd.relays || []).map((r) => [r.domain, r]));
@@ -331,6 +354,8 @@ export function describeChange(e) {
       return `订阅下架：${e.product} ${e.tier}`;
     case 'sub_price':
       return `${e.product} ${e.tier} ${e.currency} ${g('old')} → ${g('new')}`;
+    case 'sub_region_price':
+      return `${e.app} ${e.plan} · ${e.countryLabel || e.country} ¥${g('old')} → ¥${g('new')}`;
     case 'relay_new':
       return `新中转站：${e.name || e.domain}`;
     case 'relay_up':

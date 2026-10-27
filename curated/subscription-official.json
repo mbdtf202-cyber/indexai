@@ -1,0 +1,59 @@
+{
+  "schema": "subscription-official/v1",
+  "items": [
+    {
+      "product": "ChatGPT",
+      "productSlug": "chatgpt",
+      "tier": "Plus",
+      "price": 20,
+      "currency": "USD",
+      "period": "1月",
+      "url": "https://openai.com/chatgpt/pricing/",
+      "note": "官网月付价；官网与 App Store 同价，官网可开发票、可用网页版年付优惠时以官网为准。",
+      "verified_at": "2026-10-28",
+      "evidence": [
+        {
+          "url": "https://openai.com/chatgpt/pricing/",
+          "quote": "ChatGPT Plus — $20 per month",
+          "captured_at": "2026-10-28"
+        }
+      ]
+    },
+    {
+      "product": "Claude",
+      "productSlug": "claude",
+      "tier": "Pro",
+      "price": 20,
+      "currency": "USD",
+      "period": "1月",
+      "url": "https://www.anthropic.com/pricing",
+      "note": "官网月付价；官网年付折算约 $17/月（17% 折扣），App Store 只有月付。",
+      "verified_at": "2026-10-28",
+      "evidence": [
+        {
+          "url": "https://www.anthropic.com/pricing",
+          "quote": "Claude Pro — $20 per month, or $17 per month billed annually",
+          "captured_at": "2026-10-28"
+        }
+      ]
+    },
+    {
+      "product": "Gemini",
+      "productSlug": "gemini",
+      "tier": "Google AI Pro",
+      "price": 19.99,
+      "currency": "USD",
+      "period": "1月",
+      "url": "https://one.google.com/about/ai-premium/",
+      "note": "官网 Google AI Pro 月付价；与 App Store 内购同价，官网另有年付方案。",
+      "verified_at": "2026-10-28",
+      "evidence": [
+        {
+          "url": "https://one.google.com/about/ai-premium/",
+          "quote": "Google AI Pro — $19.99/month",
+          "captured_at": "2026-10-28"
+        }
+      ]
+    }
+  ]
+}

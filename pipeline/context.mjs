@@ -75,11 +75,12 @@ async function readSeedRows() {
 }
 
 async function buildCtx(prev, outDir, state) {
-  const [officialPrices, offers, relaysCurated, toolkit] = await Promise.all([
+  const [officialPrices, offers, relaysCurated, toolkit, subsOfficial] = await Promise.all([
     readCurated('official-prices.json'),
     readCurated('offers.json'),
     readCurated('relays.json'),
     readCurated('toolkit.json'),
+    readCurated('subscription-official.json'),
   ]);
 
   /* 中转站是通配策略：名单每天变，逐个写进表不现实。
@@ -127,6 +128,7 @@ async function buildCtx(prev, outDir, state) {
       offers: offers?.offers || offers || [],
       relays: relaysCurated?.relays || relaysCurated || [],
       toolkit: toolkit?.toolkit || toolkit?.tools || toolkit || [],
+      subsOfficial: subsOfficial?.items || subsOfficial || [],
     },
 
     /* 纯函数（INV-5：单一来源，层不自带实现） */

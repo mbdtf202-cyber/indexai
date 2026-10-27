@@ -50,7 +50,7 @@ export default {
       }
     };
     const [prod, apple] = await Promise.all([get(ctx.urls.prod), get(ctx.urls.apple)]);
-    return { prod, apple };
+    return { prod, apple, official: ctx.curated?.subsOfficial || [] };
   },
 
   /**
@@ -61,7 +61,7 @@ export default {
    * @param {{subsThirdStats: Function}} ctx
    */
   normalize(raw, ctx) {
-    const subs = buildSubs(raw?.apple);
+    const subs = buildSubs(raw?.apple, raw?.official);
     const subsRegions = buildSubsRegions(raw?.apple);
     // 挂单：原始行只在这里存在，出去的是统计（D3）
     const subsThird = ctx.subsThirdStats(flattenOffers(raw?.prod));
@@ -120,7 +120,7 @@ export default {
  * 这是「官网写多少就是多少」里唯一能自动化且可复核的口径——App Store 商品页是公开明码。
  * 拿不到美国区价格的档位直接跳过，不猜价、不用历史值填。
  */
-function buildSubs(apple) {
+function buildSubs(apple, official = []) {
   if (!apple) return [];
   const out = [];
   for (const app of apple.apps || []) {
@@ -134,6 +134,13 @@ function buildSubs(apple) {
         String(plan.label || plan.slug || '')
           .replace(new RegExp(`^${app.display_name}\\s*`, 'i'), '')
           .trim() || plan.label;
+      const forProduct = official.filter((x) => x.productSlug === app.slug);
+      const officialHit =
+        forProduct.find((x) => tier === x.tier || plan.label === x.tier) ||
+        forProduct.find(
+          (x) =>
+            !/annual|年/i.test(tier) && (tier.includes(x.tier) || plan.label?.includes(x.tier)),
+        );
       out.push({
         id: `${app.slug}-${plan.slug}`,
         product: app.display_name,
@@ -148,6 +155,17 @@ function buildSubs(apple) {
         note: SUB_NOTE[app.slug] || '',
         source: 'apple',
         checked: (us.fetched_at || '').slice(0, 10) || null,
+        official: officialHit
+          ? {
+              price: officialHit.price,
+              currency: officialHit.currency,
+              period: officialHit.period,
+              url: officialHit.url,
+              note: officialHit.note,
+              verified_at: officialHit.verified_at,
+              evidence: officialHit.evidence || [],
+            }
+          : null,
       });
     }
   }

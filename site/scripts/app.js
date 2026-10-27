@@ -1406,26 +1406,41 @@ const MOTION = (() => {
       ],
     ];
     // 官方标价 = 各套餐在美国区的价格（App Store 公开内购页），一档一行
+    const officialByProductTier = new Map();
+    const officialByProduct = new Map();
+    for (const r of subs) {
+      if (!r.official) continue;
+      officialByProductTier.set(`${r.product}|${r.tier}`, r.official);
+      if (!officialByProduct.has(r.product)) officialByProduct.set(r.product, []);
+      officialByProduct.get(r.product).push(r.official);
+    }
     const planRows = [];
     for (const g of state.data.subsRegions || []) {
       const us = (g.rows || []).find((r) => r.c === 'US');
       const usd = us ? Number(String(us.p).replace(/[^0-9.]/g, '')) : null;
+      const tier = (String(g.plan).startsWith(g.app)
+        ? String(g.plan).slice(g.app.length).trim() || g.plan
+        : g.plan
+      )
+        .replace(/^(Google AI|SuperGrok|ChatGPT|Claude)\s+/i, '')
+        .replace(/（/g, ' ')
+        .replace(/）/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
       planRows.push({
         product: g.app,
         vendor: '',
-        tier: (String(g.plan).startsWith(g.app)
-          ? String(g.plan).slice(g.app.length).trim() || g.plan
-          : g.plan
-        )
-          .replace(/^(Google AI|SuperGrok|ChatGPT|Claude)\s+/i, '')
-          .replace(/（/g, ' ')
-          .replace(/）/g, '')
-          .replace(/\s+/g, ' ')
-          .trim(),
+        tier,
         usd,
         duration: g.duration,
         lowestCny: g.cheapest,
         buy: us?.url || '',
+        official: (() => {
+          const exact = officialByProductTier.get(`${g.app}|${tier}`);
+          if (exact) return exact;
+          const list = officialByProduct.get(g.app) || [];
+          return list.length === 1 ? list[0] : null;
+        })(),
       });
     }
     const seenProducts = new Set(planRows.map((x) => x.product));
@@ -1441,6 +1456,7 @@ const MOTION = (() => {
         buy: r.buy,
         note: r.note,
         quota: r.quota,
+        official: r.official || null,
       });
     }
     // 等效 token：月费 ÷ 全站中位输入价，说明「这笔钱按 API 中位价能换多少 token」
@@ -1482,6 +1498,7 @@ const MOTION = (() => {
                   <span class="tier">${esc(r.tier)}</span>
                   <span class="quota" title="等效 ${r.tokens ? fmtTokens(r.tokens) : '—'} tokens（按全站中位输入价 $${money(medianIn)} / 1M 折算）">${r.tokens ? `${fmtTokens(r.tokens)} tokens` : '—'}</span>
                   <span class="p" title="${r.lowestCny ? `最低区价 ¥${Math.round(r.lowestCny)}` : ''}">${r.usd == null ? '<span class="dim">—</span>' : r.buy ? `<a href="${esc(r.buy)}" target="_blank" rel="noopener" style="text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line2)">$${money(r.usd)}</a>` : `$${money(r.usd)}`}<small>${r.duration ? ` /${esc(r.duration)}` : ''}</small></span>
+                  ${r.official ? `<span class="off">官网 ${r.official.price === r.usd ? '同价' : `$${money(r.official.price)}`} /${esc(r.official.period || '月')} <a href="${esc(safeUrl(r.official.url) || '#')}" target="_blank" rel="noopener">证据 ↗</a></span>` : ''}
 
                 </div>`,
                 )
