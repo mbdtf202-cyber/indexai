@@ -7,7 +7,7 @@
   "license": "MIT",
   "homepage": "https://indexai.pages.dev/",
   "engines": {
-    "node": ">=24"
+    "node": ">=26"
   },
   "scripts": {
     "lint": "biome check .",

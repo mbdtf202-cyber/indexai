@@ -21,7 +21,7 @@
 
 某个命令落地后，把它的「可用于」改成「可用」；M0 结束时删掉这一列。
 
-Node 用 24（`.node-version`）；本机若 PATH 里还是 22，用 `export PATH=~/.local/node/node-v24.11.0-darwin-arm64/bin:$PATH`。
+Node 用 26（`.node-version`）；本机若 PATH 里还是旧版，用 `export PATH=~/.local/node/node-v26.12.1-darwin-arm64/bin:$PATH`。
 
 ## 环境变量（测试与 golden）
 

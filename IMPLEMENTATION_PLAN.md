@@ -2858,13 +2858,17 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 ## M7 持续
 
-### [ ] T7.1 升级 Node 26
+### [x] T7.1 升级 Node 26
 
 依赖：M6 完成，且日期在 2026-10-28 之后（Node 26 进入 LTS）。
 
-步骤：`.node-version` 改为 26，`engines.node` 改为 `>=26`，CI 跟随。
-
 验收：本地与 CI 的 `npm run verify` 通过。
+
+结果：
+
+- `.node-version` → `26`（实际本机下载并使用 v26.12.1）；`package.json` 的 `engines.node` → `>=26`；`AGENTS.md` 的本机路径示例同步为 v26.12.1。
+- 在 Node 26.12.1 下跑 `npm run verify`，全绿：1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），build，e2e 103 项全过。
+- CI 的 `actions/setup-node` 通过 `node-version-file` 自动跟随 `.node-version`，无需改 workflow。
 
 ### [ ] T7.2 月度审计（周期任务）
 
