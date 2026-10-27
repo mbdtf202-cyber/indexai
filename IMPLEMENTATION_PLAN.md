@@ -2269,7 +2269,7 @@ e2e 28 项全过。
 
 验收：e2e：点击任一筛选后 `document.activeElement` 仍是该控件；对话框可用 Esc 关闭并归还焦点；表格中每个模型名都可用 Tab 聚焦。
 
-### [~] T5.5 E2E Testing Framework（实现完成，待 CI 首次生成截图基线）
+### [x] T5.5 E2E Testing Framework
 
 依据：S9.8 · 依赖：T5.4
 
@@ -2312,7 +2312,7 @@ e2e 28 项全过。
 
 `npm run verify`：lint → typecheck → invariants → 996 项 unit/golden/contract（965 通过、0 失败、30 skip、1 todo）→ build → e2e **99 项全过**。DOM 快照更新 7 个（`compare` / `events` / `method` / `relays` / `narrow-relays` / `signals` / `tools`），差异全部来自本轮 a11y 修改：排序表头去掉 `role="button"`、计数徽章去掉 `opacity`、时间轴 aria-label 加月份、代码块加 `tabindex`。
 
-**未做**：`visual.yml` 的首次基线生成要在 GitHub 上手动触发（本机无法生成 Linux 字体基线）；触发后基线 PNG 会由工作流自行提交。
+**截图基线**：2026-10-28 用 `mcr.microsoft.com/playwright:v1.64.1-noble` Linux 容器生成 60 张视口截图（16 MB，`test/visual/__screenshots__/`），并在同一容器里复跑 60 项全部通过；`visual.yml` 首次触发时会直接复用这批基线。
 
 ### [x] T5.6 Design Tokens
 

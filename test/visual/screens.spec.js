@@ -42,9 +42,7 @@ for (const width of WIDTHS) {
           );
           await page.waitForTimeout(300);
 
-          await expect(page).toHaveScreenshot(`${tab}-${width}-${theme}.png`, {
-            fullPage: true,
-          });
+          await expect(page).toHaveScreenshot(`${tab}-${width}-${theme}.png`);
         });
       }
     });
