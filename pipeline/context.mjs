@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import * as http from '../lib/http.js';
 import { now, nowISO, todayISO, sleep } from '../lib/clock.js';
 import { parseNewsYaml, mergeArchive } from '../lib/news.js';
+import { parseFeed } from '../lib/feed.js';
 import { band, familyKey, slugify, peakNote } from '../lib/model-keys.js';
 import { registerRelayHosts } from '../lib/http-policy.js';
 import { keepSafeUrl } from '../lib/safe-url.js';
@@ -139,6 +140,7 @@ async function buildCtx(prev, outDir, state) {
     keepSafeUrl,
     mergeArchive,
     parseYaml: parseNewsYaml,
+    parseFeed,
     parse: parseOpenRouter,
     eventKind,
     eventRegion,
@@ -160,6 +162,7 @@ async function buildCtx(prev, outDir, state) {
       aibijia: 'https://data.aibijia.org/api/pricing',
       frontline: 'https://data.aibijia.org/news-frontline.yaml',
       aihot: 'https://aihot.news/api/v1/items',
+      hn: 'https://hn.algolia.com/api/v1/search',
       apple: 'https://data.aibijia.org/apple_subscriptions.json',
       prod: 'https://data.aibijia.org/products.json',
     },

@@ -40,7 +40,9 @@ function makeCtx(overrides = {}) {
       mergeArchive,
       today: () => '2026-10-24',
       testProfile: true,
-      urls,
+      now: () => new Date('2026-10-24T01:00:00.000Z'),
+      parseFeed: () => [],
+      urls: { ...urls, hn: 'https://example.test/hn' },
       log: (m, opt) => logs.push({ m, level: opt?.level || 'info' }),
       ...overrides,
     },
@@ -53,7 +55,7 @@ describe('news 层（T3.1c4）', () => {
   test('加载并按契约导出', async () => {
     layer = (await import('../../pipeline/layers/news/index.js')).default;
     assert.equal(layer.id, 'news');
-    assert.equal(layer.sources.length, 2);
+    assert.ok(layer.sources.length >= 6, `来源数 ${layer.sources.length}`);
   });
 
   test('单路失败不拖累其它两路', async () => {
@@ -79,6 +81,33 @@ describe('news 层（T3.1c4）', () => {
       logs.some((l) => l.level === 'warn'),
       '失败要记 warn',
     );
+  });
+
+  test('aihot 条目优先存原始链接，聚合入口单独存 via（F08）', async () => {
+    const { ctx } = makeCtx({
+      http: {
+        text: async () => ({ ok: true, text: '' }),
+        get: async () => ({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                id: 'x1',
+                title: '原始出处测试',
+                publishedAt: '2026-10-24T03:00:00Z',
+                links: {
+                  aihot: 'https://aihot.news/items/x1',
+                  original: 'https://example.com/post/1?utm_source=x',
+                },
+              },
+            ],
+          }),
+        }),
+      },
+    });
+    const rows = await layer.fetchBulk(ctx);
+    assert.equal(rows[0].url, 'https://example.com/post/1?utm_source=x');
+    assert.equal(rows[0].via, 'https://aihot.news/items/x1');
   });
 
   test('三路全空时被判定为「没抓到」（隔离原因清晰）', () => {

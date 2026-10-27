@@ -6,6 +6,8 @@
  * 于是订阅来源从来没进过表。
  */
 
+import { OFFICIAL_FEEDS } from './sources/official-feeds.mjs';
+
 /* 来源登记表（F16）：所有实际用到的地址去重计数，方法页按引用次数列出来。
  * 以前订阅行用 buy 字段、登记时读 url，于是订阅来源从未入表。 */
 export function buildSources(out) {
@@ -33,6 +35,8 @@ export function buildSources(out) {
   if ((out.news || []).length) {
     addSrc('https://data.aibijia.org/news-frontline.yaml', 'news', 'AI 要闻精选');
     addSrc('https://aihot.news/api/v1/items', 'news', 'AIHOT 全量流');
+    addSrc('https://hn.algolia.com/api/v1/search', 'news', 'Hacker News 热帖');
+    for (const feed of OFFICIAL_FEEDS) addSrc(feed.url, 'news', feed.name);
   }
   for (const src of out.bench?.sources || []) {
     if (src.ok === false) continue;

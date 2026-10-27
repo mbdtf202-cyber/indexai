@@ -2,7 +2,7 @@
  * news 层的行 schema（T3.5 · S3.2）。
  *
  * 情报条目用**短键**（encodeNews 的压缩格式，见 lib/news.js）：
- *   u=URL  d=日期  tm=时刻  t=标题  tp=主题  s=摘要  sc=分数  im=重要标记
+ *   u=URL  v=聚合入口  d=日期  tm=时刻  t=标题  tp=主题  s=摘要  sc=分数  im=重要标记  ns=来源数
  *
  * 压缩是为了让归档不膨胀（2,000+ 条 × 每条几百字节）。
  * 这里的 schema 必须跟着短键走，不能写成长名——那是两个不同的形状。
@@ -17,7 +17,9 @@ export const NEWS_ROW = {
   // tp 是主题的**数字编码**（TOPIC_CODE，见 lib/news.js），不是字符串
   tp: { type: 'number' },
   tm: { type: 'string' },
+  v: { type: 'string', pattern: HTTP_URL },
   sc: { type: 'number' },
+  ns: { type: 'number' },
 };
 
 export const NEWS_ROW_RULES = [

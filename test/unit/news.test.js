@@ -66,18 +66,20 @@ describe('scoreNews', () => {
     assert.equal(long - short, 1);
   });
 
-  test('标题含负面人名扣分', () => {
+  test('F26：人名不参与扣分，主题相同分数相同', () => {
     const neutral = scoreNews({ title: '某公司发布模型', summary: '' });
-    const negative = scoreNews({ title: '马斯克发布模型', summary: '' });
-    assert.ok(negative < neutral, '含扣分词应更低');
+    const withPerson = scoreNews({ title: '马斯克发布模型', summary: '' });
+    assert.equal(withPerson, neutral, '人名不应改变分数');
+  });
+
+  test('主题相关性与官方源权重加分', () => {
+    const plain = scoreNews({ title: '某公司发布模型', summary: '' });
+    const official = scoreNews({ title: '某公司发布模型', summary: '', weight: 3 });
+    assert.ok(official > plain, '官方源权重应加分');
   });
 
   test('缺失 title 与 summary 不抛错', () => {
     assert.doesNotThrow(() => scoreNews({}));
-  });
-
-  test.todo('F26：不应按人名扣分（改为按主题相关性打分）', () => {
-    // 修好后转为正式断言：含「马斯克」的 xAI 价格新闻不应被压低
   });
 });
 

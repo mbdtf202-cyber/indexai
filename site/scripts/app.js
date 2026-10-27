@@ -431,6 +431,8 @@ const MOTION = (() => {
             topicLabel: LABEL[topic],
             score: x.sc,
             importance: x.im || 'daily',
+            via: x.v || '',
+            sourceCount: x.ns || 1,
           };
         });
       } catch (e) {
@@ -3512,7 +3514,7 @@ const MOTION = (() => {
                     <h4>${esc(n.title)}</h4>
                     ${n.summary ? `<p>${esc(n.summary)}</p>` : ''}
                   </div>
-                  <span class="ntime">${scale.id === 'd' ? esc(n.time || '—') : esc(dayOf(n))}</span>
+                  <span class="ntime">${n.sourceCount > 1 ? `<b class="nsrc">${n.sourceCount} 源</b>` : ''}${scale.id === 'd' ? esc(n.time || '—') : esc(dayOf(n))}</span>
                 </a>`,
                 )
                 .join('')}

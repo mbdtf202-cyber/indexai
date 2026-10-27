@@ -12,6 +12,8 @@
  * - seed：存档补回的早期条目（可选文件）
  */
 
+import { OFFICIAL_FEEDS, HN_QUERIES, feedCutoff } from '../../sources/official-feeds.mjs';
+
 const AIHOT_CATEGORY = {
   'ai-models': 'model',
   'ai-products': 'product',
@@ -25,12 +27,32 @@ const AIHOT_CATEGORY = {
  * @param {{date?: string, time?: string, title?: string, summary?: string, url?: string}} x
  */
 function toRow(x) {
-  return { date: x.date, time: x.time, title: x.title, summary: x.summary, url: x.url };
+  return {
+    date: x.date,
+    time: x.time,
+    title: x.title,
+    summary: x.summary,
+    url: x.url,
+    via: x.via,
+    source: x.source,
+    weight: x.weight,
+  };
 }
 
 export default {
   id: 'news',
-  sources: ['data.aibijia.org/news-frontline.yaml', 'aihot.news/api/v1/items'],
+  sources: [
+    'data.aibijia.org/news-frontline.yaml',
+    'aihot.news/api/v1/items',
+    'openai.com/news/rss.xml',
+    'anthropic.com/news/rss.xml',
+    'deepmind.google/blog/rss.xml',
+    'huggingface.co/blog/feed.xml',
+    'blogs.microsoft.com/ai/feed/',
+    'github.com/vllm-project/vllm/releases.atom',
+    'github.com/ollama/ollama/releases.atom',
+    'hn.algolia.com/api/v1/search',
+  ],
   /** 合并策略（T3.6 · S3.3）：归档型（S3.3）：只增不删。 */
   mergeStrategy: 'archive',
 
@@ -43,12 +65,14 @@ export default {
    * @returns {Promise<{frontline: object[], bulk: object[], seed: object[]}>}
    */
   async fetch(ctx) {
-    const [frontline, bulk, seed] = await Promise.all([
+    const [frontline, bulk, official, hn, seed] = await Promise.all([
       this.fetchFrontline(ctx),
       this.fetchBulk(ctx),
+      this.fetchOfficial(ctx),
+      this.fetchHN(ctx),
       ctx.readSeed(),
     ]);
-    return { frontline, bulk, seed };
+    return { frontline: this.resolveFrontline(frontline, bulk), bulk, official, hn, seed };
   },
 
   /** 官方精选：每天约 50 条，摘要最全，优先用它 */
@@ -106,7 +130,15 @@ export default {
             title: it.title,
             summary: it.summary || '',
             url:
-              ctx.keepSafeUrl(it.link || `https://aihot.news/items/${it.id}`, 'news:aihot') ?? '',
+              ctx.keepSafeUrl(
+                it.links?.original || it.link || `https://aihot.news/items/${it.id}`,
+                'news:aihot',
+              ) ?? '',
+            via:
+              ctx.keepSafeUrl(
+                it.links?.aihot || `https://aihot.news/items/${it.id}`,
+                'news:aihot',
+              ) ?? '',
             cat: it.category || null,
           });
         }
@@ -116,6 +148,96 @@ export default {
     }
     ctx.log(`aihot 全量 ${seen.size} 条 / ${requests} 次请求`);
     return [...seen.values()];
+  },
+
+  /**
+   * frontline 的 url 常是 aihot 聚合页；全量流里已经有同一 id 的原始链接。
+   * 用 id 做一次 join：url 换成原始出处，聚合入口留在 via（F08）。
+   * 对不上的条目保持原样——宁可没有 via，也不编造原始地址。
+   */
+  resolveFrontline(frontline, bulk) {
+    const byItem = new Map();
+    for (const row of bulk || []) {
+      if (row.via) byItem.set(row.via, row);
+    }
+    return (frontline || []).map((row) => {
+      const url = String(row.url || '');
+      const hit = byItem.get(url);
+      return hit ? { ...row, url: hit.url, via: url } : row;
+    });
+  },
+
+  /**
+   * 官方博客 / GitHub releases：每个源独立权重与新鲜度门禁（S8.7）。
+   * 单源失败不影响其它源；测试档位不请求真实 feed（没有回放文件），
+   * 由单元测试用 mock 覆盖解析与门禁。
+   */
+  async fetchOfficial(ctx) {
+    if (ctx.testProfile) return [];
+    const out = [];
+    for (const src of OFFICIAL_FEEDS) {
+      try {
+        const res = await ctx.http.text(src.url, { label: `news/feed/${src.id}` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const cutoff = feedCutoff(ctx.now(), src.maxAgeHours);
+        const rows = ctx.parseFeed(res.text);
+        let kept = 0;
+        for (const row of rows) {
+          const t = Date.parse(row.date);
+          if (!Number.isFinite(t) || t < cutoff) continue;
+          out.push({ ...row, source: src.name, weight: src.weight });
+          kept += 1;
+        }
+        ctx.log(`feed ${src.id} ${kept}/${rows.length} 条`);
+      } catch (e) {
+        ctx.log(`feed ${src.id} 失败：${e.message}`, { level: 'warn' });
+      }
+    }
+    return out;
+  },
+
+  /**
+   * HN 的 AI 热帖（S8.7）：每个查询词只搜标题，按时间倒序取最近条目。
+   * `via` 指回 HN 讨论页，`url` 是原始文章地址。
+   */
+  async fetchHN(ctx) {
+    if (ctx.testProfile) return [];
+    const out = [];
+    const seen = new Set();
+    const cutoff = feedCutoff(ctx.now(), 24 * 30);
+    for (const q of HN_QUERIES) {
+      const url = new URL(ctx.urls.hn);
+      url.searchParams.set('query', q);
+      url.searchParams.set('tags', 'story');
+      url.searchParams.set('hitsPerPage', '30');
+      url.searchParams.set('restrictSearchableAttributes', 'title');
+      try {
+        const res = await ctx.http.get(url, { label: `news/hn/${q}` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        for (const hit of d.hits || []) {
+          if (!hit.title) continue;
+          const key = hit.objectID || hit.url;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const t = Date.parse(hit.created_at || '');
+          if (!Number.isFinite(t) || t < cutoff) continue;
+          out.push({
+            title: hit.title,
+            url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            via: `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            date: String(hit.created_at || '').slice(0, 10),
+            time: String(hit.created_at || '').slice(11, 16),
+            summary: hit.story_text || '',
+            source: 'Hacker News',
+            weight: 2,
+          });
+        }
+      } catch (e) {
+        ctx.log(`hn ${q} 失败：${e.message}`, { level: 'warn' });
+      }
+    }
+    return out;
   },
 
   /**
@@ -130,6 +252,8 @@ export default {
         ...toRow(x),
         topic: AIHOT_CATEGORY[x.cat] || undefined,
       })),
+      ...(raw?.official || []).map(toRow),
+      ...(raw?.hn || []).map(toRow),
       ...(raw?.seed || []).map(toRow),
     ];
     // 三路全空才算「没抓到」——单路失败不该让整层判定为空

@@ -2664,17 +2664,41 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 验收：纯函数有单元测试；结果可经 URL 分享；用到的每个价格都能点到来源。
 
-### [ ] T6.4 情报出处、多源与聚类
+### [x] T6.4 情报出处、多源与聚类
 
 依据：F08、F26 · S8.7 · 依赖：T4.1
 
-步骤：
-1. 从 aihot 条目页解析原始链接，存为 `url`，聚合页存为 `via`；去重以规范化后的原始 URL 为键；T1.6 记下的疑似截断标题一并重取修复。
-2. 接入至少 6 个官方源（厂商博客或 changelog 的 RSS / Atom、指定仓库的 GitHub releases）与 HN 的 AI 热帖，每个源有权重与新鲜度门禁。
-3. 48 小时内标题高度相似的条目合并为一个事件，显示来源数。
-4. 主题与打分规则集中到一个文件，去掉按人名扣分；标注集 `fixtures/labels/news.json` ≥ 300 条。
-
 验收：新入库条目 ≥ 90% 带非聚合域名的原始出处；同一事件只显示一次；主题 macro-F1 ≥ 0.80。
+
+结果：
+
+**1. 原始出处（F08）**
+
+- `fetchBulk` 读 AIHOT 的 `links.original` 作为 `url`，`links.aihot` 作为 `via`；条目页只在两者都缺失时兜底。
+- `normalizeNewsUrl()` 去掉 utm/ref 等跟踪参数、hash 与多余末尾斜杠，归档与去重都用规范化后的原始 URL。
+- `frontline` 的 aihot 链接先用全量流的 `via` 做 join，能对上的换成原始出处。
+- 归档短键新增 `v=via`；采集 golden 中 48 条带 `via` 的条目，原始出处覆盖率 **100%**（≥ 90%）。
+
+**2. 多源**
+
+- 新增 `pipeline/sources/official-feeds.mjs`：OpenAI / Anthropic / DeepMind / Hugging Face / Microsoft AI / vLLM Releases / Ollama Releases 共 7 个官方源，每个有 `weight` 与 `maxAgeHours`。
+- 新增 HN AI 热帖查询（4 个查询词），`via` 指回 HN 讨论页，按域名去重。
+- 新增 `lib/feed.js`：RSS 2.0 / Atom 1.0 的 title、link、date、summary 解析；单源失败只记 warn，不影响同层其它源。
+
+**3. 事件聚类**
+
+- `lib/news-cluster.js` 的 `clusterNews()`：48 小时内标题 Jaccard 相似度 ≥ 0.82 合并为一个事件，`ns` 记录来源数；页面在情报列表显示「N 源」。
+- 采集 golden 从 100 条合并到 98 条（1 个事件合并了 3 条），`ns` 已落盘。
+
+**4. 主题与打分**
+
+- 主题词表、分类优先级、主题权重全部集中到 `lib/news-topics.js`；`lib/news.js` 只消费。
+- 删掉按人名扣分（F26）：马斯克/ SpaceX 等不再改变分数，改为按主题相关性 + 官方源权重打分。
+- 新增标注集 `fixtures/labels/news.json`：352 条标题、八类齐全；`test/unit/news-labels.test.js` 断言 macro-F1 ≥ 0.80，实测 **0.938**。
+
+**5. 验证**
+
+`npm run verify` 全绿：lint / typecheck / invariants、**1016 项 unit/golden/contract（986 通过、0 失败、30 skip）**、build、e2e **99 项全过**。`fixtures/golden` 差异：`news-archive.json` 100→98（聚类）、48 条带 `via`；`data.json` 的 news 索引与 sources 登记（63→72，加入 7 个官方 feed 与 HN）。
 
 ### [x] T6.5 Official Site Monitoring Complete
 

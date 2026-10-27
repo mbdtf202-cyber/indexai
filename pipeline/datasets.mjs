@@ -169,6 +169,16 @@ export const UPSTREAMS = [
     note: 'AI 新闻全量流。',
   },
   {
+    id: 'official-feeds',
+    name: '厂商官方博客与 Releases',
+    url: 'https://openai.com/news/rss.xml',
+    license: '公开 RSS / Atom',
+    licenseUrl: null,
+    requirement: '注明来源并链接原文',
+    layers: ['news'],
+    note: 'OpenAI / Anthropic / DeepMind / Hugging Face / Microsoft AI / vLLM / Ollama 的官方 feed。',
+  },
+  {
     id: 'hn',
     name: 'Hacker News',
     url: 'https://news.ycombinator.com',
