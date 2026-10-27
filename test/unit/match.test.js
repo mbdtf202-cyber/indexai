@@ -18,7 +18,7 @@
 
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -237,8 +237,21 @@ describe('registry/models.json（S6.2）', () => {
 /* ────────────────────────── 页面不再有前缀匹配 ────────────────────────── */
 
 describe('页面里检索不到前缀匹配（验收）', () => {
-  test('index.html 里没有 startsWith 形式的模型匹配', () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  /* 页面逻辑自 T5.8 起外置到 site/scripts/app.js（CSP 要求无内联脚本）。
+   * 两处都查：外置后的文件，以及可能残留的 index.html。 */
+  const pageSources = () =>
+    ['site/scripts/app.js', 'index.html']
+      .map((p) => {
+        try {
+          return readFileSync(join(ROOT, p), 'utf8');
+        } catch {
+          return '';
+        }
+      })
+      .join('\n');
+
+  test('页面里没有 startsWith 形式的模型匹配', () => {
+    const html = pageSources();
 
     // 只查真正的代码，不查注释
     const code = html
@@ -254,13 +267,14 @@ describe('页面里检索不到前缀匹配（验收）', () => {
     assert.equal(/bnorm\s*\(/.test(code), false, 'bnorm 应当已经删掉');
   });
 
-  test('页面内联的归一与 lib 同口径', () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+  test('页面侧的归一与 lib 同口径', () => {
+    /* 页面逻辑自 T5.8 起在 site/scripts/app.js（CSP 要求无内联脚本）。 */
+    const src = pageSources();
     assert.match(
-      html,
+      src,
       /function normalizeModelName\(name\)/,
-      '页面要内联一份（浏览器不能 import Node 模块）',
+      '页面要带一份（浏览器不能 import Node 模块）',
     );
-    assert.match(html, /VARIANT_MARKERS\s*=/, '变体标记表也要内联');
+    assert.match(src, /VARIANT_MARKERS\s*=/, '变体标记表也要带');
   });
 });

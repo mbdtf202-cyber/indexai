@@ -21,7 +21,6 @@
 
 import { renderHome } from '../views/home.mjs';
 import { renderModels } from '../views/models.mjs';
-import { renderModelDetail } from '../views/model-detail.mjs';
 import { renderBench } from '../views/bench.mjs';
 import { renderSubs } from '../views/subs.mjs';
 import { renderFree } from '../views/free.mjs';

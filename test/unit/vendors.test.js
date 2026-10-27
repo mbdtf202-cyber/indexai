@@ -203,8 +203,11 @@ describe('代码里不再有 VENDOR / VENDOR_RANK 常量', () => {
   });
 
   test('页面从 meta.vendorOrder 读顺序', () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
-    assert.match(html, /meta\?\.vendorOrder/, '页面应当读下发的顺序');
+    /* 页面逻辑自 T5.8 起在 site/scripts/app.js。 */
+    const src =
+      readFileSync(join(ROOT, 'site', 'scripts', 'app.js'), 'utf8') +
+      readFileSync(join(ROOT, 'index.html'), 'utf8');
+    assert.match(src, /vendorOrder/, '页面应当读下发的顺序');
   });
 });
 

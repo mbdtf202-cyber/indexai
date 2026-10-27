@@ -8,7 +8,7 @@
  * 没有数据目录时才退回 outDir（本地开发与 golden 的路径）。
  */
 
-import { readFile, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { readFile as readFileAsync } from 'node:fs/promises';
 import { join } from 'node:path';
 

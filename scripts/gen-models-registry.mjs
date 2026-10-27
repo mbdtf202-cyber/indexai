@@ -17,12 +17,12 @@
  * 用法：`node scripts/gen-models-registry.mjs [--write]`
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { normalizeModelName, splitVariant } from '../lib/match.js';
-import { loadVendors, normalizeVendor } from '../lib/vendors.js';
+import { normalizeVendor } from '../lib/vendors.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const write = process.argv.includes('--write');

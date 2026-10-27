@@ -2293,13 +2293,67 @@ e2e 28 项全过。
 
 验收：预算检查在构建与 e2e 中执行并通过。
 
-### [ ] T5.8 安全响应头
+### [x] T5.8 安全响应头
 
 依据：F46 · S10.1 · 依赖：T5.2
 
 步骤：`_headers` 写入 S10.1 的全部响应头；页面不留任何内联 `<script>`（JSON-LD 数据块除外）；e2e 监听 `securitypolicyviolation` 事件。
 
 验收：e2e 中没有 CSP 违规；检索构建产物没有内联脚本。
+
+结果：
+
+**1. `_headers` 写全 S10.1**
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self';
+  style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self';
+  connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+Cross-Origin-Opener-Policy: same-origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+外加 `Permissions-Policy`（相机/麦克风/定位全禁）。`style-src-attr 'unsafe-inline'` 只为条形图的 `style="--w:…"` —— 那些值全部是构建期算出的数字。
+
+**2. 页面零内联脚本**
+
+`index.html` 里原有三个内联脚本：
+
+| 内容 | 大小 | 处理 |
+|---|---|---|
+| 防闪烁（`html.js` 前置） | 194 B | → `site/scripts/boot.js`，**同步**外链 |
+| 主题/密度恢复 | 247 B | 合并进 `boot.js` |
+| 主逻辑 | 158 KB | → `site/scripts/app.js`，`type="module"` |
+
+`boot.js` 必须同步阻塞——否则 body 会先透明再被 `.nojs` 救回来，读者看到一次闪烁。外置 + 同步两者可以兼得。
+
+**3. 过程中撞到并修掉的三个问题**
+
+1. **我第一次替换把整个 `<head>` 删掉了**：用 `s0.start → s1.end` 的区间替换，把中间的 HTML 一起切了（259 KB → 76 KB，`#view` 消失）。回滚后用每个 match 自己的区间，才正确。
+2. **外置后 `app.js` 的相对 import 打成 404**：`from "./lib/url.js"` 变成 `/scripts/lib/url.js`。改成绝对路径 `/lib/url.js`。
+3. **`news-archive.json` 在 T4.1 迁移后已是 404**：页面仍在拉它。改成先从 manifest 的 `newsShards` 找月度分片，找不到再退回单文件，都没有就**接受降级**（只显示索引）而不是抛错。
+
+**4. manifest 加 `newsShards`**
+
+构建时从 `.data/news/` 或 `--data` 目录旁找月度分片，复制到 `dist/news/` 并记进 manifest。客户端据此按需拉某个月——首页不必拿全部 2788 行。
+
+顺带效果：首页情报区从「骨架屏」变成直接有内容（分片真的能拿到了），DOM 快照已重录。
+
+**5. 两条检查一起闭合**
+
+- **e2e 运行时**（`test/e2e/csp.spec.js`，3 项）：监听 `securitypolicyviolation`，首页加载 + 切三个标签、预渲染页面各一遍，零违规。
+- **单元静态**（`test/unit/security-headers.test.js`，14 项）：扫构建产物与源文件，找不带 `src` 的 `<script>`（JSON 数据块除外）、内联 `on*=` 事件、`javascript:` 链接。
+
+只测其一是漏的：静态检查抓不到 `eval` 的运行时行为，运行时检查抓不到永不执行的分支。
+
+**6. 测试跟着代码走**
+
+页面逻辑外置后，三个测试仍在读 `index.html` 找代码。改成读「真正含代码的那个文件」（`site/scripts/app.js` + `index.html` 拼接），而不是放宽断言。
+
+`site/scripts/app.js` 是从内联脚本原样搬出的历史代码，加入 biome 忽略列表并注明原因。
+
+928 项测试 896 通过 0 失败，e2e **31 项**全过（新增 3 项 CSP），verify 全绿。
 
 ### [ ] T5.9 文案、控件与审美评审
 

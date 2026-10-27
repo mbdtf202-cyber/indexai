@@ -63,7 +63,7 @@ for (const board of Object.values(bench?.boards || {})) {
 
 /* 2. 按归一 key 分组，找出「表里已有实体 + 未登记的写法」。 */
 resetModelCache();
-const { models, byNorm } = loadModels();
+const { byNorm } = loadModels();
 
 const proposals = [];
 

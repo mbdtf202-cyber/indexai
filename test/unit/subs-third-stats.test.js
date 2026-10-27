@@ -153,7 +153,10 @@ describe('fixture 与页面不含发卡平台链接（T2.7 验收）', () => {
   });
 
   test('页面源码里第三方挂单不再渲染外链', () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8');
+    /* 页面逻辑自 T5.8 起在 site/scripts/app.js（CSP 要求无内联脚本）。 */
+    const html =
+      readFileSync(join(ROOT, 'site', 'scripts', 'app.js'), 'utf8') +
+      readFileSync(join(ROOT, 'index.html'), 'utf8');
     // 找那段渲染挂单的代码：不应再出现 x.url 这样的链接
     assert.ok(!/subsThird\.map\(\s*x\s*=>\s*`<tr>/.test(html), '旧逐条渲染还在');
     assert.match(html, /renderThirdStats/, '应当有统计渲染函数');

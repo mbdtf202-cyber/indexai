@@ -8,7 +8,7 @@
  * 3. 排队闸真的生效：同一主机并发不超过上限，最小间隔也被遵守。
  */
 
-import { test, describe, before, after } from 'node:test';
+import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -17,7 +17,6 @@ import { fileURLToPath } from 'node:url';
 
 import {
   DEFAULT_POLICY,
-  HOST_POLICY,
   RELAY_POLICY,
   policyFor,
   registerRelayHosts,

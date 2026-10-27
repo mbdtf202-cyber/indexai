@@ -15,7 +15,10 @@
       "!.wrangler",
       "!test-results",
       "!playwright-report",
-      "!package-lock.json"
+      "!package-lock.json",
+      "!site/scripts/app.js",
+      "!site/scripts/app-init.js",
+      "!site/scripts/lazy-load.js"
     ]
   },
   "formatter": {

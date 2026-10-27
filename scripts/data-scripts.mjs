@@ -29,7 +29,7 @@ import {
   appendFileSync,
   readdirSync,
 } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { nowISO } from '../lib/clock.js';
 
 /** data 分支检出目录的默认位置（已被 .gitignore 忽略）。 */

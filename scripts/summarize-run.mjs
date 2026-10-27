@@ -43,7 +43,7 @@ lines.push('|---|---|---:|---:|');
 for (const l of report.layers) {
   const note = l.error ? `（${l.error}）` : l.reason ? `（${l.reason}）` : '';
   lines.push(
-    `| ${l.id} | ${STATUS_LABEL[l.status] || l.status} | ${l.n} | ${l.ms}ms${note ? ' ' + note : ''} |`,
+    `| ${l.id} | ${STATUS_LABEL[l.status] || l.status} | ${l.n} | ${l.ms}ms${note ? ` ${note}` : ''} |`,
   );
 }
 
@@ -72,8 +72,8 @@ if (quarantined.length) {
   lines.push('| 层 | 隔离 / 总数 | 比例 | 阈值 | 样例 |');
   lines.push('|---|---:|---:|---:|---|');
   for (const [id, v] of quarantined) {
-    const pct = (v.ratio * 100).toFixed(1) + '%';
-    const cap = (v.threshold * 100).toFixed(0) + '%';
+    const pct = `${(v.ratio * 100).toFixed(1)}%`;
+    const cap = `${(v.threshold * 100).toFixed(0)}%`;
     const sample = (v.samples || [])
       .slice(0, 2)
       .map((s) => `\`${s.id}\`：${s.reasons[0]}`)

@@ -1,11 +1,29 @@
+# 安全响应头（T5.8 · S10.1）。
+#
+# 原则：默认全禁，只开真正需要的。
+#   - script-src 'self'：页面里没有任何内联脚本（JSON 数据块不是脚本）
+#   - style-src-attr 'unsafe-inline'：只为条形图的 style="--w:…" 保留，
+#     值全部是构建期算出的数字，不来自用户输入
+#   - frame-ancestors 'none'：不允许被任何站点嵌套
+#   - base-uri 'none' / form-action 'none'：站点没有表单，也没有 <base>
+
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+  Cross-Origin-Opener-Policy: same-origin
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+
+# ─────────────────────────── 缓存 ───────────────────────────
+# 页面外壳与 manifest 必须每次校验（T3.9 · S3.5）。
+# 它们是指针：一旦缓存旧值，页面就永远看不到新数据。
+
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
 
 /
   Cache-Control: public, max-age=0, must-revalidate
 
-# 页面外壳与 manifest 必须每次校验（T3.9 · S3.5）。
-# 它们是指针：一旦缓存旧值，页面就永远看不到新数据。
 /data/manifest.json
   Cache-Control: no-store, must-revalidate
 
@@ -31,10 +49,30 @@
 /bench.json
   Cache-Control: public, max-age=300
 
-# 自托管字体与静态资源：文件名不带哈希，缓存一天
+# 预渲染页面（T5.2）：内容随数据每日变，缓存 5 分钟
+/pages/*
+  Cache-Control: public, max-age=300
+
+# 脚本与样式：文件名不带哈希，缓存一天（发布后最长滞后一天生效）
+/scripts/*
+  Cache-Control: public, max-age=86400
+
+/styles/*
+  Cache-Control: public, max-age=86400
+
+/client/*
+  Cache-Control: public, max-age=86400
+
+/lib/*
+  Cache-Control: public, max-age=86400
+
+# 自托管字体与静态资源
 /assets/*
   Cache-Control: public, max-age=86400
 
-/*
-  X-Content-Type-Options: nosniff
-  Referrer-Policy: strict-origin-when-cross-origin
+# 变化源：与页面同节奏
+/feeds/*
+  Cache-Control: public, max-age=300
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600

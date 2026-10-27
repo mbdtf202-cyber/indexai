@@ -73,7 +73,6 @@ export function dataFor(kind, full, extra = {}) {
       return { ...full, bench: full?.bench ?? extra.bench };
     case 'relays':
       return { ...full, relays: full?.relays || [] };
-    case 'all':
     default:
       return full || {};
   }

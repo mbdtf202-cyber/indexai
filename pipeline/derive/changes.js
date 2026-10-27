@@ -186,7 +186,7 @@ export function saveChanges(events, date) {
  * Generate Atom feed XML
  */
 export function generateAtomFeed(events) {
-  const stamp = nowISO();
+  const _stamp = nowISO();
 
   let entriesXml = '';
   for (const event of events.slice(0, 20)) {

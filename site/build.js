@@ -48,6 +48,7 @@ const ASSET_DIRS = ['assets'];
 const EXTRA_DIRS = [
   ['site/styles', 'styles'],
   ['site/client', 'client'],
+  ['site/scripts', 'scripts'],
 ];
 
 /** 数据文件名：从 --data 指定的目录复制。 */
@@ -149,27 +150,55 @@ for (const name of DATA_FILES) {
 
   const text = readFileSync(src, 'utf8');
   const digest = hashOf(text);
-  const hashed = name.replace(/\.json$/, '.' + digest.slice(0, 8) + '.json');
+  const hashed = name.replace(/\.json$/, `.${digest.slice(0, 8)}.json`);
 
   writeFileSync(join(DATA_DIR, hashed), text, 'utf8');
   published.push({
     name,
-    file: 'data/' + hashed,
+    file: `data/${hashed}`,
     hash: digest,
     bytes: Buffer.byteLength(text, 'utf8'),
   });
 
   cpSync(src, join(DIST, name));
   copiedData.push(name);
-  copiedData.push('data/' + hashed);
+  copiedData.push(`data/${hashed}`);
 }
 
 /* dist/data/manifest.json（T3.9 · S3.5）：页面通过它找数据文件。
  * 采集侧那份记「层 → 文件 → 门禁结论」，这份记「文件 → 内容哈希 → 体积」，
  * 两者一起构成发布凭据；部署后逐层核对哈希（第 3 步）。 */
+/* 情报按月分片清单（T5.2 · S9.3）：客户端据此按需拉某个月，
+ * 不必一次拿全部。目录不存在时是空数组，页面会退化成只显示索引。 */
+const newsShardMonths = (() => {
+  /* T4.1 把归档迁到了 data 分支的 news/。构建时它在 .data/news/，
+   * 也可能在 --data 指定的目录旁。两处都找。 */
+  const candidates = [join(dataDir, 'news'), join(ROOT, '.data', 'news')];
+
+  for (const dir of candidates) {
+    try {
+      const months = readdirSync(dir)
+        .filter((f) => /^\d{4}-\d{2}\.json$/.test(f))
+        .map((f) => f.replace(/\.json$/, ''))
+        .sort();
+      if (!months.length) continue;
+
+      mkdirSync(join(DIST, 'news'), { recursive: true });
+      for (const m of months) {
+        cpSync(join(dir, `${m}.json`), join(DIST, 'news', `${m}.json`));
+      }
+      return months;
+    } catch {
+      /* 这个位置没有：试下一个 */
+    }
+  }
+  return [];
+})();
+
 const buildManifest = {
   schema_version: 'data-manifest/v1',
   files: published,
+  newsShards: newsShardMonths,
   total_bytes: published.reduce((n, f) => n + f.bytes, 0),
 };
 writeFileSync(

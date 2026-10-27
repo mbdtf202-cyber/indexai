@@ -444,6 +444,7 @@ function checkR8() {
     'feeds',
     'styles',
     'client',
+    'scripts',
     'pages',
   ]);
   const DIST_ALLOWED_FILE =

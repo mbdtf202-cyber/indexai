@@ -19,8 +19,7 @@
  *   { id, sources, budget, 抓取, 归一, 合并, 门禁 }  —— 四个方法都收 ctx
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -118,7 +117,7 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
   const prevPick = await loadPrevious({ layers: LAYERS, outDir, dataDir });
   const prev = prevPick.prev;
   if (prevPick.source === 'data') {
-    console.log('[collect] 上一版来自 data 分支快照（' + prevPick.layers + ' 层）');
+    console.log(`[collect] 上一版来自 data 分支快照（${prevPick.layers} 层）`);
   }
 
   /* 唯一需要运行期状态的层：events 的 Luma 冷却（S4.4）。 */
