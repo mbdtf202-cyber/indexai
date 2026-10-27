@@ -364,6 +364,7 @@ const ROOT_WHITELIST = new Set([
   'biome.jsonc',
   'tsconfig.json',
   'playwright.config.js',
+  'playwright.visual.config.js', // T5.5：截图基线只在 CI Linux 容器里跑，单独一份配置
   'loop.sh',
   // 采集与体检（T3.1 起并入 pipeline/）
   'collect.mjs',

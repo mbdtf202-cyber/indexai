@@ -835,7 +835,7 @@ const MOTION = (() => {
   function th(key, label, num, mob) {
     const active = state.sortKey === key;
     return `<th class="${num ? 'num' : ''}${key === 'ctx' || key === 'cache_write' || mob ? ' hidesm' : ''}"
-      data-sort="${key}" tabindex="0" role="button"
+      data-sort="${key}" tabindex="0"
       aria-sort="${active ? (state.sortDir === 1 ? 'ascending' : 'descending') : 'none'}"
       aria-label="按${esc(label)}排序">${esc(label)}${active ? `<i>${state.sortDir === 1 ? '▲' : '▼'}</i>` : ''}</th>`;
   }
@@ -876,7 +876,7 @@ const MOTION = (() => {
               const isBest =
                 !m.free && betterFamily.has(m.family) && bestIdOfFamily.get(m.family) === m.id;
               const disc = m.cache_read != null && m.input ? 1 - m.cache_read / m.input : null;
-              return `<tr data-id="${esc(m.id)}">
+              return `<tr data-id="${esc(m.id)}" tabindex="0">
             <td><div class="mname">${m.free ? '<span class="tag free">免费</span>' : ''}${isNew(m) ? '<span class="tag new">NEW</span>' : ''}
               <span class="txt">${esc(m.name)}</span><span class="id hidesm">${esc(m.id)}</span>${isBest ? '<span class="tag direct">最低</span>' : ''}</div></td>
             <td class="vend hidesm">${esc(m.vendor)}</td>
@@ -1570,7 +1570,7 @@ const MOTION = (() => {
               const p = r.prices?.[f.key];
               return p && p.kind === 'per_1m';
             }).length;
-            return `<button class="chip" data-relayflag="${f.key}" aria-pressed="${state.relayFlag === f.key}">${f.label}${n ? ` <b style="opacity:.55;font-weight:400">${n}</b>` : ''}</button>`;
+            return `<button class="chip" data-relayflag="${f.key}" aria-pressed="${state.relayFlag === f.key}">${f.label}${n ? ` <b style="font-weight:400">${n}</b>` : ''}</button>`;
           }).join('')}
         </div>
         <span class="spacer"></span>
@@ -1827,8 +1827,8 @@ const MOTION = (() => {
 
     const lane = (vals, dict, cur, attr, allLabel, cnt) => `
       <div class="chips" role="group" aria-label="${allLabel}">
-        <button class="chip" data-${attr}="all" aria-pressed="${cur === 'all'}">${allLabel} <b style="opacity:.55;font-weight:400">${cnt.all}</b></button>
-        ${vals.map(([k, n]) => `<button class="chip" data-${attr}="${esc(k)}" aria-pressed="${cur === k}">${esc(EV_LABEL(dict, k))} <b style="opacity:.55;font-weight:400">${n}</b></button>`).join('')}
+        <button class="chip" data-${attr}="all" aria-pressed="${cur === 'all'}">${allLabel} <b style="font-weight:400">${cnt.all}</b></button>
+        ${vals.map(([k, n]) => `<button class="chip" data-${attr}="${esc(k)}" aria-pressed="${cur === k}">${esc(EV_LABEL(dict, k))} <b style="font-weight:400">${n}</b></button>`).join('')}
       </div>`;
 
     // 来源按真实出现的值生成，AIOS / 以后新增的源都会自己出现
@@ -1941,7 +1941,7 @@ const MOTION = (() => {
       <div class="controls">
         <div class="chips" role="group" aria-label="类型">
           <button class="chip" data-toolkind="all" aria-pressed="${state.toolKind === 'all'}">全部 ${all.length}</button>
-          ${uses.map((k) => `<button class="chip" data-toolkind="${k}" aria-pressed="${state.toolKind === k}">${esc(all.find((r) => r.use === k)?.useLabel || k)} <b style="opacity:.55;font-weight:400">${useCount[k]}</b></button>`).join('')}
+          ${uses.map((k) => `<button class="chip" data-toolkind="${k}" aria-pressed="${state.toolKind === k}">${esc(all.find((r) => r.use === k)?.useLabel || k)} <b style="font-weight:400">${useCount[k]}</b></button>`).join('')}
         </div>
         <span class="spacer"></span><span class="eyebrow">编辑排序 · 不是按星数</span>
       </div>
@@ -3373,8 +3373,8 @@ const MOTION = (() => {
             ${pts
               .map(
                 (p) => `
-              <button class="rt-node ${p.showMo ? 'era' : ''} ${sel && keyOf(sel) === keyOf(p) ? 'on' : ''}"
-                style="--x:${p.x}%" data-ms="${esc(keyOf(p))}" aria-label="${esc(`${p.d} ${p.title}`)}">
+              <button class="rt-node ${p.showMo ? 'era' : ''} ${sel && keyOf(sel) === keyOf(p) ? 'on' : ''}${p.x > 94 ? ' edge' : ''}"
+                style="--x:${p.x}%" data-ms="${esc(keyOf(p))}" aria-label="${esc(`${p.d.slice(2, 7).replace('-', '.')} · ${p.d} ${p.title}`)}">
                 <span class="rt-mo">${esc(p.d.slice(2, 7).replace('-', '.'))}</span>
               </button>`,
               )
@@ -3469,13 +3469,13 @@ const MOTION = (() => {
             .sort((a, b) => b[1] - a[1])
             .map(
               ([k, n]) =>
-                `<button class="chip" data-newstopic="${k}" aria-pressed="${state.newsTopic === k}">${esc(topicLabel[k] || k)} <b style="opacity:.55;font-weight:400">${n}</b></button>`,
+                `<button class="chip" data-newstopic="${k}" aria-pressed="${state.newsTopic === k}">${esc(topicLabel[k] || k)} <b style="font-weight:400">${n}</b></button>`,
             )
             .join('')}
         </div>
       </div>
 
-      <div class="nheat" role="img" aria-label="按${scale.label}聚合的情报密度">
+      <div class="nheat" role="group" aria-label="按${scale.label}聚合的情报密度">
         ${buckets
           .map((b, i) =>
             b.n
@@ -3586,7 +3586,7 @@ const MOTION = (() => {
       <p>比价表默认不是按价格排，而是按<strong>厂商主流度 + 模型发布时间</strong>：OpenAI、Anthropic、Google、DeepSeek、通义、Kimi、智谱、MiniMax、xAI、Mistral、Meta 等排前，同厂商内新发布在前；点任意表头可换成价格排序。</p>
 
       <h2>有效成本怎么算</h2>
-      <div class="code">${esc(COST_FORMULA)}
+      <div class="code" tabindex="0">${esc(COST_FORMULA)}
 h = 缓存命中率       s = 输出 token 占比
 cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</div>
       <p>比价表默认 <code>h=${pct(profileOf('compare').h)}</code>、<code>s=${pct(profileOf('compare').s)}</code>（${esc(profileOf('compare').label)}）；
@@ -3594,7 +3594,7 @@ cache_read 缺失时按 h = 0 处理，并标 "—"，不假装有缓存优惠</
 
       <h2>中转站口径</h2>
       <p>OneAPI / NewAPI 有两套并存的价目写法，<strong>表达式优先</strong>：</p>
-      <div class="code">① billing_expr（真实挂牌价）
+      <div class="code" tabindex="0">① billing_expr（真实挂牌价）
    tier("base", p * 2 + c * 10 + cr * 0.1 + cc * 2.5)
    p=输入 c=输出 cr=缓存读 cc=缓存写，单位就是 $ / 1M
 
@@ -3647,6 +3647,7 @@ ${esc(COST_FORMULA)}</div>
   }
 
   /* ── drawer ── */
+  let drawerReturnFocus = null;
   function openDrawer(id) {
     const m = state.data.models.find((x) => x.id === id);
     if (!m) return;
@@ -3681,15 +3682,19 @@ ${esc(COST_FORMULA)}</div>
         <dt>采集日</dt><dd class="mono">${esc(m.seen || '—')}</dd>
       </dl>
       <p class="note"><a href="${esc(m.src)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;text-underline-offset:3px">查看原始来源 ↗</a></p>`;
+    drawerReturnFocus = document.activeElement;
     $('#drawer').dataset.open = '1';
     $('#drawer').setAttribute('aria-hidden', 'false');
     $('#overlay').dataset.open = '1';
+    $('#drawer .close')?.focus();
   }
 
   function closeDrawer() {
+    const open = $('#drawer')?.dataset.open === '1';
     $('#drawer').dataset.open = '0';
     $('#drawer').setAttribute('aria-hidden', 'true');
     $('#overlay').dataset.open = '0';
+    if (open && drawerReturnFocus?.isConnected) drawerReturnFocus.focus();
   }
 
   /** 局部重绘：保住当前滚动位置，用于异步数据到达后原地补内容（F21）。 */
@@ -3711,6 +3716,19 @@ ${esc(COST_FORMULA)}</div>
     renderKpis();
     renderHealth();
     const v = $('#view');
+    /* T5.5：重绘前记住 #view 内被聚焦控件的 data-* 标识，重绘后把焦点放回去。
+       筛选按钮点一次就整块重绘，不恢复的话键盘用户会被丢回文档开头。 */
+    const focusSel = (() => {
+      const el = document.activeElement;
+      if (!el || !v.contains(el) || !el.dataset) return null;
+      for (const k of Object.keys(el.dataset)) {
+        const val = el.dataset[k];
+        if (val != null && /^[A-Za-z0-9_-]+$/.test(k)) {
+          return `[data-${k}="${CSS.escape(val)}"]`;
+        }
+      }
+      return null;
+    })();
     if (state.tab === 'home') {
       v.innerHTML = viewHome();
       // 归档只填充要闻区：priceAxis 与要闻的标题/数量都已经在首屏里了，
@@ -3748,6 +3766,7 @@ ${esc(COST_FORMULA)}</div>
       if (state.tab === 'subs') renderSubBars();
       if (state.tab === 'events') renderTimeline();
       if (state.tab === 'bench' && state.benchView === 'value') renderBenchScatter();
+      if (focusSel) v.querySelector(focusSel)?.focus({ preventScroll: true });
       // 局部重绘后把滚动位置放回去：归档到达只填充要闻区，不该把人弹回顶部
       if (keepScroll) scrollTo({ top: keepScroll, behavior: 'auto' });
     });
@@ -4041,7 +4060,7 @@ ${esc(COST_FORMULA)}</div>
     });
     document.addEventListener('keydown', (ev) => {
       if (ev.key === 'Escape') closeDrawer();
-      if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('th[data-sort]')) {
+      if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches?.('th[data-sort], tr[data-id]')) {
         ev.preventDefault();
         ev.target.click();
       }

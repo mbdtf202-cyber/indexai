@@ -240,7 +240,7 @@ for (const tab of ['subs', 'relays']) {
       let i = 0;
       while (i < Math.min(html.length, expected.length) && html[i] === expected[i]) i += 1;
       const from = Math.max(0, i - 100);
-      expect.fail(
+      throw new Error(
         `${tab} 的 360px DOM 与快照不一致（第一处差异在 ${i}）：\n` +
           `  实际: …${html.slice(from, i + 180)}\n` +
           `  期望: …${expected.slice(from, i + 180)}\n` +

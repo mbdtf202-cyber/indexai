@@ -2269,13 +2269,50 @@ e2e 28 项全过。
 
 验收：e2e：点击任一筛选后 `document.activeElement` 仍是该控件；对话框可用 Esc 关闭并归还焦点；表格中每个模型名都可用 Tab 聚焦。
 
-### [~] T5.5 E2E Testing Framework (Round 1 complete)
+### [~] T5.5 E2E Testing Framework（实现完成，待 CI 首次生成截图基线）
 
 依据：S9.8 · 依赖：T5.4
 
-步骤：e2e 覆盖每个路由 × 360 / 768 / 1280 × 浅色与深色：控制台错误、横向溢出、axe（serious / critical 为零）、键盘流程、只请求同源、禁用 JS。新增 `visual.yml`：在 Playwright 官方 Linux 容器里做截图对比；基线只由手动触发的工作流生成并提交。
-
 验收：S9.8 全部条目在 CI 中执行并通过；`visual.yml` 首次运行生成基线。
+
+结果：
+
+**1. 全矩阵（`test/e2e/matrix.spec.js`，66 项）**
+
+10 个标签 × 360 / 768 / 1280 × 浅色 / 深色，每项查四件事：控制台零错误、无横向溢出、axe serious / critical 为零、禁用 JS 后预渲染页仍有正文。另加三条键盘测试与一条同源请求测试：
+
+- Tab 按顺序到达页面上全部 31 个可聚焦控件，且焦点始终有可见指示；
+- 激活筛选后 `document.activeElement` 仍是原控件（重绘前记录 `data-*`，重绘后恢复）；
+- 模型详情：行聚焦后 Enter 打开抽屉、焦点进关闭按钮，Esc 关闭并归还焦点；
+- 页面只请求同源地址。
+
+**2. 首跑 42 红，全是页面真问题，逐条修掉**
+
+| 问题 | 根因 | 修法 |
+|---|---|---|
+| `aria-allowed-attr` × 44 | 排序表头 `th` 同时有 `role="button"` 与 `aria-sort`，ARIA 不允许 | 去掉 `role="button"`，保留 `th` 的隐式 columnheader；Enter / Space 处理器不动 |
+| `color-contrast` × 102 | 计数徽章 `opacity:.55`、`.repoch` `.7`、`.bp-old` `.8`、`.rt-era` `.55` 把文字压到 2.2–3.7:1 | 去掉透明度叠色，直接用 `--faint` / `--dim` / `--accent` 原色 |
+| `label-content-name-mismatch` × 80 | brand 的 `aria-label` 不含可见副标题；时间轴按钮的 `aria-label` 不含可见月份 | 删掉 brand 的多余 aria-label；时间轴名称前置 `22.11 ·` 月份 |
+| `link-in-text-block` × 54 | 方法页正文内链只靠颜色区分 | 正文 `p a` 统一加下划线 |
+| `nested-interactive` × 6 | `.nheat` 用 `role="img"` 包着可聚焦按钮 | 改 `role="group"` |
+| `scrollable-region-focusable` × 4 | 方法页两个 `.code` 可横向滚动但不能聚焦 | 加 `tabindex="0"` |
+| 横向溢出 3px / 2px | 时间轴最后一个月份标签越出 360px 视口 | 边缘节点加 `edge` 类，标签改为右对齐 |
+
+**3. 截图基线（`visual.yml` + `playwright.visual.config.js`）**
+
+- 10 个标签 × 3 宽度 × 2 主题 = 60 张整页截图，路径固定为 `test/visual/__screenshots__/{arg}{ext}`（不带平台后缀）；
+- 只在 `mcr.microsoft.com/playwright:v1.64.1-noble` 容器里生成与比较，基线只能由 `workflow_dispatch` 勾选 `update_baselines` 生成并提交；PR 路径触发只做比较；
+- 本机跑 `--update-snapshots` 只作为审美评审输入，不提交。
+
+**4. 连带修掉一个测试框架 bug**
+
+`visual-a11y.spec.js` 的 DOM 快照断言调用了不存在的 `expect.fail`，快照一旦不一致就抛 `TypeError` 而不是可读的差异。改成 `throw new Error`。
+
+**5. 验证**
+
+`npm run verify`：lint → typecheck → invariants → 996 项 unit/golden/contract（965 通过、0 失败、30 skip、1 todo）→ build → e2e **99 项全过**。DOM 快照更新 7 个（`compare` / `events` / `method` / `relays` / `narrow-relays` / `signals` / `tools`），差异全部来自本轮 a11y 修改：排序表头去掉 `role="button"`、计数徽章去掉 `opacity`、时间轴 aria-label 加月份、代码块加 `tabindex`。
+
+**未做**：`visual.yml` 的首次基线生成要在 GitHub 上手动触发（本机无法生成 Linux 字体基线）；触发后基线 PNG 会由工作流自行提交。
 
 ### [x] T5.6 Design Tokens
 
