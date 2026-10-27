@@ -435,9 +435,29 @@ function checkR8() {
   /* dist/ 部分（T3.9）：构建产物里只该有「构建能生成的东西」。
    * 混进手写文件是 F37 的形态——它会被发布出去，却不在任何构建清单里，
    * 下次谁都不知道它是哪来的、还敢不敢删。 */
-  const DIST_ALLOWED_DIRS = new Set(['assets', 'data', 'lib', 'news', 'feeds']);
+  /* dist/ 里允许的目录：构建会产出的那几个。 */
+  const DIST_ALLOWED_DIRS = new Set([
+    'assets',
+    'data',
+    'lib',
+    'news',
+    'feeds',
+    'styles',
+    'client',
+    'pages',
+  ]);
   const DIST_ALLOWED_FILE =
-    /^(?:index\.html|favicon\.svg|_headers|data\.json|bench\.json|news-(?:archive|milestones)\.json|manifest\.json)$/;
+    /^(?:index\.html|favicon\.svg|_headers|sitemap\.xml|robots\.txt|data\.json|bench\.json|news-(?:archive|milestones)\.json|manifest\.json)$/;
+
+  /* 路由表声明的页面。从表里读而不是手写清单：手写清单每加一个页面就要改两处，
+   * 忘掉一处就会出现「构建正确但适应度检查报错」的假警报。 */
+  const routeFiles = new Set();
+  try {
+    const src = readFileSync(join(ROOT, 'site', 'routes', 'index.mjs'), 'utf8');
+    for (const m of src.matchAll(/file:\s*'([^']+\.html)'/g)) routeFiles.add(m[1]);
+  } catch {
+    /* 路由表还读不到：只允许固定那几份 */
+  }
 
   let distEntries;
   try {
@@ -458,7 +478,7 @@ function checkR8() {
       }
       continue;
     }
-    if (!DIST_ALLOWED_FILE.test(e.name)) {
+    if (!DIST_ALLOWED_FILE.test(e.name) && !routeFiles.has(e.name)) {
       violations.push({
         file: join('dist', e.name),
         line: 1,

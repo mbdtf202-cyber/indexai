@@ -7,7 +7,9 @@ import { truncate, formatDate } from './format.js';
 const _showPast = false;
 
 export function renderEvents(data) {
-  const { events = [] } = data || {};
+  /* filterType 曾经在模板里被引用但从未声明——预渲染一到这一页就 ReferenceError。
+     从 data 里取，默认 'all'（不做筛选）。 */
+  const { events = [], filterType = 'all' } = data || {};
 
   return `
     <div id="events" class="page events-page">

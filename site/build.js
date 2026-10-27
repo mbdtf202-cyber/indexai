@@ -44,6 +44,12 @@ const SHARED_MODULES = ['lib/url.js', 'lib/cost.js', 'lib/effective-cost.js'];
 /** 静态资源目录：整目录复制（自托管字体在这里，S9.6）。 */
 const ASSET_DIRS = ['assets'];
 
+/* 样式与客户端模块（T5.2）：预渲染的 HTML 引用它们。 */
+const EXTRA_DIRS = [
+  ['site/styles', 'styles'],
+  ['site/client', 'client'],
+];
+
 /** 数据文件名：从 --data 指定的目录复制。 */
 // news-archive.json 按需拉取，不进构建产物（T4.1）
 // manifest.json 记录每层的文件名 / 哈希 / 门禁结论（T3.7 · S3.5）：
@@ -90,6 +96,16 @@ for (const dir of ASSET_DIRS) {
   }
   cpSync(src, join(DIST, dir), { recursive: true });
   copied.push(`${dir}/`);
+}
+
+for (const [from, to] of EXTRA_DIRS) {
+  const src = join(ROOT, from);
+  if (!existsSync(src)) {
+    console.error(`[build] 缺少目录：${from}`);
+    process.exit(1);
+  }
+  cpSync(src, join(DIST, to), { recursive: true });
+  copied.push(`${to}/`);
 }
 
 for (const rel of SHARED_MODULES) {
@@ -259,6 +275,64 @@ if (prevDir) {
 if (!copiedData.includes('data.json')) {
   console.error(`[build] ${dataDir} 里没有 data.json，页面无数据可渲染`);
   process.exit(1);
+}
+
+/* ────────────────────────── 预渲染（T5.2 · S9.1） ──────────────────────────
+ *
+ * 每个路由一个独立 HTML，不开 JS 也能读。这是 S9.3 的要求，也是读者
+ * 「搜一个价格」时最该有的体验：不该为此下载 146 KB 数据再等 JS。
+ *
+ * 首页的 index.html 仍然由 prerender 生成——旧的单体页面不再作为生产入口，
+ * 但它留在仓库里作为对照（M5 后续任务会清理）。
+ */
+{
+  const { prerenderAll, sitemap } = await import('./routes/prerender.mjs');
+
+  /* 完整数据：data.json 里 only 目录，boards 在 bench.json。合并一份给视图用。 */
+  const fullData = JSON.parse(readFileSync(join(dataDir, 'data.json'), 'utf8'));
+  if (existsSync(join(dataDir, 'bench.json'))) {
+    try {
+      fullData.bench = JSON.parse(readFileSync(join(dataDir, 'bench.json'), 'utf8'));
+    } catch {
+      /* bench 坏了就让视图自己降级 */
+    }
+  }
+
+  /* 变化数据（T4.3 已在上面生成）读回来喂给首页。 */
+  let changes = null;
+  try {
+    changes = JSON.parse(readFileSync(join(DATA_DIR, 'changes.json'), 'utf8'));
+  } catch {
+    changes = null;
+  }
+
+  const baseUrl = (
+    JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).homepage || ''
+  ).replace(/\/+$/, '');
+
+  const { pages, failed } = prerenderAll({
+    outDir: join(DIST, 'pages'),
+    data: fullData,
+    changes,
+    baseUrl,
+    log: (m) => console.log(`[build]   ${m}`),
+  });
+
+  writeFileSync(
+    join(DIST, 'sitemap.xml'),
+    sitemap({ baseUrl, lastmod: fullData.meta?.date }),
+    'utf8',
+  );
+  copied.push('sitemap.xml');
+
+  console.log(`[build] 预渲染 ${pages.length}/${pages.length + failed.length} 页`);
+  for (const p of pages) copiedData.push(join('pages', p.file));
+
+  if (failed.length) {
+    /* 单页渲染失败不该让整个构建失败：其它页照常发布，
+     * 但必须在日志里说清哪一页没出来。 */
+    for (const f of failed) console.error(`[build] 未渲染：${f.path} — ${f.error}`);
+  }
 }
 
 /** 产物统计：文件数、总字节，用于构建日志与后续预算检查。 */

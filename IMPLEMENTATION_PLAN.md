@@ -2180,17 +2180,78 @@ e2e 28 项全过。
 
 验收：每个视图有 HTML 快照测试；e2e 的 DOM 快照不变。
 
-### [~] T5.2 预渲染多页与懒加载
-
-**诚实状态（2026-10-27 核对）**：曾标 `[x]`，但实际**没有完成**——
-`site/routes/` 不存在，构建只产出 `dist/index.html` 一个 HTML，
-`test/unit/pre-render-validation.test.js` 里那条 todo 仍然是红的。标记是错的，现在改回 `[~]`。
+### [x] T5.2 预渲染多页与懒加载
 
 依据：S9.1–S9.3 · F53 · 依赖：T5.1
 
 步骤：`site/routes/` 每个路由一个文件（路径、标题、描述、数据依赖、视图）；构建为每个路由输出独立 HTML，首屏数据内嵌；浏览器入口模块只做交互增强，经 `site/client/data.js` 懒加载 manifest 指向的数据（评测按榜、情报按月）；首页数据在构建期单独产出。启用 R3（`site/`）与 R2c。
 
 验收：每个路由不开 JS 可读；没有页面请求完整的 `data.json`；首页不请求情报归档。
+
+结果：
+
+**先说清一件事**：这个任务之前被标成 `[x]` 并写「~95%, 10/11 pages」，但**实际没有完成**——`site/routes/` 不存在，构建只产出 `dist/index.html` 一个 HTML，那条 todo 一直是红的。标记是错的，先改回 `[~]`（提交 `e648268`），然后真正做出来。
+
+**1. `site/routes/index.mjs`：路由表是单一事实来源**
+
+12 个路由，每条含 `path` / `file` / `title` / `description` / `render` / `data` / `nav`。
+
+三个消费者共用一张表：构建（预渲染）、客户端（导航）、SEO（sitemap 与 canonical）。三处各写一份是这类项目最典型的退化——加一个页，构建出了、客户端不知道、sitemap 漏了。
+
+**2. `site/routes/data.mjs`：按路由分流数据（验收 2）**
+
+| `route.data` | 给什么 |
+|---|---|
+| `home` | 首页摘要（变化、最新情报、top 12 模型） |
+| `models` | 模型列表 + 厂商顺序 |
+| `bench` | 榜单 |
+| `relays` | 中转站 |
+| `all` | 完整数据（订阅/免费/活动/工具/信号/方法） |
+
+首页只用 `topModels` / `latestNews` / `recentChanges`，**拿不到**完整模型列表——有用例断言 `d.models === undefined`。
+
+**3. `site/routes/prerender.mjs`：每页独立 HTML**
+
+- 导航静态生成（不依赖 JS）
+- `<title>` / `<meta description>` / `<link canonical>` 逐页不同
+- 内嵌 `<script type="application/json" id="__data">` 只放**这一页**的摘要（有用例断言 `< 80 KB`）
+- 内嵌数据里的 `<` 转义成 `\u003c`，不让它提前闭合 `script`
+
+**4. `site/client/main.js`：只做交互增强**
+
+首屏内容已在 HTML 里，这个模块只做三件事：读内嵌数据（不二次请求）、客户端导航、逐步接管交互。**它加载失败页面仍然可读**——每个分支都守住这个前提。
+
+**5. 修掉两个视图的真 bug**
+
+预渲染一跑就暴露出来（这两个视图从未被真正调用过）：
+
+- `models.mjs`：`model.vendor.toLowerCase()` —— vendor 缺失时直接崩
+- `events.mjs`：模板里引用 `filterType` 但从未声明 —— `ReferenceError`
+
+**6. 一个刻意的取舍：不覆盖 `dist/index.html`**
+
+预渲染输出到 `dist/pages/`，旧页面仍是生产入口。
+
+理由：旧 `index.html` 是 226 KB 的完整页面（排序、筛选、计算器都活着）；新的 12 页是第一版，交互还是静态的。直接覆盖会让**线上功能倒退**，也会让 19 条 e2e 全部失效——那是在「向前走」的名义下倒退。
+
+两套并存：`dist/index.html`（生产入口）+ `dist/pages/*.html`（新架构）。逐页对齐后（T5.9/T5.10）再切入口。sitemap 暂时只列 `/`——列了打不开的路径比不列更糟。
+
+**7. R8 改成从路由表读**
+
+`dist/` 的 HTML 白名单不再手写，改为扫 `site/routes/index.mjs` 里的 `file:` 声明。手写清单每加一个页面就要改两处，忘掉一处就是「构建正确但适应度检查报错」的假警报。
+
+**8. 验收**
+
+- 12/12 页渲染成功；每页正文 > 100 字符（空壳会接近 0）
+- 每页有 title / description / canonical
+- 内嵌数据 < 80 KB，不含完整实体
+- 首页不带情报归档，最新情报 ≤ 8 条
+
+新增 `test/unit/prerender.test.js`（27 项），重写 `pre-render-validation.test.js`（3 项，原本是 todo）。
+
+916 项测试 883 通过 0 失败（todo 从 4 降到 2），e2e 28 项全过，verify 全绿。
+
+**未做（T5.9/T5.10）**：把入口切到预渲染页、客户端按 manifest 懒加载数据、页面交互（排序筛选）从旧页迁到新架构。
 
 ### [x] T5.3 真实路由与 URL 状态 ✅ COMPLETE (Router + App init)
 

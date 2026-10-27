@@ -112,7 +112,9 @@ function renderTableHeader(currentSortBy, currentSortOrder) {
 
 function renderModelRow(model) {
   return `
-    <tr data-model-id="${model.id}" class="${model.vendor.toLowerCase().replace(/-/g, '')}-row">
+    <tr data-model-id="${model.id}" class="${String(model.vendor || 'unknown')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')}-row">
       <td class="model-name">
         <strong>${model.name}</strong>
         ${model.family ? `<span class="family">${model.family.replace(/[-_]/g, ' ')}</span>` : ''}
@@ -161,8 +163,8 @@ export function applySortingAndFiltering(models, filters, sortBy, sortOrder) {
         compareValueB = b.free_quota || 0;
         break;
       default:
-        compareValueA = a.name.toLowerCase();
-        compareValueB = b.name.toLowerCase();
+        compareValueA = String(a.name || '').toLowerCase();
+        compareValueB = String(b.name || '').toLowerCase();
     }
 
     if (compareValueA < compareValueB) return sortOrder === 'asc' ? -1 : 1;
