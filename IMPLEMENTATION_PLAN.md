@@ -1873,7 +1873,7 @@ Atom 结构：19 个 entry，每个都有 title/id/updated。
 
 787 项测试 748 通过 0 失败，e2e 28 项全过，verify 全绿。
 
-### [ ] T4.5 模型表与匹配器
+### [x] T4.5 模型表与匹配器
 
 依据：S6.2、S6.3 · F24 · 依赖：T4.4
 
@@ -1883,6 +1883,52 @@ Atom 结构：19 个 entry，每个都有 title/id/updated。
 3. 评测对照表、散点、中转站旗舰全部改为经实体 ID 关联；删除页面的 `bnorm` / `modelFor` 前缀匹配。
 
 验收：匹配器测试覆盖别名、变体、未匹配三条路径；页面里检索不到前缀匹配代码。
+
+结果：
+
+**1. `registry/models.json`：457 个实体**
+
+`scripts/gen-models-registry.mjs` 从两个源生成（OpenRouter 461 行 + 官方价 12 行）：
+- 规范 id `vendor/model`，别名按**源分组**（`aliases.openrouter` / `aliases.official`），符合 S6.2
+- 别名只收精确写法，**不含任何通配**（有用例扫全表）
+- 推理档位挂在 `variants` 下，不建独立实体
+
+**2. `lib/match.js`：三级规则（S6.3）**
+
+| 优先级 | 规则 |
+|---|---|
+| 1 | 精确别名（大小写不敏感） |
+| 2 | 归一后精确相等（小写、去厂商前缀、统一分隔符） |
+| 3 | 未匹配 |
+
+**没有第四级。** 归一不做任何截断——这正是 F24 的错。
+
+**3. F24 修复：`familyKey` 剥日期尾巴**
+
+原正则只认 `-2026-01-01`，不认 `-20260101`（8 位连写）。现在三种都剥：
+`YYYY-MM-DD` / `YYYYMMDD` / `YYMMDD`。只剥末尾，`model-2026-preview` 中间的日期保留。
+
+F24 的待办用例已转成**正向用例**（不是删掉），todo 从 5 降到 4。
+
+**4. 变体识别：只切末尾**
+
+第一版把 `qwen3.8-max`、`mistral-medium-3-5` 也当变体（`max`/`medium` 在标记表里）。误判会把两个不同的模型合成一个——那是**比未匹配更糟**的错误。现在只认 `thinking` / `reasoning` / `reasoner` / `nothink` / `non-thinking`，且必须是**最后一段**。
+
+实测：461 行里识别出 4 个真变体（`trinity-large-thinking`、`kimi-k2-thinking`、`qwen3-vl-30b-a3b-thinking`、`qwen3-next-80b-a3b-thinking`），零误判。
+
+**5. 删除页面前缀匹配**
+
+`index.html` 的 `bnorm` + `modelFor` 前缀回退整段删掉，改为调用内联的 `matchModel`（浏览器不能 import Node 模块，所以内联一份最小实现；有用例保证两处口径一致）。
+
+**6. 副作用（是修复不是退化）**
+
+评测页更多格子显示「—」：过去靠前缀匹配填上的价格，其实属于**别的模型**。`Gemini 3.1 Pro Preview` 显示 `$2.00` 就是这种情况——那是另一个模型的价格。现在显示「—」，读者知道缺数据而不是被喂错的数字。DOM 快照已重录。
+
+新增 `test/unit/match.test.js`（25 项），含 F24 的两条回归：`GPT-6` 不会匹配到 `GPT-6.1 Sol`、`Claude Opus 5` 不会匹配到 `5.5`。
+
+815 项测试 778 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：评测对照表与中转站旗舰的页面接线全部改经实体 ID——数据层（`matchModel` + `registry`）已就位，页面侧的 `buildBenchTable` 仍按名字找行，M5 拆分时一并改为实体 ID。
 
 ### [ ] T4.6 未匹配报告与质量线
 

@@ -466,16 +466,22 @@ describe('familyKey / band / per1M', () => {
     assert.equal(familyKey('x', 'x/model-preview', 'X'), 'x::model');
   });
 
-  test(
-    'F24：familyKey 未剥离 8 位日期尾巴，跨层对齐仍靠模糊匹配',
-    { todo: 'F24：familyKey 未剥离 8 位日期尾巴，跨层对齐仍靠模糊匹配' },
-    () => {
-      assert.equal(
-        familyKey('anthropic', 'anthropic/claude-opus-5.5-20260101', 'X'),
-        familyKey('anthropic', 'anthropic/claude-opus-5-5', 'X'),
-      );
-    },
-  );
+  /* F24 已修（T4.5）：日期尾巴是快照标记，不是模型差异。
+   * 三种写法都要剥：YYYY-MM-DD / YYYYMMDD / YYMMDD。 */
+  test('F24：familyKey 剥掉日期尾巴，同一模型的快照归到一族', () => {
+    const base = familyKey('anthropic', 'anthropic/claude-opus-5-5', 'X');
+    for (const id of [
+      'anthropic/claude-opus-5.5-20260101',
+      'anthropic/claude-opus-5-5-2026-01-01',
+      'anthropic/claude-opus-5-5-260101',
+    ]) {
+      assert.equal(familyKey('anthropic', id, 'X'), base, `${id} 应当归到同一族`);
+    }
+  });
+
+  test('F24：只剥末尾日期，不动中间的', () => {
+    assert.equal(familyKey('x', 'x/model-2026-preview', 'X'), 'x::model-2026');
+  });
 
   test('familyKey 去掉 :free', () => {
     assert.equal(familyKey('meta', 'meta/llama-4:free', 'Llama 4'), 'meta::llama-4');

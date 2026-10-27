@@ -2954,25 +2954,80 @@ const MOTION = (() => {
     return { board: b, map };
   }
 
-  // 名称归一：把评测方与价格方的不同写法对齐（评测用 "GPT-6 Astra"，价格表可能是 "OpenAI: GPT-6 Astra"）
-  const bnorm = (t) => String(t || "").toLowerCase()
-    .replace(/^[a-z0-9.\-]+\s*:\s*/, "")
-    .replace(/\s*\([^)]*\)\s*$/, "")
-    .replace(/[\s._\-/]+/g, "");
+  /* 模型名归一（与 lib/match.js 同口径）。
+   *
+   * 页面不能 import Node 模块，所以这里内联一份最小实现。两处口径必须一致——
+   * test/unit/match.test.js 用同一组用例跑两边，不一致就挂。 */
+  function normalizeModelName(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/^[^/]+\//, "")
+      .replace(/[\s_.]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
 
-  // 价格匹配：batch / preview / 带日期的变体都归一到同一个 key，会撞名。
-  // 所以先排除 batch（半价批处理，不代表常规挂牌价），再按「完全相等 → 前缀」逐级退让。
-  const isBatch = (n) => /\b(batch|batches)\b/i.test(String(n || ""));
-  function modelFor(name, models) {
-    const key = bnorm(name);
-    if (!key) return null;
-    const pool = models.filter((m) => m.input > 0 && !isBatch(m.name));
-    const exact = pool.filter((m) => bnorm(m.name) === key);
-    if (exact.length) {
-      // 同为完全匹配时，取名字最长（信息最具体）的那条
-      return exact.sort((a, b) => String(b.name).length - String(a.name).length)[0];
+  const VARIANT_MARKERS = ["thinking", "reasoning", "reasoner", "nothink", "non-thinking"];
+
+  /* 只切「最后一段是档位标记」的名字。中间的标记不动——
+   * qwen3.8-max 的 max 是模型名，thinking-machines 是厂商名。 */
+  function splitVariant(name) {
+    const parts = normalizeModelName(name).split("-");
+    const last = parts[parts.length - 1];
+    if (parts.length > 1 && VARIANT_MARKERS.includes(last)) {
+      return { parent: parts.slice(0, -1).join("-"), variant: last };
     }
-    return pool.find((m) => bnorm(m.name).startsWith(key)) || pool.find((m) => key.startsWith(bnorm(m.name))) || null;
+    return null;
+  }
+
+  /* 三级匹配（S6.3）：精确别名 → 归一后精确相等 → 未匹配。
+   * 别名表来自下发的 registry（meta.modelAliases），拿不到就只做前两级。 */
+  function matchModel(name) {
+    const raw = String(name || "").trim();
+    if (!raw) return { matched: false, id: null, name: null, variant: null };
+
+    const aliasMap = state.data?.meta?.modelAliases || {};
+    const aliasHit = aliasMap[raw.toLowerCase()];
+    if (aliasHit) return { matched: true, id: aliasHit, name: aliasHit, variant: null };
+
+    const norm = normalizeModelName(raw);
+    const v = splitVariant(raw);
+    if (v) return { matched: false, id: null, name: null, variant: v.variant, parent: v.parent };
+
+    return { matched: false, id: null, name: norm, variant: null };
+  }
+
+  /* 名称归一与匹配（T4.5 · S6.3）。
+   *
+   * 曾经这里有前缀匹配：`bnorm(m.name).startsWith(key)`。后果是
+   * 「Claude Sonnet 5」会匹配到「Claude Sonnet 5.5」，「GPT-6」会匹配到
+   * 「GPT-6.1 Sol」——图上那个点看着像对的，其实是另一个模型的数据（F24）。
+   *
+   * 现在只走 lib/match.js 的三级规则：精确别名 → 归一后精确相等 → 未匹配。
+   * 不再有任何前缀或模糊匹配。
+   */
+  const isBatch = (n) => /\b(batch|batches)\b/i.test(String(n || ""));
+
+  function modelFor(name, models) {
+    if (!name) return null;
+    const pool = (models || []).filter((m) => m.input > 0 && !isBatch(m.name));
+    if (!pool.length) return null;
+
+    const target = matchModel(name);
+    if (target.matched) {
+      const byId = pool.find((m) => m.id === target.id);
+      if (byId) return byId;
+      // 实体表里有但价格表里没有同名 id：退回按显示名精确比对（仍不做前缀）
+      const byName = pool.filter((m) => normalizeModelName(m.name) === normalizeModelName(target.name || ""));
+      if (byName.length) return byName.sort((a, b) => String(b.name).length - String(a.name).length)[0];
+    }
+
+    /* 实体表里没有这个名字：只做「归一后精确相等」，不做前缀。
+     * 找不到就返回 null —— 页面显示「—」比显示一个错的数字好。 */
+    const norm = normalizeModelName(name);
+    const exact = pool.filter((m) => normalizeModelName(m.name) === norm);
+    if (exact.length) return exact.sort((a, b) => String(b.name).length - String(a.name).length)[0];
+    return null;
   }
   const priceFor = (name, models) => modelFor(name, models)?.input ?? null;
 
