@@ -41,6 +41,7 @@ import { vendorOrder } from '../lib/vendors.js';
 import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
 import { SCHEMAS } from './schemas/index.mjs';
 import { gateAndFallback, VERDICT } from './manifest.mjs';
+import { buildCounts } from './counts.mjs';
 import { persist, resolveOutDir } from './persist.mjs';
 import { createHistoryReader, loadPrevious, readPrevBench } from './previous.mjs';
 
@@ -299,14 +300,10 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
       lumaCooldownMs: lumaBlock.cooldownMs,
       lumaCooldownCapMs: lumaBlock.capMs,
     },
+    /* 计数（T5.9 · S9.10）：页面上的每个数字都从产出算，见 pipeline/counts.mjs。 */
     counts: {
       ...(prev.meta?.counts || {}),
-      events: out.events?.length ?? 0,
-      models: Array.isArray(out.models) ? out.models.length : 0,
-      relays: Array.isArray(out.relays) ? out.relays.length : 0,
-      news: Array.isArray(out.news) ? out.news.length : 0,
-      resources: Array.isArray(out.resources) ? out.resources.length : 0,
-      sources: sourcesList.length,
+      ...buildCounts(out, { now: nowISO(), sources: sourcesList.length }),
     },
     dropped: unsafeUrlStats(),
     dedupe,

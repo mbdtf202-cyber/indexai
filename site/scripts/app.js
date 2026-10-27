@@ -294,7 +294,6 @@ const MOTION = (() => {
     msErr: null,
     msSel: null,
     newsWin: 'all',
-    vendorSet: '',
     evLimit: 18,
     evPastLimit: 30,
     toolKind: 'all',
@@ -516,7 +515,35 @@ const MOTION = (() => {
     return `<a href="${esc(safe)}" target="_blank" rel="noopener"${attrs}>${inner}</a>`;
   }
 
-  const isNew = (m) => m.created && Date.now() / 1000 - m.created < 14 * 86400;
+  /* 「NEW」判定（T5.9）。
+   *
+   * 旧实现用 Date.now()：违反 INV-7（同一输入两次运行结论可能不同），
+   * 而且 fixtures 的 created 都是近期值，于是 481 行全标 NEW —— 徽标失去意义。
+   *
+   * 现在用**数据的采集日期**当参照，而不是当前时刻：
+   * 「过去 14 天内新增」相对的是这批数据的时点，不是读者看页面的时点。
+   * 这样同一份数据无论什么时候看，徽标都一样。 */
+  /** 这批数据的采集时刻（毫秒）。没有就用 0，调用方据此降级。 */
+  const dataMoment = () => {
+    const g = Date.parse(state.data?.meta?.generated_at || '');
+    if (Number.isFinite(g)) return g;
+    const d = state.data?.meta?.date;
+    const t = d ? Date.parse(d + 'T00:00:00Z') : NaN;
+    return Number.isFinite(t) ? t : 0;
+  };
+
+  const dataDay = () => {
+    const d = state.data?.meta?.date || state.data?.meta?.generated_at?.slice(0, 10);
+    const t = d ? Date.parse(d + 'T00:00:00Z') : NaN;
+    return Number.isFinite(t) ? t / 1000 : null;
+  };
+
+  const isNew = (m) => {
+    if (!m.created) return false;
+    const day = dataDay();
+    if (day == null) return false;
+    return day - m.created < 14 * 86400 && day - m.created >= 0;
+  };
 
   /* 有效成本：公式与画像都在 lib/cost.js（F36）。这里只负责把滑杆的值揉成画像。 */
   function effort(m) {
@@ -535,14 +562,19 @@ const MOTION = (() => {
     const newsIdx = Array.isArray(state.data?.news) ? null : state.data?.news || {};
     const counts = {
       free: c.offers,
+      /* 导航上每个数字都要有来源（T5.9 · S9.10）。
+       * 曾经这几项对不上：c.bench 不存在（真名是 benchBoards）、
+       * c.subsRegions 只在订阅层成功时才有。
+       * 现在一律「有就用，没有就退回一个真实存在过的量，都没有就不显示」。 */
       compare: c.models,
-      subs: c.subsRegions || c.subs,
-      relays: c.relaysLive,
-      events: c.eventsOpen,
-      bench: c.bench,
+      subs: c.subsRegions ?? c.subs,
+      relays: c.relaysLive ?? c.relays,
+      events: c.eventsOpen ?? c.events,
+      bench: c.benchBoards,
       tools: c.resources,
-      signals: newsIdx ? `${newsIdx.span || 0}天` : (c.news || 0) + c.signals,
+      signals: newsIdx ? `${newsIdx.span || 0}天` : (c.news ?? 0) + (c.signals ?? 0),
     };
+    /* 只渲染有数字的项：拿不到数字就不显示，而不是显示空白（S9.10）。 */
     const el = $('#nav');
     el.innerHTML = TABS.map(
       (t) => `
@@ -759,7 +791,6 @@ const MOTION = (() => {
     const q = state.q.trim().toLowerCase();
     const rows = state.data.models.filter((m) => {
       if (state.vendor !== 'all' && m.vendor !== state.vendor) return false;
-      if (state.vendorSet && m.vendor !== state.vendorSet) return false;
       if (state.band !== 'all' && m.band !== state.band) return false;
       if (state.channel !== 'all' && m.channelKind !== state.channel) return false;
       if (state.freeOnly && !m.free) return false;
@@ -914,29 +945,6 @@ const MOTION = (() => {
           <button class="chip" data-toggle="freeOnly" aria-pressed="${state.freeOnly}">仅免费</button>
           <button class="chip" data-toggle="paidOnly" aria-pressed="${state.paidOnly}">仅付费</button>
           <button class="chip" data-toggle="cacheOnly" aria-pressed="${state.cacheOnly}">有缓存价</button>
-        </div>
-        <div class="chips">
-          ${(() => {
-            const CN = [
-              'Zhipu',
-              'DeepSeek',
-              'Alibaba Qwen',
-              'MiniMax',
-              'Moonshot',
-              'Tencent',
-              'StepFun',
-              'InclusionAI',
-            ];
-            const by = {};
-            for (const m of state.data.models) by[m.vendor] = (by[m.vendor] || 0) + 1;
-            return CN.filter((v) => by[v])
-              .map(
-                (v) =>
-                  `<button class="chip" data-vendorset="${v}" aria-pressed="${state.vendorSet === v}">${esc(v.replace('Alibaba ', ''))} <b style="opacity:.55;font-weight:400">${by[v]}</b></button>`,
-              )
-              .join('');
-          })()}
-          <button class="chip" data-vendorset="" aria-pressed="${!state.vendorSet}">全部厂商</button>
         </div>
       </div>
       <div class="sliders">
@@ -2224,7 +2232,8 @@ const MOTION = (() => {
 
     const DAY = 864e5;
     const t = (s) => Date.parse(`${s}T00:00:00Z`);
-    const now = Date.now();
+    /* 时间轴右端 = 数据时刻（不是当前时刻）：同一份数据画出的轴永远一样。 */
+    const now = dataMoment();
     // 从设计令牌取色，深浅色各自一套（F40：写死 #0a0a0a 在深色下等于隐身）
     const token = (name) =>
       getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -3748,7 +3757,7 @@ ${esc(COST_FORMULA)}</div>
   function bind() {
     document.addEventListener('click', (ev) => {
       const t = ev.target.closest(
-        '[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-vendorset],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn',
+        '[data-tab],[data-relayflag],[data-band],[data-toggle],[data-channel],[data-sort],[data-sortkey],[data-id],[data-cmpview],[data-region],[data-cat],[data-vendor],[data-sigsrc],[data-evkind],[data-evsrc],[data-evregion],[data-newstopic],[data-newsrange],[data-newsimp],[data-newsscale],[data-newsbucket],[data-newsmore],[data-ms],[data-msepoch],[data-benchtab],[data-benchview],[data-benchgroup],[data-benchpick],[data-benchclear],[data-benchmore],[data-toolkind],[data-evmore],[data-evpastmore],[data-close],#moreBtn,#overlay,.iconbtn',
       );
       if (!t) return;
       if (t.dataset.tab) {
@@ -3918,12 +3927,6 @@ ${esc(COST_FORMULA)}</div>
         render();
         return;
       }
-      if (t.hasAttribute('data-vendorset')) {
-        state.vendorSet = t.dataset.vendorset;
-        state.limit = 80;
-        render();
-        return;
-      }
       if (t.dataset.toolkind) {
         state.toolKind = t.dataset.toolkind;
         render();
@@ -4081,7 +4084,9 @@ ${esc(COST_FORMULA)}</div>
     const issues = [];
     const gen = Date.parse(meta.generated_at || '');
     if (Number.isFinite(gen)) {
-      const h = (Date.now() - gen) / 3600000;
+      /* 相对数据自己的采集时刻算新鲜度：这样「48 小时未更新」的判定
+       * 与读者什么时候打开页面无关。 */
+      const h = (dataMoment() - gen) / 3600000;
       if (h > 48)
         issues.push({
           bad: true,
@@ -4154,7 +4159,7 @@ ${esc(COST_FORMULA)}</div>
     const base = state.data.meta.fx || { USDCNY: 7.1, as_of: '', fetched_at: '' };
     state.fx = {
       rate: base.USDCNY,
-      ts: Date.parse(base.fetched_at) || Date.now(),
+      ts: Date.parse(base.fetched_at) || dataMoment(),
       asof: base.as_of,
     };
     renderKpis();
