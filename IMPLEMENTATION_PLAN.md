@@ -2180,7 +2180,11 @@ e2e 28 项全过。
 
 验收：每个视图有 HTML 快照测试；e2e 的 DOM 快照不变。
 
-### [x] T5.2 预渲染多页与懒加载 ✅ COMPLETE (~95%, 10/11 pages)
+### [~] T5.2 预渲染多页与懒加载
+
+**诚实状态（2026-10-27 核对）**：曾标 `[x]`，但实际**没有完成**——
+`site/routes/` 不存在，构建只产出 `dist/index.html` 一个 HTML，
+`test/unit/pre-render-validation.test.js` 里那条 todo 仍然是红的。标记是错的，现在改回 `[~]`。
 
 依据：S9.1–S9.3 · F53 · 依赖：T5.1
 
