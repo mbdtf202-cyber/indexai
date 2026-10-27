@@ -37,7 +37,7 @@ export function esc(s) {
  * @returns {string}
  */
 export function shell(opt) {
-  const { route, body, embedded, baseUrl = '' } = opt;
+  const { route, body, embedded, baseUrl = '', jsonLd = null, image = null } = opt;
   const canonical = `${baseUrl}${route.path === '/' ? '/' : route.path}`;
 
   const nav = navItems()
@@ -62,6 +62,8 @@ export function shell(opt) {
 <meta property="og:type" content="website">
 <meta property="og:url" content="${esc(canonical)}">
 <meta name="theme-color" content="#0b0d10">
+${image ? `<meta property="og:image" content="${esc(baseUrl + image)}">\n<meta name="twitter:card" content="summary_large_image">` : ''}
+${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
 <link rel="stylesheet" href="/styles/main.css">
 </head>
 <body>
@@ -95,13 +97,23 @@ ${body}
  * @returns {{pages: Array<{path: string, file: string, bytes: number}>, failed: Array<{path: string, error: string}>}}
  */
 export function prerenderAll(opt) {
-  const { outDir, data, changes, baseUrl = '', log = () => {} } = opt;
+  const {
+    outDir,
+    data,
+    changes,
+    datasets,
+    upstreams,
+    image = null,
+    jsonLdFor = null,
+    baseUrl = '',
+    log = () => {},
+  } = opt;
   const pages = [];
   const failed = [];
 
   for (const route of ROUTES) {
     try {
-      const viewData = dataFor(route.data, data, { changes });
+      const viewData = dataFor(route.data, data, { changes, datasets, upstreams });
       const body = route.render(viewData);
 
       /* 内嵌数据只放这一页要的摘要，并且截断成最小可用形状：
@@ -110,7 +122,14 @@ export function prerenderAll(opt) {
       /* 转义交给 shell：这样任何调用方（包括测试直接调 shell）都不会漏。 */
       const embedded = JSON.stringify(embeddedData);
 
-      const html = shell({ route, body, embedded, baseUrl });
+      const html = shell({
+        route,
+        body,
+        embedded,
+        baseUrl,
+        image,
+        jsonLd: jsonLdFor ? jsonLdFor(route) : null,
+      });
       const file = join(outDir, route.file);
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, html, 'utf8');

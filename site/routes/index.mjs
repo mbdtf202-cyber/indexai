@@ -29,6 +29,7 @@ import { renderEvents } from '../views/events.mjs';
 import { renderTools } from '../views/tools.mjs';
 import { renderSignals } from '../views/signals.mjs';
 import { renderMethods } from '../views/method.mjs';
+import { renderData } from '../views/data.mjs';
 import { renderChanges } from '../views/changes.mjs';
 import { renderCalculator } from '../views/cost-calculator.mjs';
 
@@ -132,7 +133,7 @@ export const ROUTES = [
     path: '/signals',
     file: 'signals.html',
     title: `信号 · ${SITE_NAME}`,
-    description: '值得记录的一手消息。',
+    description: '从业者公开说过的话：价格、路线、能力边界。每条带原文与出处，可回查。',
     render: renderSignals,
     data: 'all',
     nav: true,
@@ -157,6 +158,16 @@ export const ROUTES = [
     data: 'models',
     nav: true,
     navLabel: '成本',
+  },
+  {
+    path: '/data',
+    file: 'data.html',
+    title: `数据与署名 · ${SITE_NAME}`,
+    description: '公开数据文件、schema、许可与全部上游署名。每个数字都可以顺着走到原始文件。',
+    render: renderData,
+    data: 'datasets',
+    nav: true,
+    navLabel: '数据',
   },
   {
     path: '/methodology',

@@ -130,11 +130,13 @@ describe('parseNewsYaml', () => {
     '  url: https://x/2',
   ].join('\n');
 
-  test('从第二条开始解析（split 会吞掉首条，现状行为）', () => {
+  /* 这条原来断的是「split 会吞掉首条」——即旧 bug 的现状。
+   * F09 修掉后反过来断：两条都要在。 */
+  test('两条都解析出来（F09 修掉前的行为是吞掉首条）', () => {
     const items = parseNewsYaml(yaml);
-    assert.equal(items.length, 1);
-    assert.equal(items[0].title, '第二条标题');
-    assert.equal(items[0].date, '2026-10-23');
+    assert.equal(items.length, 2);
+    assert.equal(items[0].title, '第一条标题');
+    assert.equal(items[1].title, '第二条标题');
   });
 
   test('首条前补换行可完整解析全部条目', () => {
@@ -145,9 +147,13 @@ describe('parseNewsYaml', () => {
     assert.equal(items[0].time, '10:30');
   });
 
-  test('F09 相关：格式以 "- date:" 开头才能识别（现状）', { todo: 'F09 首条丢失' }, () => {
+  /* F09 已修（T5.10）：原来的切分要求每条前面有换行，
+   * 文本以 `- date:` 开头时首条就不在任何 chunk 里。 */
+  test('F09：首条以 "- date:" 开头也能识别', () => {
     const items = parseNewsYaml(yaml);
     assert.equal(items.length, 2);
+    assert.equal(items[0].title, '第一条标题');
+    assert.equal(items[0].url, 'https://x/1');
   });
 
   test('缺 url 的条目被跳过', () => {

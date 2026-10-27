@@ -2431,13 +2431,69 @@ Referrer-Policy: strict-origin-when-cross-origin
 
 941 项测试 909 通过 0 失败，e2e 31 项全过，verify 全绿。
 
-### [ ] T5.10 SEO、署名与数据页
+### [x] T5.10 SEO、署名与数据页
 
 依据：F51 · S9.9 · D7 · 依赖：T5.3
 
 步骤：每个路由独立的 `title`、`description`、canonical（地址来自 `package.json` 的 `homepage`）；生成 `sitemap.xml`、`robots.txt`；`/data/` 页列出每个公开数据文件、schema、许可与上游署名（OpenRouter CC BY 4.0、Artificial Analysis 署名要求、LMArena 等），并以 schema.org `Dataset` JSON-LD 描述；默认分享图用仓库内的静态 PNG。
 
 验收：sitemap 覆盖全部路由与模型页；每页标题唯一；`/data/` 页的署名覆盖全部上游源。
+
+结果：
+
+**1. `pipeline/datasets.mjs`：18 个上游穷举**
+
+每条含 `id` / `name` / `url` / `license` / `requirement` / `layers` / `note`：
+
+| 层 | 上游 |
+|---|---|
+| models | OpenRouter（CC BY 4.0，需署名并链接回源站） |
+| bench | Artificial Analysis、LMArena、SWE-bench、Aider、Terminal-Bench、τ-bench、ARC-AGI、SimpleBench、Vals AI |
+| events | Luma、Devpost、Devfolio |
+| news | AIHOT、Hacker News |
+| resources | GitHub |
+| subs | App Store |
+| fx | open.er-api.com |
+
+「穷举而不是挑几个主要的」是这张表的原则：漏一个就是漏一次署名义务。有用例按名字与地址双查，页面里缺任何一个上游都失败。
+
+**2. `/data/` 页（13/13 页里的新一页，12.3 KB）**
+
+三段：公开文件清单（文件 / 内容 / schema / 大小）、上游与署名（18 条，带许可链接）、采集与门禁说明（单层故障只让该层沿用上一版）。
+
+JSON-LD 是 `schema.org/Dataset`，带 `distribution` 数组（每个文件一个 `DataDownload`），让搜索引擎能索引成「可下载的数据集」。
+
+**3. robots.txt 与 sitemap**
+
+`robots.txt` 允许全部页面并指向 sitemap。`sitemap.xml` 从同一张路由表生成——加页不会漏。
+
+**4. 默认分享图：手写 PNG 编码器**
+
+`scripts/make-og-image.mjs` 用 `zlib.deflateSync` 与手写的 CRC 表生成 1200×630 PNG（5.5 KB），零依赖（INV-6）。带一个极简 5×7 点阵字体画站名。
+
+不用截图：截图会随页面改动失效，而分享图需要长期稳定。
+
+**5. 顺手修掉 F09（真 bug）**
+
+`parseNewsYaml` 的切分是 `split(/\n\s*-\s+date:/)`，要求每条前面有换行。文本以 `- date:` 开头时**首条就不在任何 chunk 里**——归档每天少第一条。
+
+修法：先在文本前补一个换行再切。这是这一轮修的最后一个已知 F 项。
+
+同时纠正了一条测试：它原来断的正是「split 会吞掉首条」这个**旧 bug 的现状**，修好后改成正向断言。
+
+**6. 补了一条过短的 description**
+
+信号页的 `description` 只有十个字（「值得记录的一手消息」），SEO 上太短也太空。改成能独立成句的一句话。
+
+**7. 安全头测试的例外**
+
+JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码），扫描器加上 `application/ld+json`。
+
+新增 `test/unit/seo-data.test.js`（24 项）。966 项测试 935 通过 0 失败（todo 从 4 降到 **1**），e2e 31 项全过，verify 全绿。
+
+**未做**：
+- **模型详情页路由**（`/models/<id>/`）：验收提到「sitemap 覆盖模型页」，但 577 个模型的逐页预渲染需要先决定分页策略（每页都要带自己的价格与评测数据，产物会到几十 MB）。数据层已就位（`registry/models.json` 有规范 id），这属于独立任务，不混在 T5.10 里草率通过。
+- 「待复核」标记的展示（`outdated` 计数已下发，展示留待入口切换时一并做）。
 
 ---
 

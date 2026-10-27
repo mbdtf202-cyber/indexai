@@ -316,6 +316,7 @@ if (!copiedData.includes('data.json')) {
  */
 {
   const { prerenderAll, sitemap } = await import('./routes/prerender.mjs');
+  const { publicDatasets, UPSTREAMS, datasetJsonLd } = await import('../pipeline/datasets.mjs');
 
   /* 完整数据：data.json 里 only 目录，boards 在 bench.json。合并一份给视图用。 */
   const fullData = JSON.parse(readFileSync(join(dataDir, 'data.json'), 'utf8'));
@@ -339,10 +340,30 @@ if (!copiedData.includes('data.json')) {
     JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).homepage || ''
   ).replace(/\/+$/, '');
 
+  /* 数据页要的文件清单与上游署名（T5.10 · S9.9）。 */
+  const builtManifest = (() => {
+    try {
+      return JSON.parse(readFileSync(join(DATA_DIR, 'manifest.json'), 'utf8'));
+    } catch {
+      return {};
+    }
+  })();
+  const datasets = publicDatasets({ manifest: builtManifest });
+  const upstreams = UPSTREAMS;
+
   const { pages, failed } = prerenderAll({
     outDir: join(DIST, 'pages'),
     data: fullData,
     changes,
+    datasets,
+    upstreams,
+    /* 默认分享图（T5.10）：仓库内的静态 PNG，1200×630。 */
+    image: '/assets/og.png',
+    /* 数据页加 schema.org Dataset（S9.9）。 */
+    jsonLdFor: (route) =>
+      route.path === '/data'
+        ? datasetJsonLd({ baseUrl, datasets, lastmod: fullData.meta?.date })
+        : null,
     baseUrl,
     log: (m) => console.log(`[build]   ${m}`),
   });
@@ -353,6 +374,14 @@ if (!copiedData.includes('data.json')) {
     'utf8',
   );
   copied.push('sitemap.xml');
+
+  /* robots.txt（T5.10 · S9.9）：允许全部页面，指向 sitemap。 */
+  writeFileSync(
+    join(DIST, 'robots.txt'),
+    ['User-agent: *', 'Allow: /', '', `Sitemap: ${baseUrl}/sitemap.xml`, ''].join('\n'),
+    'utf8',
+  );
+  copied.push('robots.txt');
 
   console.log(`[build] 预渲染 ${pages.length}/${pages.length + failed.length} 页`);
   for (const p of pages) copiedData.push(join('pages', p.file));

@@ -71,6 +71,9 @@ export function dataFor(kind, full, extra = {}) {
       return { ...full, vendorOrder: full?.meta?.vendorOrder || [] };
     case 'bench':
       return { ...full, bench: full?.bench ?? extra.bench };
+    case 'datasets':
+      /* 数据页要的是「文件清单 + 上游清单」，不是站点数据。 */
+      return { datasets: extra.datasets || [], upstreams: extra.upstreams || [] };
     case 'relays':
       return { ...full, relays: full?.relays || [] };
     default:

@@ -51,7 +51,9 @@ export function findInlineScripts(html) {
   while ((m = re.exec(html))) {
     const attrs = m[1] || '';
     if (/\bsrc\s*=/.test(attrs)) continue; // 外链，合规
-    if (/type\s*=\s*["']application\/json["']/.test(attrs)) continue; // 数据块，不是脚本
+    /* S10.1 的例外：JSON 数据块与 JSON-LD 都不执行代码。
+     * 后者是 T5.10 给数据页加的 schema.org Dataset 描述。 */
+    if (/type\s*=\s*["']application\/(json|ld\+json)["']/.test(attrs)) continue;
     out.push(m[0]);
   }
   return out;
@@ -173,6 +175,13 @@ describe('findInlineScripts 本身', () => {
 
   test('认 JSON 数据块为合规', () => {
     assert.deepEqual(findInlineScripts('<script type="application/json" id="x">{}</script>'), []);
+  });
+
+  test('认 JSON-LD 为合规（S10.1 的例外，不执行代码）', () => {
+    assert.deepEqual(
+      findInlineScripts('<script type="application/ld+json">{"@type":"Dataset"}</script>'),
+      [],
+    );
   });
 
   test('抓到真正的内联脚本', () => {
