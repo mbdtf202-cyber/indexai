@@ -1686,13 +1686,68 @@ e2e 28 项全过。
 
 **未做（依赖真实 git 远端）**：`npm run data:pull` 的实际检出、CI 首次创建 orphan 分支——本地没有远端可推，属于部署期验证。
 
-### [ ] T4.2 状态日志、告警与状态页
+### [x] T4.2 状态日志、告警与状态页
 
 依据：S4.2、S4.4 · 依赖：T4.1
 
 步骤：告警逻辑做成纯函数：读 `status/<layer>.ndjson`，同一层连续两次 red 或 stale 时开或追加带 `layer:<id>` 标签的 issue，恢复后评论并关闭；替换现在按日期开 issue 的步骤。页面加「状态」视图（M5 迁为 `/status/`）：每层、每个源最近 30 次运行的状态、计数趋势、耗时、请求账目与被限流次数。
 
 验收：告警决策有单元测试（开、追加、关闭三种路径）；状态视图有 e2e。
+
+结果：
+
+**1. `pipeline/alerts/decision.mjs`：纯函数决策**
+
+上一版的 `detectAlertDecision` 有三个真实缺陷：
+
+| 缺陷 | 后果 |
+|---|---|
+| `redCount >= 2` 数的是**有史以来**任何两次失败 | 隔三天失败一次也被当成「连续」 |
+| 不读已有 issue 状态 | 永远返回 `open`，每次开新 issue |
+| 不规整历史顺序 | 调用方给反了结论就整个反过来 |
+
+新实现把三件事分开：`normalizeHistory`（按时间倒序）、`consecutiveBad`（只数开头）、`decideAlert`（三选一）。
+
+| 动作 | 条件 |
+|---|---|
+| `open` | 连续 ≥2 次坏，无未关闭 issue |
+| `append` | 连续 ≥2 次坏，已有 issue（追加评论，标题带 `#N`） |
+| `close` | 最新一次 ok，且已有 issue |
+
+阈值 `CONSECUTIVE_THRESHOLD = 2`；坏状态 `red` / `failed` / `stale` / `partial`。
+
+**2. `scripts/alert-layers.mjs`：按层执行**
+
+- 逐层读 `status/<layer>.ndjson` → 查该层未关闭的 issue（`--label layer:<id>`）→ 决策 → 执行
+- 单个层出错不中断整轮（一个 gh 调用失败不该拖垮其它层的告警）
+- `--dry-run` 只打印决策，本地排查用
+
+实测（`/tmp/dbd2`，10 层）：`[alert] 所有层都正常，无需操作`。
+
+**3. `pipeline/status.mjs`：状态视图的数据契约**
+
+`layerStatus` / `statusOverview` / `renderStatusText`。页面要看的四样：最近 30 次状态、计数趋势、平均耗时、最新计数。
+
+- **连续异常按「最新往前数」算，与告警同一口径**——两处口径不一致时，页面显示「正常」而告警已经开了 issue，那才是最糟的体验。
+- 平均耗时只算非零的：没跑的那次（`ms: 0`）不该拉低平均。
+- 总览把异常的排前面。
+
+**4. workflow 替换「按日期开 issue」**
+
+```
+旧：失败 → 开 issue「采集失败：2026-10-27」
+新：每层读状态日志 → 连续两次异常才开/追加，恢复后自动关闭
+```
+
+- 改成 `if: always()` 而不是 `failure()`：某层红了但整体没失败时，那正是最该被看见的情况。
+- 标签 `collect-alert` + `layer:<id>`，GH 上能按层筛。
+- 顺带产出「分层状态（最近 30 次）」表格进 job summary。
+
+新增 `test/unit/alerts-status.test.js`（21 项），覆盖三条路径、真连续性（失败→ok→失败不算连续）、顺序无关、issue 内容、状态视图（窗口裁剪、成功率、平均耗时、排序、空日志）。
+
+730 项测试 691 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：页面「状态」视图（`/status/`）——`index.html` 是 256 KB 单体，M5 才拆。数据侧契约已就位（`status.mjs`），M5 换渲染层即可。
 
 ### [ ] T4.3 变化引擎与 Atom 源
 

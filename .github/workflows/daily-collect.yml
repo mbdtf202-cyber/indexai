@@ -6,7 +6,7 @@ name: daily-collect
 # 三道防线（以前一道都没有）：
 #   1. 发布前健康门禁 —— 任一层为空/异常缩水，job 直接红，线上保持上一版
 #   2. token 预检      —— Cloudflare token 权限不对时立刻失败并说清原因
-#   3. 失败告警        —— job 失败自动开 issue，不再靠人去翻 Actions 列表
+#   3. 分层告警        —— 按层判连续异常，开/追加/关闭 issue（T4.2）
 
 on:
   schedule:
@@ -339,20 +339,43 @@ jobs:
           ' >> "$GITHUB_STEP_SUMMARY"
 
       # 失败要响：自动开 issue（已存在同名 open issue 时不重复开）
-      - name: 失败告警
-        if: failure()
+      # 分层告警（T4.2 · S4.2）：读 status/<layer>.ndjson 判「连续两次异常」。
+      #
+      # 与旧做法（按日期开 issue）的区别：
+      #   1. 按层判，不按日期——同一个问题连挂三天开一个 issue 并追加，不是三个
+      #   2. 一个 job 里三层挂了就三个 issue，各带 layer:<id> 标签，修法不同
+      #   3. 恢复后自动评论并关闭，不会越积越多
+      #
+      # 用 if: always() 而不是 failure()：采集中间某层红了但整体没失败时，
+      # 也要能告警——那正是最该被看见的情况。
+      - name: 分层告警（需 data 分支）
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          TITLE="采集失败：$(date -u +%F)"
-          BODY=$(printf '每日采集任务失败。\n\n**运行记录**：%s\n\n**排查顺序**\n1. 看这一步的日志，health.mjs 会指出是哪一层不达标\n2. 若是 Cloudflare token：重新建 token，模板选 Edit Cloudflare Workers\n3. 若是某个数据源改版：在 pipeline/orchestrator.mjs 里看对应 fetch 的错误日志，修解析器\n4. 确认线上仍是上一版（旧数据比残缺数据好），修复后手动 workflow_dispatch 重跑\n\n> 线上站点在此期间保持上一次成功发布的数据。\n' "$RUN_URL")
-          existing=$(gh issue list --label collect-failure --state open --json number --jq 'length')
-          if [ "$existing" != "0" ]; then
-            echo "已有未关闭的失败 issue，追加评论"
-            gh issue comment "$(gh issue list --label collect-failure --state open --json number --jq '.[0].number')" --body "$BODY"
-          else
-            gh label create collect-failure --color B60205 --description "每日采集失败" 2>/dev/null || true
-            gh issue create --title "$TITLE" --body "$BODY" --label collect-failure
+          if [ ! -d .data/status ]; then
+            echo "::warning::没有拿到 data 分支，无法按层告警"
+            exit 0
           fi
+          # 打标签（幂等；缺权限不致命）
+          gh label create collect-alert --color D93F0B --description "采集分层告警" 2>/dev/null || true
+          node scripts/alert-layers.mjs --root .data || echo "::warning::告警脚本失败（不影响发布）"
+
+      - name: 状态摘要
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -d .data/status ]; then
+            exit 0
+          fi
+          node -e '
+            const { statusOverview, renderStatusText } = await import("./pipeline/status.mjs");
+            const { readdirSync } = await import("node:fs");
+            const layers = readdirSync(".data/status")
+              .filter((f) => f.endsWith(".ndjson"))
+              .map((f) => f.replace(/\.ndjson$/, ""));
+            console.log("## 分层状态（最近 30 次）");
+            console.log("");
+            console.log(renderStatusText(statusOverview(layers, { root: ".data" })));
+          ' --input-type=module >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "::warning::状态摘要生成失败"
