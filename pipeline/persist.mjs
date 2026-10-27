@@ -14,6 +14,13 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import { buildManifest, manifestEntry, VERDICT } from './manifest.mjs';
 import { snapshotLayer, recordAttempt, writeNewsShards } from '../scripts/data-scripts.mjs';
 import { buildUnmatchedReport } from '../lib/unmatch-report.js';
+import {
+  appendPoint,
+  seriesDoc,
+  seriesFileName,
+  MODEL_SERIES_FIELDS,
+  SUB_SERIES_FIELDS,
+} from './series.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -241,6 +248,8 @@ export async function persist(outDir, data, opt = {}) {
    * 前者只有最新一版，后者攒着每次尝试与每个月的归档——那才是能算趋势、能回滚的东西。
    *
    * 只在配置了数据目录时写（默认 .data/），本地跑测试不会在仓库里留垃圾。 */
+  const asOf = data.meta?.date || report?.finished_at?.slice(0, 10) || null;
+
   if (opt.dataDir) {
     for (const [id, rows] of Object.entries(data)) {
       if (id === 'meta' || id === 'sources' || id === 'signals') continue;
@@ -302,6 +311,84 @@ export async function persist(outDir, data, opt = {}) {
       /* 报告写不出来不该阻断发布：它是诊断信息，不是站点数据。 */
       console.warn('[persist] 未匹配报告生成失败：', e.message);
     }
+  }
+
+  /* 价格序列（T4.8 · S5.3）：只存变化点。
+   *
+   * 三类各一个目录：series/models / series/relays / series/subs。
+   * 每天全量存是 30 行里 28 行一样——仓库臃肿、diff 全是噪声、
+   * 画线时还要自己压缩。存变化点视觉上完全等价。 */
+  try {
+    const seriesRoot = ensureDir(join(opt.dataDir, 'series'));
+    let written = 0;
+
+    /** 读一个已有的序列文件（没有就是空数组）。 */
+    const readSeries = (path) => {
+      try {
+        return JSON.parse(readFileSync(path, 'utf8')).points || [];
+      } catch {
+        return [];
+      }
+    };
+
+    const put = async (kind, key, points, fields) => {
+      const dir = ensureDir(join(seriesRoot, kind));
+      const path = join(dir, `${seriesFileName(key)}.json`);
+      await writeFileAtomic(
+        path,
+        JSON.stringify(seriesDoc({ key, kind, fields, points }), null, 0),
+      );
+      written += 1;
+    };
+
+    /* 1. 模型 */
+    for (const m of Array.isArray(data.models) ? data.models : []) {
+      if (!m.id) continue;
+      const dir = join(seriesRoot, 'models');
+      const path = join(dir, `${seriesFileName(m.id)}.json`);
+      const prev = readSeries(path);
+      const points = appendPoint(prev, { date: asOf, ...m }, MODEL_SERIES_FIELDS);
+      if (points.length !== prev.length || !prev.length) {
+        await put('models', m.id, points, MODEL_SERIES_FIELDS);
+      }
+    }
+
+    /* 2. 中转站：每个旗舰一个 input 点 */
+    for (const r of Array.isArray(data.relays) ? data.relays : []) {
+      if (!r.domain) continue;
+      const dir = join(seriesRoot, 'relays');
+      const path = join(dir, `${seriesFileName(r.domain)}.json`);
+      const prev = readSeries(path);
+
+      /* 一个域名下多个旗舰：拆成「旗舰 key → 输入价」再打平比较。 */
+      const flat = {};
+      for (const [k, price] of Object.entries(r.prices || {})) {
+        if (price && Number.isFinite(price.input)) flat[k] = price.input;
+      }
+      if (!Object.keys(flat).length) continue;
+
+      const points = appendPoint(prev, { date: asOf, ...flat }, Object.keys(flat));
+      if (points.length !== prev.length || !prev.length) {
+        await put('relays', r.domain, points, Object.keys(flat));
+      }
+    }
+
+    /* 3. 订阅：一档一个点 */
+    for (const s of Array.isArray(data.subs) ? data.subs : []) {
+      if (!s.id) continue;
+      const dir = join(seriesRoot, 'subs');
+      const path = join(dir, `${seriesFileName(s.id)}.json`);
+      const prev = readSeries(path);
+      const points = appendPoint(prev, { date: asOf, price: s.price }, SUB_SERIES_FIELDS);
+      if (points.length !== prev.length || !prev.length) {
+        await put('subs', s.id, points, SUB_SERIES_FIELDS);
+      }
+    }
+
+    if (written) console.log(`[persist] 价格序列更新 ${written} 个`);
+  } catch (e) {
+    /* 序列是派生数据，写不出来不该阻断发布——下次运行会补上变化点。 */
+    console.warn('[persist] 价格序列生成失败：', e.message);
   }
 
   return { wrote: true, gate: gate.verdict, reason: gate.reason };

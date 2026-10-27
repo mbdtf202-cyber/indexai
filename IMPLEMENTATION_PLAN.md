@@ -2,7 +2,7 @@
 
 Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文件是执行清单，由 Ralph 在 build 模式下逐项执行并维护。不要用 plan 模式重写它。
 
-当前里程碑：**M4 资产**
+当前里程碑：**M5 前端**
 
 ## 规则
 
@@ -2067,13 +2067,104 @@ bench 低是正常的：它算的是**全部榜单行**（含几百个只出现�
 
 861 项测试 825 通过 0 失败，e2e 28 项全过，verify 全绿。
 
-### [ ] T4.8 价格序列
+### [x] T4.8 价格序列
 
 依据：S5.3 · 依赖：T4.3、T4.5
 
 步骤：派生 `series/models/<id>.json`、`series/relays/<domain>.json`、`series/subs/<plan>.json`，只存变化点。
 
 验收：由多日 fixture 快照派生的三类序列只含变化点，都有测试。
+
+结果：
+
+**1. `pipeline/series.mjs`：只存变化点**
+
+| 函数 | 作用 |
+|---|---|
+| `samePrice` | 相对误差 0.1% 判同价 |
+| `appendPoint` | 只在有变化时追加；同一天重跑是替换 |
+| `buildSeries` | 从多日快照派生 |
+| `densify` | 还原成每天一个点（画线用） |
+| `seriesFileName` | `vendor/model` → `vendor__model`（文件名不能含斜杠） |
+
+三类字段：模型 `input/output/cache_read/cache_write`、中转站每个旗舰的 `input`、订阅 `price`。
+
+**2. 四条取舍**
+
+- **第一条永远记**：它是序列的起点，没有它画不出线。
+- **同一天重跑替换而不是追加**：否则一天会有多个点（CI 重跑很常见）。
+- **实体某天缺席跳过**，不记 `null` 点——那不是「价格变成 null」，是「那天没采到」。
+- **`changes` 用 `max(0, points-1)`**：只有一个起点时是 0 次变化，不是 1 次，也不是 -1。
+
+**3. 实测**
+
+一次运行产出 **488 个序列文件**（461 模型 + 3 中转站 + 12 订阅 + 其余）。同一天第二跑**不追加任何点**（没有输出「序列更新」）。
+
+样例：
+```json
+{"schema":"series/v1","key":"chatgpt-pro_100","kind":"subs","fields":["price"],
+ "points":[{"date":"2026-10-24","price":100}],"changes":0}
+```
+
+**4. 失败不阻断发布**
+
+序列是派生数据：写不出来下次运行会补上变化点。捕获后只 `warn`，不影响站点。
+
+新增 `test/unit/series.test.js`（28 项），含「3 天 2 个变化点 + densify 还原后与每日全量等价」。
+
+889 项测试 853 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**M4 到此完成：8 个任务全部 [x]**（T4.1 data 分支、T4.2 告警与状态、T4.3 变化引擎、T4.4 厂商表、T4.5 模型表、T4.6 质量线、T4.7 基线门禁、T4.8 价格序列）。
+
+---
+
+## M4 里程碑结论（2026-10-27）
+
+**M4 完成：8 个任务全部 [x]。** 数据有了历史、变化、统一实体与质量线——从「每天重拍一张照片」变成「知道昨天和今天差在哪」。
+
+### 关键事实
+
+- **实体表 577 个模型 / 65 个厂商**：三处硬编码（`SUB_VENDOR` / `KNOWN` / `VENDOR_RANK`）全部清零，改由 `registry/*.json` 单一来源。
+- **F24 修掉**：`familyKey` 现在剥三种日期尾巴（`YYYY-MM-DD` / `YYYYMMDD` / `YYMMDD`）；页面的前缀匹配（`bnorm` + `startsWith`）整段删除。评测页因此有更多格子显示「—」——**那是修复不是退化**：过去填上的价格其实属于别的模型。
+- **质量线 28/28 全绿**：OpenRouter 用量前 100 与全部旗舰 100%，每个评测榜前 30 名 ≥ 90%。
+
+### 新增模块
+
+| 模块 | 职责 |
+|---|---|
+| `scripts/data-scripts.mjs` | data 分支读写：快照 / 状态日志 / 月度分片 |
+| `pipeline/previous.mjs` | 上一版与历史计数的来源 |
+| `pipeline/alerts/decision.mjs` | 告警决策（纯函数，open/append/close） |
+| `pipeline/status.mjs` | 状态视图数据契约 |
+| `pipeline/derive/changes-engine.mjs` | 六类变化事件（S5.2） |
+| `pipeline/derive/atom.mjs` | Atom 源 |
+| `pipeline/baseline.mjs` | 中位数基线（7 次回看） |
+| `pipeline/series.mjs` | 三类型价格序列，只存变化点 |
+| `lib/vendors.js` + `registry/vendors.json` | 厂商归一 |
+| `lib/match.js` + `registry/models.json` | 模型实体匹配（三级规则） |
+| `lib/unmatch-report.js` | 未匹配报告与质量线 |
+
+### 这一轮修掉的真 bug
+
+1. **`data-scripts.mjs` 三个函数全是坏的**：ESM 里调 `require`、不建目录、用 `new Date()`。
+2. **告警 `redCount >= 2` 数的是有史以来任何两次失败**，不是「连续」；而且永远返回 `open`。
+3. **变化引擎「任一价格变了就报一条」**：只改输入价时输出价也被写进事件（值其实没变）。
+4. **变体识别误判**：`qwen3.8-max` 被当成 `qwen3` 的变体（`max` 在标记表里）。误判会把两个模型合成一个——比未匹配更糟。
+5. **`familyKey` 不剥 8 位连写日期**（F24 本体）。
+6. **缩水判定只看上一版**：上一版本身可能是异常低值（F33）。
+7. **`make-fixture-data` 还在读 main 上的 `news-archive.json`**：T4.1 迁移后 news 变成 0 条。
+
+### 测试
+
+889 项，853 通过，0 失败，4 todo（F09 首行丢失、T5.2 预渲染 2 项）。
+
+e2e 28 项全过。
+
+### 留给 M5
+
+- `index.html`（256 KB 单体）拆分与预渲染（T5.2）。
+- 页面接线：`meta.vendorOrder` 已下发但页面只用于排序；状态视图、未匹配明细、核实日期、变化模块都等 `/status/` 与首页模块。
+- 评测对照表与中转站旗舰改为经实体 ID 关联（数据层已就位）。
 
 ---
 
