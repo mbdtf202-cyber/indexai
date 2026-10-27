@@ -11,6 +11,7 @@
 
 import { writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { buildManifest, manifestEntry, VERDICT } from './manifest.mjs';
+import { snapshotLayer, recordAttempt, writeNewsShards } from '../scripts/data-scripts.mjs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -169,6 +170,12 @@ export async function persist(outDir, data, opt = {}) {
   /* 索引字段名必须与页面契约一致（index.html 的 newsIndex）：
    * n / days / span / first / last / per。写错名字页面会一直当成「归档没到手」，
    * 于是卡在骨架、整个 signals 页永远等下去。 */
+  /* 情报按月分片（T4.1 · S5.1）必须在这里做：下一行就把 data.news 换成索引对象了，
+   * 晚一步读到的是索引，不是条目。 */
+  if (opt.dataDir && Array.isArray(archive) && archive.length) {
+    writeNewsShards(archive, { root: opt.dataDir });
+  }
+
   data.news = {
     n: archive.length,
     days: days.length,
@@ -219,6 +226,30 @@ export async function persist(outDir, data, opt = {}) {
 
   const manifest = buildManifest({ layers: layerFiles, generatedAt: data.meta?.date || '' });
   await writeFileAtomic(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+  /* data 分支的产物（T4.1 · S5.1）。
+   *
+   * 与 outDir 的分工：outDir 是「这次构建要用的」，data 目录是「历史要留下的」。
+   * 前者只有最新一版，后者攒着每次尝试与每个月的归档——那才是能算趋势、能回滚的东西。
+   *
+   * 只在配置了数据目录时写（默认 .data/），本地跑测试不会在仓库里留垃圾。 */
+  if (opt.dataDir) {
+    for (const [id, rows] of Object.entries(data)) {
+      if (id === 'meta' || id === 'sources' || id === 'signals') continue;
+      const list = Array.isArray(rows) ? rows : Array.isArray(rows?.rows) ? rows.rows : null;
+      if (!list) continue;
+      snapshotLayer(id, list, { root: opt.dataDir });
+    }
+
+    /* 每次尝试都记一行：告警要判「连续两次 red」，靠的就是这份历史。 */
+    for (const r of report?.layers || []) {
+      recordAttempt(
+        r.id,
+        { status: r.status, count: r.n, ms: r.ms, error: r.error, reason: r.reason },
+        { root: opt.dataDir, at: report.finished_at },
+      );
+    }
+  }
 
   return { wrote: true, gate: gate.verdict, reason: gate.reason };
 }

@@ -1627,23 +1627,7 @@ e2e 28 项全过。
 
 退出条件：站点能回答「什么变了」与「这个模型在各处多少钱、多强」。
 
-### [~] T4.1 data 分支（初始化完成）
-
-依据：D1 · S5.1、S4.2 · 依赖：T3.9
-
-**Round 1: 架构初始化 (当前进度)**
-- [x] 创建 data 分支初始化脚本 ✓
-- [x] 创建 data scripts 模块 ✓
-- [x] 更新 .gitignore 加入 .data/目录 ✓
-- [x] 添加 npm run data:* 命令到 package.json ✓
-- [ ] 完整 CI workflow 集成（等待 pipeline/index.mjs 稳定后）
-- [ ] news-archive.json → news/月度分片迁移
-- [ ] 停止 main 分支的数据提交
-
-**验收标准**:
-- main 之后不再出现 bot 提交 ✓(待 CI 集成后验证)
-- data 分支任意天快照可构建完整站点 ✓(待实现后测试)
-
+### [x] T4.1 data 分支
 
 依据：D1 · S5.1、S4.2 · 依赖：T3.9
 
@@ -1654,6 +1638,53 @@ e2e 28 项全过。
 4. `npm run data:pull`：把 data 分支检出到 `.data/`（加入 `.gitignore`），本地可用 `npm run build -- --data .data` 构建真实站点。
 
 验收：`main` 之后不再出现 bot 提交；用 data 分支任意一天的快照都能构建出完整站点（用两天的 fixture 快照测试）。
+
+结果：
+
+**1. `scripts/data-scripts.mjs` 重写**
+
+上一版三个函数**全是坏的**：在 ESM 里调 `require`（直接 ReferenceError）、`appendFileSync` 前不建目录（首次运行必崩）、时间用 `new Date()`（违反 R2b）。现在提供 8 个函数：
+
+| 函数 | 作用 |
+|---|---|
+| `snapshotLayer` | 写快照，**稳定排序**（按 id/domain/product/repo）——同一输入同一字节序列，否则每次采集都产生假 diff |
+| `loadSnapshot` | 读快照，没有返回 `null`（首次运行是正常情况） |
+| `recordAttempt` | 追加一行到 `status/<layer>.ndjson`，时间走 `clock`（R2b） |
+| `readAttempts` | 读日志，支持 `limit` |
+| `writeNewsShards` | 归档按月切分，**合并不覆盖**（归档只增不删） |
+| `readNewsShards` | 读回全部分片合成归档 |
+| `dataRoot` | 解析数据根目录（默认 `.data/`） |
+
+**2. 上一版从 data 分支读（第 2 条）**
+
+`pipeline/previous.mjs`：优先 data 分支快照 → 退回 `outDir/data.json` → 都没有就是首次运行。旧做法从线上 `data.json` 拉，等于把「上一版」交给一个每小时可能变一次的外部服务决定。
+
+实测：第二跑输出 `[collect] 上一版来自 data 分支快照（6 层）`。
+
+**3. 归档迁移（第 3 条）**
+
+`scripts/migrate-news.mjs`：`news-archive.json` 100 条 → `news/2026-10.json` 分片，然后从 main 删除。
+
+**删除前先校验**：分片条数少于来源的 99% 就拒绝删除——顺序错了就是「删了没存」，归档再也补不回来（源站只给最近 7 天）。
+
+`.gitignore` 去掉 `!news-archive.json`，注释改成「自 T4.1 起迁到 data 分支」。
+
+**4. workflow 停止向 main 推数据**
+
+「提交情报归档」改成「提交到 data 分支」：用临时 worktree 操作 data 分支，`git push origin HEAD:data`。main 上不再出现 bot 提交。artifact 清单里移除 `news-archive.json`，加入 `.data/`。
+
+**5. 验收**
+
+- 稳定排序：同一批数据两种顺序写两次，字节完全相同（有用例）
+- 只追加：追加不覆盖历史，`limit` 取最近 N 条
+- 月度分片：合并不覆盖、同 URL 用新值、无日期跳过
+- 任意一天快照都能构建：两天各写一次快照，两天都能读到数据
+
+新增 `test/unit/data-branch.test.js`（16 项）。编排器因新增逻辑超 R3，把「上一版从哪读」与 `readPrevBench` 抽进 `pipeline/previous.mjs`，回到 385 行。
+
+709 项测试 670 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做（依赖真实 git 远端）**：`npm run data:pull` 的实际检出、CI 首次创建 orphan 分支——本地没有远端可推，属于部署期验证。
 
 ### [ ] T4.2 状态日志、告警与状态页
 

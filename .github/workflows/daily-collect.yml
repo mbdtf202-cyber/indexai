@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     # 采集 job 需要提交情报归档与开失败 issue，这是唯一需要写权限的 job
     permissions:
-      contents: write      # 提交 news-archive.json
+      contents: write      # 推送到 data 分支
       issues: write        # 失败时开 issue
     timeout-minutes: 25
 
@@ -113,7 +113,7 @@ jobs:
             run-report.json
             data.json
             bench.json
-            news-archive.json
+            manifest.json
           retention-days: 30
 
       # 二次独立校验：把 data.json 当独立产物再验一遍，
@@ -122,20 +122,42 @@ jobs:
         run: node health.mjs
 
       
-      - name: 提交情报归档
+      # 数据写进 data 分支，不碰 main（T4.1 · 第 3 条）。
+      #
+      # 理由：归档每天在长，放在 main 会让仓库膨胀，而且数据提交与代码提交
+      # 混在一条时间线上——回滚代码时不知道该不该带上数据。
+      # 这里只推 data 分支：快照、状态日志、月度分片、变化事件。
+      - name: 提交到 data 分支
         run: |
-          touch news-archive.json
-          if [ -n "$(git status --porcelain news-archive.json news-seed.json)" ]; then
-            git config user.name "indexai-bot"
-            git config user.email "bot@users.noreply.github.com"
-            git add news-archive.json news-seed.json
-            git commit -m "data: news archive $(date -u +%F)"
-            git push
-          else
-            echo "情报归档无变化"
+          set -euo pipefail
+          git config user.name "indexai-bot"
+          git config user.email "bot@users.noreply.github.com"
+
+          if [ ! -d .data ] || [ -z "$(ls -A .data 2>/dev/null)" ]; then
+            echo "::warning::没有 data 产物，跳过"
+            exit 0
           fi
 
-      # 先验 token 再部署：权限不对时给出可操作的报错，而不是 wrangler 的裸 10000
+          # 用临时 worktree 操作 data 分支，避免污染当前工作树
+          rm -rf /tmp/data-wt
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch origin data --depth=1
+            git worktree add /tmp/data-wt FETCH_HEAD
+          else
+            git worktree add --orphan -b data /tmp/data-wt
+          fi
+
+          cp -R .data/* /tmp/data-wt/ 2>/dev/null || true
+
+          cd /tmp/data-wt
+          git add -A
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "data: snapshot $(date -u +%F)"
+            git push origin HEAD:data
+            echo "已推送到 data 分支"
+          else
+            echo "data 分支无变化"
+          fi
 
       # 采集产物交给 build job（T3.9 · 第 2 条：只有需要写仓库的 job 拿写权限）
       - name: 上传采集产物
@@ -145,10 +167,10 @@ jobs:
           path: |
             data.json
             bench.json
-            news-archive.json
             news-milestones.json
             news/
             manifest.json
+            .data/
           retention-days: 7
 
           if-no-files-found: warn

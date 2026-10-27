@@ -42,6 +42,9 @@ import { quarantineLayer, summarizeQuarantine } from './validate.mjs';
 import { SCHEMAS } from './schemas/index.mjs';
 import { gateAndFallback, VERDICT } from './manifest.mjs';
 import { persist, resolveOutDir } from './persist.mjs';
+import { loadPrevious, readPrevBench } from './previous.mjs';
+
+export { readPrevBench };
 
 import fxLayer from './layers/fx/index.js';
 import adoptionLayer from './layers/adoption/index.js';
@@ -69,24 +72,6 @@ const readJson = async (path) => {
 };
 
 const readCurated = (name) => readJson(join(ROOT, 'curated', name));
-
-/**
- * 读取上一版完整评测快照（F02）。
- *
- * 必须从 `bench.json` 读，不能从 `data.json`：后者只存目录（`boards` 已拆出去），
- * `prev.bench.boards` 恒为空——这正是「失败沿用上次」在线上从未生效的根因。
- *
- * 缺文件／坏 JSON／缺 boards 一律返回 null（首次运行的合法情况）。
- */
-export function readPrevBench(path = join(resolveOutDir(), 'bench.json')) {
-  try {
-    const parsed = JSON.parse(readFileSync(path, 'utf8'));
-    if (!parsed || typeof parsed !== 'object' || !parsed.boards) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
 
 /* ─────────────────────────── 层清单 ─────────────────────────── */
 
@@ -127,7 +112,13 @@ export async function collect({ outDir = resolveOutDir() } = {}) {
   console.log('[collect] 开始');
   resetUnsafeUrlStats();
 
-  const prev = (await readJson(join(outDir, 'data.json'))) || {};
+  /* 上一版（T4.1）：优先 data 分支快照，退回 outDir。 */
+  const dataDir = process.env.INDEXAI_DATA_DIR || null;
+  const prevPick = await loadPrevious({ layers: LAYERS, outDir, dataDir });
+  const prev = prevPick.prev;
+  if (prevPick.source === 'data') {
+    console.log('[collect] 上一版来自 data 分支快照（' + prevPick.layers + ' 层）');
+  }
 
   /* 唯一需要运行期状态的层：events 的 Luma 冷却（S4.4）。 */
   const lumaState = { blocked: false, reason: null, cooldownMs: 0, gaveUp: 0 };
@@ -383,7 +374,7 @@ if (isDirectRun) {
   const outDir = resolveOutDir();
   collect({ outDir })
     .then(async (data) => {
-      await persist(outDir, data);
+      await persist(outDir, data, { dataDir: process.env.INDEXAI_DATA_DIR || null });
       console.log(`[collect] 写入 ${outDir}/{data,bench,news-archive}.json`);
     })
     .catch((e) => {
