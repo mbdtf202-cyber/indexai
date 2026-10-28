@@ -1,0 +1,37 @@
+name: 数据报错
+description: 报告一条价格、活动、情报或工具记录的错误
+title: "[报错] "
+labels: ["report"]
+body:
+  - type: markdown
+    attributes:
+      value: 请尽量附上原始来源链接。记录 ID 会从页面上的「报错」链接自动带入。
+  - type: input
+    id: record_id
+    attributes:
+      label: 记录 ID
+      description: 模型 id、活动 id、产品名或数据文件里的键
+      placeholder: "claude-opus-5.5 / evt-123 / ChatGPT Plus"
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 来源链接
+      description: 这条记录当前引用的页面或接口
+      placeholder: https://example.com/pricing
+  - type: textarea
+    id: wrong
+    attributes:
+      label: 哪里错了
+      description: 期望值、实际值，以及你看到的原文
+      placeholder: 页面写 $15，但官网是 $12；截图/链接如下…
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 我已经查过原始来源，不是把不同渠道的价格混在一起
+          required: true

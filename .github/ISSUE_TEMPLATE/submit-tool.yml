@@ -1,0 +1,44 @@
+name: 投稿工具
+description: 推荐一个值得收录的 AI 工具、CLI、MCP 或 skill
+title: "[投稿] 工具："
+labels: ["submission", "toolkit"]
+body:
+  - type: input
+    id: repo
+    attributes:
+      label: 仓库或主页
+      placeholder: https://github.com/owner/repo
+    validations:
+      required: true
+  - type: input
+    id: title
+    attributes:
+      label: 名称
+      placeholder: "例如：baoyu-design"
+    validations:
+      required: true
+  - type: dropdown
+    id: use
+    attributes:
+      label: 类型
+      options:
+        - skill
+        - MCP
+        - CLI
+        - 桌面应用
+        - 其他
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: 为什么值得收录
+      description: 要具体：解决什么问题、别处为什么不好找
+      placeholder: 它能把…，目前没有同类工具…
+    validations:
+      required: true
+  - type: input
+    id: license
+    attributes:
+      label: 许可证
+      placeholder: MIT / Apache-2.0 / 未知

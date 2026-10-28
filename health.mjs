@@ -16,9 +16,9 @@
  */
 
 import { readFile } from 'node:fs/promises';
+import { now, todayISO } from './lib/clock.js';
 
 const DATA = new URL('./data.json', import.meta.url);
-const HISTORY = new URL('./news-history.json', import.meta.url);
 
 /* ────────────────────────── 基线 ──────────────────────────
  * min       ：低于这个数直接判死（源挂了、解析器失效）
@@ -33,17 +33,15 @@ export const LAYERS = {
   models:        { min: 350, warnBelow: 400, shrink: 0.75, label: '模型比价' },   // 实测 474
   offers:        { min: 25,  warnBelow: 30,  shrink: 0.80, label: '免费额度' },   // 实测 37
   subsRegions:   { min: 12,  warnBelow: 15,  shrink: 0.70, label: '订阅区价套餐' }, // 实测 18
-  subsThird:     { min: 50,  warnBelow: 80,  shrink: 0.60, label: '第三方挂单' }, // 实测 209
+  subsThird:     { min: 50,  warnBelow: 80,  shrink: 0.60, label: '第三方挂单' }, // 实测 209 条挂单（D3 起按 listings 之和计）
   relays:        { min: 40,  warnBelow: 50,  shrink: 0.80, label: '中转站在册' }, // 实测 54
   relaysLive:    { min: 8,   warnBelow: 12,  shrink: 0.60, label: '中转站有价' }, // 实测 22
-  events:        { min: 243, warnBelow: 382, shrink: 0.70, label: 'AI 活动' },    // 实测 695（Devpost 192 + Luma 480 + AIOS 23）；红线取 35%，警戒 55%
+  events:        { min: 604, warnBelow: 950, shrink: 0.70, label: 'AI 活动' },    // 实测 1727（Devpost 193 + Luma 1498 + Devfolio 13 + AIOS 23）；红线 35%，警戒 55%
   news:          { min: 200, warnBelow: 800, shrink: 0.70, label: '情报归档' },   // 实测 2235
   resources:     { min: 12,  warnBelow: 16,  shrink: 0.80, label: '工具箱' },     // 实测 21
   bench:         { min: 120, warnBelow: 140, shrink: 0.75, label: '评测' },       // 实测 155
   signals:       { min: 8,   warnBelow: 12,  shrink: 0.70, label: '一手信号' },   // 实测 21
-  aaModels:      { min: 150, warnBelow: 200, shrink: 0.70, label: 'AA 智能指数' }, // 实测 266
   orApps:        { min: 10,  warnBelow: 15,  shrink: 0.60, label: 'OR 应用榜' },  // 实测 25
-  orModels:      { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'OR 模型榜' },  // 实测 20
   hnSignals:     { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'HN 民间声量' }, // 实测 16
 };
 
@@ -58,13 +56,12 @@ export const LAYERS = {
  * optional:true —— 可选本地层（AIOS 读本机文件）。没装 AIOS 就该是 0，
  * 所以不设绝对下限；但只要上一版有、这一版凭空变 0，就是采集中断，照样判死。
  *
- * TODO(校准) 采集端扩容落地后（Devpost 192 + Luma 463 + AIOS 23 ≈ 678），
- * 按实测总量重算：总量 min≈35%、warnBelow≈55%；分源 min 取各源实测的 ~35%：
- *   devpost ≈ 67、luma ≈ 162、aios 维持可选。
- * 先按保守值跑，避免 collector 中途写 data.json 时误报。 */
+ * 阈值口径：总量 min≈35%、warnBelow≈55%；分源 min 取各源实测的 ~35%。
+ * 实测值见每行末尾的注释（T4.7 起改为按 7 次成功快照的中位数自动校准，
+ * 在那之前这里的数字是人工核对的基线）。 */
 export const EVENT_SOURCES = {
-  devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 192；红线 35%，警戒 55%
-  luma:     { min: 168, warnBelow: 264, label: '活动源 Luma' },     // 实测 480；同上
+  devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 193；红线 35%，警戒 55%
+  luma:     { min: 524, warnBelow: 823, label: '活动源 Luma' },     // 实测 1498（含地理维度）；红线 35%，警戒 55%
   // Devfolio 只收 AI 相关的未截止场次，量小但真实（实测 9 条）。红线放到 3，防整源归零。
   devfolio: { min: 3,   warnBelow: 6,   label: '活动源 Devfolio' },
   aios:     { min: 0,   warnBelow: 0,   label: '活动源 AIOS', optional: true },
@@ -84,7 +81,7 @@ function semanticChecks(d) {
   const warn = (k, msg) => issues.push({ level: 'warn', key: k, msg });
 
   // 1. 活动：status 为 open/upcoming 的，不能已经过了 end 日期
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const ev = Array.isArray(d.events) ? d.events : [];
   const deadOpen = ev.filter((e) => e.status !== 'past' && e.end && e.end < today);
   if (deadOpen.length) red('events', `${deadOpen.length} 个活动标着「开放中」但截止日期已过（最早 ${deadOpen[0].end}：${deadOpen[0].title}）`);
@@ -133,15 +130,26 @@ function semanticChecks(d) {
   const gen = Date.parse(d.meta?.generated_at || '');
   if (!Number.isFinite(gen)) red('meta', 'generated_at 缺失或无法解析');
   else {
-    const ageH = (Date.now() - gen) / 3600000;
+    const ageH = (now().getTime() - gen) / 3600000;
     if (ageH < -1) red('meta', `generated_at 在未来（${d.meta.generated_at}）`);
     else if (ageH > 48) red('meta', `数据已 ${ageH.toFixed(1)} 小时未更新`);
     else if (ageH > 30) issues.push({ level: 'warn', key: 'meta', msg: `数据已 ${ageH.toFixed(1)} 小时未更新，接近日更上限` });
   }
 
-  // 6. 汇率：必须是正数且接近合理区间
+  // 6. 汇率：数值合理 + 来源可信（F23）
+  // 只查区间是不够的：回退到写死的 7.1 时区间照样通过，读者看到的每个人民币价
+  // 都可能来自一个过期固定值，而页面说一切正常。[warn] 级在页面横幅可见。
   const fx = Number(d.meta?.fx?.USDCNY);
   if (!(fx > 4 && fx < 12)) red('meta', `汇率异常：USDCNY=${d.meta?.fx?.USDCNY}`);
+  else if (d.meta?.fx?.source === 'fallback') {
+    issues.push({
+      level: 'warn',
+      key: 'meta',
+      msg: `汇率回退到固定值 ${fx}（实时源不可用），人民币价按它折算`,
+    });
+  } else if (d.meta?.fx?.stale) {
+    issues.push({ level: 'warn', key: 'meta', msg: '汇率沿用了上次的值，今天的实时源没拿到' });
+  }
 
   // 7. 中转站：在册站点里至少要有一批真的探测成功
   const rl = d.relays || [];
@@ -157,6 +165,20 @@ function semanticChecks(d) {
     else if (span < 30) red('news', `情报跨度只有 ${span} 天（归档应当只增不删，跨度塌缩说明被覆盖了）`);
     else if (days < 10) issues.push({ level: 'warn', key: 'news', msg: `情报只有 ${days} 天有内容，跨度 ${span} 天，中间大量空窗` });
     if (Number(ni.bytes || 0) > 4 * 1024 * 1024) issues.push({ level: 'warn', key: 'news', msg: `情报归档 ${(ni.bytes / 1048576).toFixed(1)}MB，超过 4MB 该收紧保留了` });
+
+    /*
+     * 最新一条的年龄（F09）。
+     *
+     * 只看跨度与天数会被「三路源全挂」骗过去：归档只增不删，跨度永远够大，
+     * 于是十几天没新条目也一路绿灯。这里按 Asia/Shanghai 归日算年龄：
+     * 2 天前 warn、3 天前 red —— 日更的站点不该连续两天没有新东西。
+     */
+    const last = ni.last ? String(ni.last).slice(0, 10) : null;
+    if (last && /^\d{4}-\d{2}-\d{2}$/.test(last)) {
+      const ageDays = daysBetween(last, todayInShanghai());
+      if (ageDays >= 3) red('news', `情报最新条目停在 ${last}（${ageDays} 天前），源可能全挂了`);
+      else if (ageDays >= 2) issues.push({ level: 'warn', key: 'news', msg: `情报最新条目停在 ${last}（${ageDays} 天前）` });
+    }
   }
 
   // 9. 采集明细：能定位是哪一层空掉的
@@ -164,6 +186,24 @@ function semanticChecks(d) {
   if (stale.length) issues.push({ level: 'warn', key: 'collect', msg: `${stale.length} 层沿用了上一版数据：${stale.map((s) => s.layer).join(', ')}` });
 
   return issues;
+}
+
+/** 今天（Asia/Shanghai）的 YYYY-MM-DD。归日口径与情报层保持一致（S2.2）。 */
+function todayInShanghai() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now());
+}
+
+/** 两个 YYYY-MM-DD 相差几天（后 - 前）。用 UTC 相减，避开夏令时。 */
+function daysBetween(from, to) {
+  const a = Date.parse(`${from}T00:00:00Z`);
+  const b = Date.parse(`${to}T00:00:00Z`);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 0;
+  return Math.round((b - a) / 86400000);
 }
 
 /* ────────────────── 按来源分层的活动门禁 ──────────────────
@@ -226,7 +266,10 @@ export function checkData(d, prev) {
 
   const countOf = (k) => {
     const c = d.meta?.counts || {};
-    if (k === 'subsThird') return (d.subsThird || []).length;
+    // D3：subsThird 现在是按产品的统计行，门禁要的是挂单总数（各产品 listings 之和）
+    if (k === 'subsThird') {
+      return (d.subsThird || []).reduce((n, x) => n + (x.listings || 0), 0);
+    }
     if (k === 'relaysLive') return (d.relays || []).filter((r) => r.status === 'ok').length;
     if (k === 'subsRegions') return (d.subsRegions || []).length;
     return c[k] ?? (Array.isArray(d[k]) ? d[k].length : 0);

@@ -6,7 +6,22 @@ node_modules/
 .wrangler/
 dist/
 
-# 采集的中间产物（data.json 每天 700KB，提交会撑爆仓库；只上传到 Pages）
-# 注意：data.json 当前仍在版本控制里作为「基线快照」，如需彻底停止跟踪，
-# 执行 git rm --cached data.json 后取消下面这行注释。
-# data.json
+# Ralph 循环的日志与完成标记
+.ralph/
+
+# 测试覆盖率报告
+coverage/
+test-results/
+playwright-report/
+
+# 本地拉取的 data 分支快照（npm run data:pull）
+.data/
+
+# 采集的生成物（T2.1 起不再跟踪）：data.json 约 700KB、bench.json 约 3.5MB，
+# 每天重建一次，提交只会让仓库膨胀。需要它们时跑一次采集即可。
+data.json
+bench.json
+# 情报归档自 T4.1 起迁到 data 分支的 news/ 月度分片，main 上不再保留
+
+# T4.1: Data branch staging (T4.1)
+.data/

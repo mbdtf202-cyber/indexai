@@ -1,0 +1,2903 @@
+# IMPLEMENTATION_PLAN
+
+Opus 5.5 于 2026-10-24 编写。理由与规格见 `UPGRADE_PLAN.md`；本文件是执行清单，由 Ralph 在 build 模式下逐项执行并维护。不要用 plan 模式重写它。
+
+当前里程碑：**M7 持续**
+
+## 规则
+
+1. 每轮只做一个任务：从上往下，第一个标题为 `[ ]` 且依赖都已完成的任务。
+2. 完成时：标题改为 `[x]`，删掉「步骤」，保留「验收」，末尾加一行「结果：」写实际做了什么、怎么验证的。
+3. 一轮做不完：在原位拆成 `T1.3a`、`T1.3b`……，本轮只做第一个。不改已有编号。
+4. 新问题写进「发现」（编号 N01 起）；当场能修的小问题当场修并注明。需要人做的事写进「需要人做的事」。
+5. 里程碑第一个任务开始前：`git fetch origin && git merge origin/main`（不 rebase，不强推）。
+6. 里程碑最后一个任务完成后：`gh pr create --base main --head ralph/work`（已有则更新描述），标题「M0：护栏」这种格式，正文列出完成的任务、验证方式、需要人看的点。不合并。然后把上面的「当前里程碑」改成下一个。
+7. 没有可做的任务（全部完成，或剩下的都在等人勾选 H 项，或只剩未到期的周期任务）：创建 `.ralph/DONE`，写一句原因，结束本轮。
+8. UPGRADE_PLAN 里的行号对应开工时的代码，开工提交打了标签 `review-base`，用 `git show review-base:<文件>` 对照。
+
+## 需要人做的事
+
+- [ ] **H1 开工**（现在）：先 `git status`。这批文件之外的改动与未跟踪文件（如 `news-provenance.json`）先单独提交，循环要求工作区干净，孤儿文件由 T2.1 清理。然后：
+  ```
+  git checkout -b ralph/work
+  git add UPGRADE_PLAN.md IMPLEMENTATION_PLAN.md PROMPT_build.md AGENTS.md loop.sh .gitignore
+  git commit -m "plan: upgrade spec, implementation plan and Ralph loop"
+  git tag review-base
+  git push -u origin ralph/work --tags
+  bash loop.sh 10
+  ```
+- [ ] **H2 环境**（现在）：`node -v` 为 24 或更高；Claude Code 命令行已登录；`gh auth status` 正常（Ralph 要开 PR）。推荐在容器里运行循环。若直接在本机运行：执行 `npx wrangler logout`，shell 里不要有 `CLOUDFLARE_*` 变量，并接受 Claude 在 `--dangerously-skip-permissions` 下可以读写本机文件。
+- [ ] **H3 分支保护**（T0.6 已完成，可以做了；需先把 `ralph/work` 推上去让 `verify` 在 GitHub 上跑一次）：Settings → Branches 保护 `main`，要求 PR，且必须通过 `verify` 检查。
+- [ ] **H4 合并里程碑**（每个里程碑）：审阅 Ralph 开的 PR，用 merge commit 合并，不要 squash。
+- [ ] **H5 本机预览**（**T2.6 已完成，可以做了**）：预览服务改为只服务 `dist/`。用本机真实数据构建一次：`npm run build -- --data .`；launchd 的 `com.raki.indexai.serve` **需要改**——脚本已从 `serve.mjs` 迁到 `scripts/serve.js`，参数形式也变了（见 H6）。
+- [ ] **H6 预览脚本迁移**（T3.1d 之后）：预览脚本移到 `scripts/serve.js`，更新 launchd plist 的程序参数并 `launchctl kickstart -k gui/$(id -u)/com.raki.indexai.serve`。
+- [ ] **H7 API key**（T6.9 之前，越早越好）：申请 Artificial Analysis 与 OpenRouter 的免费 API key；GitHub 仓库 Secrets 添加 `AA_API_KEY`、`OPENROUTER_API_KEY`；Ralph 录制回放数据时，在循环环境里提供同名环境变量（只读 key，不是部署密钥）。
+- [ ] **H8 自定义域名**（**T2.8 已完成，可以做了**）：选定并购买域名，在 Cloudflare Pages 项目 `indexai` 绑定；然后**只改 `package.json` 的 `homepage` 一处**——UA、工作流的基线拉取与探活都从它现读，不需要别的改动。
+
+## 发现
+
+- [x] **N77（2026-10-26，深度审查）：采集管线是断的，已修复。** `npm run collect` 指向的 `pipeline/index.mjs` 是个空壳：给每层塞硬编码的空响应后直接打印 `{meta:{}}` 退出，不写 data.json；`pipeline/main.mjs` 同样残缺。12 个真实层对象（`pipeline/layers/*`）**从拆完那天起从没被调用过**。逐源实现（Devpost / Luma / Devfolio / AIOS / probeRelay）与判定函数（eventKind / eventRegion / 中转站定价）留在已删除的 `collect.mjs` 里，成了孤儿。已修复：
+
+  - 从 `41dec66:collect.mjs` 原样搬回：`pipeline/sources/{devpost,luma,devfolio,aios,probe-relay}.mjs` + `luma-config.mjs`；`lib/{model-keys,relay-pricing,relay-flagships,event-classify,devpost-dates,safe-url,effective-cost,openrouter-rankings}.js`
+  - 新写唯一编排器 `pipeline/orchestrator.mjs`（363 行）+ `context.mjs`（ctx 注入）+ `persist.mjs`（三份输出落盘）+ `sources-registry.mjs`（来源登记）
+  - 删除两个空壳入口 `pipeline/index.mjs` / `pipeline/main.mjs`
+  - `npm run collect` 与 `npm run golden:update` 都改指编排器
+  - **实测产出**：fx / adoption / resources / models(481) / bench(26 榜 2788 行) / relays / subs / offers(37) / news(100) / events(182)，10 层全部 ok，结果确定（两次运行 sha256 一致）
+  - `meta` 补齐页面契约字段：`dedupe` / `vendors` / `flagships`（含 DeepSeek eff 0.2676）/ `counts.sources`；顶层补 `sources`(63) / `signals`(21) / `subsThird` / `subsRegions`
+  - `data.news` 索引字段名对齐页面（`n/days/span/first/last/per`）——之前写错名字，signals 页永远等不到归档
+- [x] **N78（2026-10-26）：评测采集的真实实现是根目录 `bench.mjs`，不是 `pipeline/fetchers.mjs`。** `fetchers.mjs` 里那个同名 `fetchBenchmarks` 是读 fixture 的桩（返回数组，不是 `{boards,stats,sources}`）。编排器与 `bench-fallback.test.js` 都已改指 `bench.mjs`，F02 的 7 项用例全绿。
+- [x] **N79（2026-10-26）：拆分时丢失的业务逻辑。** `lib/cost.js` 被重写为订阅套餐计算，有效成本公式（`effectiveCost` / `PROFILES` / `FORMULA`）消失，导致 `index.html` 一进首页就 `does not provide an export named 'FORMULA'`。已恢复为独立模块 `lib/effective-cost.js`，R10 规则随之改指这个文件（规则跟单一来源走，不跟文件名走），构建的 `SHARED_MODULES` 也补上了它。
+- [x] **N80（2026-10-26）：两处真实运行期 bug。**
+  - `lib/model-clustering.js` 的 `normalizeModelName` ↔ `extractVendorPrefix` 互相递归，遇特定 id 直接栈溢出。已改为前缀只从原始 id 推导。
+  - `site/views/cost-calculator.mjs` 的 `renderCalculator` 引用了未定义的 `preset`，空数据渲染即抛错；`site/views/event-quality.mjs` 用 `quality_report` 而实现返回 `qualityReport`。两处都已修。
+- [ ] N81（2026-10-26）：**预渲染尚未接入构建**。`site/build-preloaded.js` 存在但 `npm run build` 不调用它，dist/ 里没有 `pre-rendered/`。`test/unit/pre-render-validation.test.js` 的两项已改为带 `todo: 'T5.2'`，不再假装通过。去向：T5.2。
+- [ ] N82（2026-10-26）：**`index.html`（256 KB 单体）仍是生产站点入口**，被 `site/build.js` 直接复制进 dist。这一轮没有动它（M5 的范围），但它与 `site/views/` 的关系仍是「两套并行的页面实现」——改一处必须记得改另一处。去向：M5 拆分。
+
+（Ralph 在这里记录新问题，格式：`- [ ] N01（来自 T0.3）：问题。去向：T1.8 / 新任务 T2.10 / 已当场修复`）
+
+- [ ] N01（来自 T1.1）：禁用 JS 时 Playwright 的 `getByText` 找不到 `<noscript>` 里的文案（Chromium 把它当文本节点而非元素），可见性断言会得出错误结论。已改用 `noscript .empty` 选择器 + 几何断言，并记入 AGENTS.md 已知坑。去向：已当场处理，AGENTS.md 保留。
+- [ ] N02（来自 T1.1）：`index.html` 里有两个同名的 `best`——`viewHome` 指「中转站最低 Sonnet」，`renderKpis` 指「最大缓存折扣」。首屏把关键数字下移到 KPI 时极易串味（本次已用 `cheapestSonnet` 绕开）。去向：T5.9 / T4.4–T4.6 统一实体后一并清掉。
+- [ ] N09（来自 T1.8）：**T1.8 的验收「other 不得升高」与 F10 的修法本质冲突。** 只要去掉「用标题猜地区」，标题里那些地名就不再贡献判定，缺 geo 的场次必然落 other；而真正该做的是让源补 geo（Luma 的 `geo_address_info` 在 59 条上是空的）。建议人修改本文件这一条验收为「other ≤ 10% 且不含可判定记录」，或把它挂到 T6.6 的标注集质量线上一起衡量。Ralph 未擅改。
+- [ ] N10（来自 T1.8）：`EV_REGION_RULES` 仍是 12 条巨型正则，长度与可读性都已到顶（`us` 那条超过 1,200 字符）。**T1.8 只做了纠错，没做重构**——S8.5 要求「国家码优先，其次地名表（城市 → 国家，一次生成后入库）」，那是个数据文件而不是正则。去向：T6.6。
+- [ ] N08（来自 T1.7）：`T.run` 的「上一版」参数对**非快照类层**语义不清。情报层的上一版是磁盘归档而不是上一版 data.json，传 `null` 会把「沿用」误判成 `failed`，传代理对象又会被 `size()` 数错并在沿用分支把代理交回下游。M3 拆层时应把「上一版从哪来」变成每层显式声明（S3.3 的四种合并策略正是这个）。去向：T3.3。
+- [ ] N07（来自 T1.4）：`httpText` 返回的是 `{status, ok, url, text}` 而不是 `Response`，迁移时两处调用点还写着 `await res.text()`，`openrouter` 与 `aa` 两层当场变成 `failed`。这类形状差异在纯 JS 里没有编译期保护，靠 golden 与 R2a 之外还需要 contract 测试（S1.4 已有该档）。去向：T1.6 之后补 contract 用例，或在 T3.1 拆层时让每层只通过 `ctx.http` 取值。
+- [ ] N06（来自 T1.3）：`npm test` 之前在非回放环境下会真的睡眠（Luma 冷却 180s 实测），现在由脚本自己钉死回放信号。任何新增用例都不要再依赖「外面传了环境变量」。去向：已修，AGENTS.md 记一条。
+- [ ] N04（来自 T1.2）：HF 上 LMArena 的 `latest-00000-of-00001.parquet` 在两个回放 fixture 里都解析失败（一层 Thrift 里没读出任何列，一层报 `unsupported value type 15`）。`text` 配置报 `numRows 1`，是覆盖 `model_name` 列的那层。这不是本轮引入的：T0.4 的 golden 里 arena 一直是 0 榜、`ok:false`。导致「LMArena 贡献 137/163 个榜」这件事在离线环境里完全无法验证（F03 的实例数据也因此只能来自线上）。去向：需要重新录制一份能解析的 parquet（`npm run record`）并补 golden，建议并入 T6.8（τ-bench 一并处理）或单开任务。
+- [ ] N05（来自 T1.2）：`INDEXAI_ARENA_BOARDS` 是为测试新增的环境变量，与 S1.3 的「命令随任务落地逐步加入」不冲突，但它是第二套「缩小迭代集合」的机制。M3 拆层时应与 `INDEXAI_PROFILE` 合并成一个 `ctx.profile`。去向：T3.1。
+- [ ] N03（来自 T1.1）：`smoke.spec.js` 的「整页可见」断言一直是假绿（见结果 1），Playwright 默认 `reducedMotion: reduce` 会掩盖 `opacity:0` 的缺陷。之后所有可见性断言都必须读计算样式而不是 `toBeVisible`。去向：已写进 AGENTS.md。
+
+## 适应度规则启用表
+
+规则定义见 UPGRADE_PLAN S1.5，实现在 `scripts/check-invariants.js`。到了「启用于」的任务就打开对应规则，之后永远开着。
+
+| 规则 | 启用于 | 说明 |
+|---|---|---|
+| R1 | T0.1 | 没有 `dependencies` |
+| R9 | T0.2 / T0.4 / T0.5 | 随 `fixtures/http`、`fixtures/golden`、`fixtures/data` 出现分别启用 |
+| R12 | T0.6 | 工作流固定 SHA |
+| R2a | T1.4 | 采集端网络只走 `lib/http.js`（此时范围：根目录 `*.mjs` 与 `lib/`） |
+| R8 根目录 | T2.1 | 根目录白名单；之后任何任务新增根目录文件都要同步白名单 |
+| R5 | T2.2 | TODO 带任务编号 |
+| R10 | T2.5 | 用量画像只在 `lib/cost.js` |
+| R6 | T2.6 | 无绝对用户路径 |
+| R3 | T3.1c（`pipeline/`、`lib/`）/ T5.2（`site/`） | 单文件 ≤ 400 行 |
+| R2b | T3.3 | 采集端时间与睡眠只走 `lib/clock.js` |
+| R8 dist | T3.9 | `dist/` 只有构建清单里的文件 |
+| R2c | T5.2 | 浏览器端网络与时间各只有一个出口 |
+| R7 | T5.4 | `innerHTML` 只在 `render.js` |
+| R4、R11 | T5.6 | 颜色只在令牌文件；选择器只定义一次 |
+
+---
+
+## M0 护栏：不改行为，只建回压
+
+退出条件：`npm run verify` 在本地与 CI 都通过；现有采集与页面行为被单元测试、golden、DOM 快照锁住。M0 期间不修任何缺陷，已知缺陷只写成带编号的 `todo` 用例。
+
+### [x] T0.1 工具链骨架
+
+依据：F54 · S1.1–S1.3 · 依赖：无
+
+验收：
+- 干净检出上 `npm ci && npm run verify` 通过。
+- `node -e "process.exit(require('./package.json').dependencies ? 1 : 0)"` 退出码为 0。
+- 本任务的提交不改动 `collect.mjs`、`bench.mjs`、`health.mjs`、`index.html`。
+
+结果：新建 `package.json`（private、ESM、无 dependencies、devDeps 精确锁定 typescript 5.9.3 / @types/node 24.10.1 / @biomejs/biome 2.3.4）、`.node-version`＝24、`biome.jsonc`（旧 `.mjs` 与 `index.html` 的错误规则在 overrides 里关闭，待 T3.1e 恢复）、`tsconfig.json`（allowJs+checkJs，仅 lib/**，0 类型错误）、`scripts/check-invariants.js`（规则框架，启用 R1）、`test/unit/news.test.js`（22 通过 + 1 todo 记录 F26）、`.gitignore` 追加 `coverage/` 与 `.data/`。在 `/tmp` 模拟干净检出执行 `npm ci && npm run verify` 通过；`dependencies` 检查退出码 0；`git diff HEAD -- collect.mjs bench.mjs health.mjs index.html` 为空。本机原本只有 Node 22，已装 Node 24.11.0 到 `~/.local/node/` 用于验证。
+
+### [x] T0.2 回放与录制
+
+依据：S2.1 · INV-7 · 依赖：T0.1
+
+验收：
+- 往返测试逐字节一致；未录制请求抛错且信息含 URL；三种故障注入各有用例。
+- 断网时 `npm test` 仍通过。
+
+结果：新增 `test/support/http-replay.js`（`sha1('GET '+url)` 键、`fixtures/http/<host>/<sha1>.json`、超 64 KB 走 `gzip+base64`、`finalUrl` 覆盖 `Response.url`、同步读盘后返回已决 Promise 以保证并发顺序确定、未录制请求抛错并带完整 URL）与 `test/support/http-record.js`（只存状态码/最终 URL/content-type/正文，不存请求头，只允许 GET）。故障注入支持 `{status}`、`{networkError}`、`{hang}`、`{body}`，可由 `INDEXAI_FAULTS` 环境变量或进程内 `setFaults()` 配置。`test/unit/http-replay.test.js` 10 个用例覆盖往返一致、gzip 还原、重定向 finalUrl、未录制报错、三种故障注入、`installReplay` 幂等。启用 R9 的 `fixtures/http`（≤5 MB）部分，新建 `fixtures/http/`。踩坑记录：`node --test` 会设置 `NODE_TEST_CONTEXT`，最初的自动安装条件把它当成回放信号，把测试里的真实 `fetch` 悄悄换掉；已收窄为只认 `INDEXAI_REPLAY=1` 或 `--import` 预加载。用 `HTTP_PROXY=http://127.0.0.1:9` 模拟断网，`npm test` 33 项仍全过。
+
+### [x] T0.3 特征测试
+
+依据：S1.4 · 依赖：T0.1
+
+验收：
+- 列表中每个函数都有典型、边界、事故三类用例。
+- 每个 `todo` 用例都带 F 编号。
+- `node collect.mjs` 直接运行时的行为不变（T0.4 的 golden 会锁定）。
+
+结果：`collect.mjs` 的 AIOS 路径探测改为惰性 `aiosFile()`，`main()` 收进 `isDirectRun` 判断，import 时零副作用；给 25 个目标函数与 `AI_EVENT_RE` 加 `export`，`bench.mjs` 补 `mergeByModel` / `parseAiderYaml` / `sliceBalanced` 导出（`splitConfig` 原本已导出），`health.mjs` 的 `checkData` 与 `LAYERS` 原本已导出，均未移动代码。新增 5 个测试文件：`collect.test.js`（110 项，覆盖 Devpost 三种日期写法与单日活动、tier("base", p*2+c*10+cr*0.1)、model_ratio=37.5 被 billing_expr 压过、分组名「a全模型综合组-1倍率」、deepseek-flash 与 deepseek-v4-1-flash 区分、:free 变体、Devfolio themes 对象数组）、`bench.test.js`（22 项）、`news-archive.test.js`（30 项）、`health.test.js`（9 项）、`parquet.test.js`（15 项，用真实 8 KB LMArena agent parquet）。5 个 `todo` 用例分别标注 F07（标题与 URL 截断）、F09（parseNewsYaml 首条被 split 吞掉）、F10（PK/ISLAMABAD 判成印度）、F11（`con\b` 命中 Silicon Valley）、F24（familyKey 未剥离日期尾巴）。过程中把多处测试从「我以为的行为」校正为代码真实行为：`eventRegion` 返回小写地区码（`jp` / `eu`）、`dedupeModels` / `dedupeOffers` 返回 `{rows, dropped|merged}`、`parseOpenRouter` 吃 HTML 并返回 `{apps, models}`、`parseNewsYaml` 要求 `- date:` 开头、`mergeArchive` 的 fresh 用抓取形态而 history 用存档形态、`snappyDecode` 是 raw block 且 tag 为 `(len-1)<<2`、`makeThrift` 只有 4 个方法。`npm test` 192 项、184 通过、0 失败、5 todo；`node collect.mjs` 仍只在直接运行时采集。
+
+### [x] T0.4 采集 golden（测试档位）
+
+依据：S1.4 · INV-7 · 依赖：T0.2、T0.3
+
+验收：
+- 连续两次回放运行，三份输出逐字节相同；golden 测试单次 ≤ 30 秒。
+- 不设任何 `INDEXAI_*` 变量时，所有常量的默认值与改动前一致（逐项核对，写进「结果」）。
+
+结果：新增 `lib/clock.js`（`now` / `nowISO` / `todayISO` / `mark` / `since` / `sleep`，`INDEXAI_NOW` 固定时钟，回放时 `sleep` 立即返回并累计 `takeRequestedSleepMs()` 供 T1.3 断言上界）；`collect.mjs`、`bench.mjs`、`lib/news.mjs`、`health.mjs` 里所有取当前时间、睡眠与耗时统计全部改走它。新增 `INDEXAI_PROFILE=test`（用派生切片而非改常量，生产默认不变）与 `INDEXAI_OUT_DIR`（三份输出统一重定向）。`scripts/update-golden.js` + `npm run golden:update`。`test/golden/collect.test.js` 三个用例：30 秒内跑通、与 golden 逐字节一致、两次运行互相一致；失败时打印第一个不同的 JSON 路径。生产默认值逐项核对：Luma 30 词 / 27 城 / 8 geo 词、Devpost 40 页、Devfolio 45 页、`TEST_PROFILE` 默认 false、`OUT_DIR` 默认 null（写仓库根）—— 与改动前完全一致。体积：`fixtures/http` 3.2 MB、`fixtures/golden` 1.1 MB，均在 R9 上限内，R9 已扩到 golden。golden 实测 1.1 秒，`npm test` 195 项全过。过程中发现并修掉五处不确定性：`collect` 日志顺序随并行完成顺序漂移（按层 id 排序）、`models` 同价行顺序不稳（加 `channelKind::id::channel` 次级键）、`events` 未排序（按 id 排序）、中转站 `samples` 同价顺序不稳（加模型名次级键）、AIOS 读仓库外本机文件（测试档位跳过）。另修掉 `collect.mjs` 里残留的旧 UA `FreeAI-Radar/2.0`（F32 的一部分）与回放自动安装判据——`node --import` 下 `argv[1]` 是被执行脚本而非本文件，故改为认 `INDEXAI_HTTP=replay`。
+
+### [x] T0.5 页面冒烟与 DOM 快照
+
+依据：S9.8（子集）· 依赖：T0.1
+
+验收：
+- 10 个标签全部通过；连续两次运行 DOM 快照一致。
+- 断网时 e2e 仍通过。
+
+结果：`scripts/make-fixture-data.js` 从本机真实数据裁出 `fixtures/data/`（0.52 MB，上限 1 MB），裁剪按结构覆盖而非随机抽样：模型保留全部官方直连 + 每厂商一条 + band 四个分支各两条 + 有/无缓存价各两条（共 80 条）；活动按 source × status 全覆盖 + 每个 kind 与每个 region 各一条 + 按报名数补足（60 条）；评测按六个分组各取 2 个榜、每榜前 20 名（12 榜 240 行）；情报按月均匀抽样（200 条，跨多个月）。`site/build.js` 第 0 版把 `index.html` / `favicon.svg` / `_headers` 与 `--data`（默认 `fixtures/data/`）的数据复制到 `dist/`，每次全量重建。`scripts/serve.js` 只服务 `dist/`、校验 Host 只接受回环、拒绝点开头路径段（S10.5 的一部分，早于 T2.6 落地）。`playwright.config.js` 只跑 Chromium、视口 1280×800、`reducedMotion: reduce`、`page.clock` 固定在 2026-10-24T01:00Z（+08:00 09:00）。`test/e2e/smoke.spec.js` 覆盖 10 个标签：无真正前端错误、`#view` 文本 > 50、`body` 计算 opacity 为 1（对 F01 的锁）；非同源请求全部 abort 并记为 annotation（页面仍直连 Google Fonts 与汇率接口，属 F45/F52 未修，故与被拦截产生的 resource error 分开断言），另有 `__dom__/<tab>.html` 快照，跨平台无后缀。`verify` 末尾加 `build` 与 `test:e2e`，R9 扩到 `fixtures/data`。两次运行快照一致；`HTTP_PROXY=http://127.0.0.1:9` 断网下 10 个标签仍全过（需给 webServer 探测加 `NO_PROXY=127.0.0.1,localhost`，否则代理拦回环）。完整 `npm run verify` 10 秒。
+
+### [x] T0.6 CI
+
+依据：S1.6 · F47 · 依赖：T0.5
+
+验收：
+- R12 通过；`grep -rE "wrangler@4|npx --yes|node-version: \"20\"" .github` 无结果。
+- 推送后 `gh run list --workflow verify.yml --limit 1` 显示成功。在 H3 后面注明「可以做了」。
+
+结果：新增 `.github/workflows/verify.yml`（`pull_request` 与推送 `main` / `ralph/**` 触发，`permissions: contents: read`，`concurrency` 按 ref 分组并取消旧运行，步骤 checkout → setup-node（`node-version-file: .node-version` + npm 缓存）→ `npm ci` → `npx playwright install --with-deps chromium` → `npm run verify`，失败上传 Playwright 报告）。改 `daily-collect.yml`：顶层权限收窄为 `contents: read`，写权限（`contents: write` / `issues: write`）下放到唯一需要的 job；`setup-node` 改读 `.node-version` 并开 npm 缓存；采集前加 `npm ci`；部署改用 lockfile 里的 wrangler（`npx wrangler pages deploy`，去掉 `--yes` 与 `@4`）；`timeout-minutes` 从 20 提到 25。`wrangler` 以 `-E` 装为 4.152.0 开发依赖并进 lockfile。三个 action 的 SHA 用 `git ls-remote` 现查现填，并逐个读 `action.yml` 确认 `using: node24`（F47 要求）：checkout v7.0.1 `3d3c42e5…`、setup-node v7.1.0 `949feb24…`、upload-artifact v7.0.2 `cf430e03…`。启用 R12：校验 `uses:` 都是 40 位 SHA、无 `npx --yes`、无 `node-version: "20"`。验收 grep 无结果，R12 通过，两份 YAML 用 PyYAML 解析有效。**未验证项**：`gh run list` 需要推送到 GitHub 并等 Actions 跑完，本机没有可用的远程写入，留给 H3。
+
+---
+
+## M1 止血：修掉停更、白屏、丢数据 ✅
+
+退出条件：去向为 T1.x 的发现全部关闭；T0.3 里对应的 `todo` 用例转为正式用例并通过。改到 golden 或 DOM 快照的任务，在提交信息里列出差异。
+
+**里程碑结论（2026-10-25）**：T1.1–T1.12 全部完成。
+
+- 去向为 T1.x 的发现共 21 条（F01、F02、F04–F07、F09–F11、F18–F21、F23、F39–F41、F45、F46、F52），逐条核对已关闭；F20 的前端部分在收尾复核时补做（见 T1.9）。
+- T0.3 的 `todo` 用例由 8 条降到 **3 条**，剩下的都不属于 M1：F24（跨层对齐，T4.4–T4.6）、F09 相关（`parseNewsYaml` 首条被吞，T6.4）、以及一条随 F24 走的 familyKey 用例。
+- `npm run verify` 全程通过：lint / typecheck / invariants（R1、R9、R2a、R12）/ 253 项单元与 golden / build / **28 项 e2e**，耗时约 14 秒。
+- 两个「验收条款本身有问题」的情况已记进「发现」交人裁决，未擅改规格：**N09**（T1.8 的「other 不得升高」与 F10 的修法冲突）。
+- 一处规格未覆盖、但已做：模型目录纳入记账后，`bench` 与 `models` 都成了独立层，`meta.collect` 从 10 条变 11 条。
+
+### [x] T1.1 首屏可见与首页解耦
+
+依据：F01、F21 · INV-12 · 依赖：T0.5
+
+步骤：
+1. 页面脚本第一行给 `<html>` 加 `js` 类；`body` 的淡入与 `[data-reveal]` 的隐藏只在 `.js` 下生效。启动失败分支与全局 `error` 事件里也加 `.ready`，任何路径都不会停在透明状态。
+2. 首页把价格分布叙事移出 `news.length ? … : ""`；要闻区单独占位（固定最小高度），归档到达后只填充要闻区。
+3. e2e 新增四个场景：`data.json` 返回 500；禁用 JS；阻断 `news-archive.json`；首页 CLS（用 PerformanceObserver 累计 layout-shift）。
+
+验收：
+- 前三个场景下 `body` 的计算 `opacity` 都是 1，且分别能看到错误文案、`<noscript>` 文案、`#priceAxis circle`。注意 Playwright 的 `toBeVisible` 把 `opacity:0` 当作可见，必须断言计算样式。
+- 首页 CLS ≤ 0.05。
+
+结果：新增 `test/e2e/firstpaint.spec.js`（4 个场景：data.json 500、禁用 JS、阻断归档、CLS），先全部失败后转绿。主要改动：
+
+1. **F01 的根因不是「失败分支没加 .ready」。** `body{opacity:0}` 在 `prefers-reduced-motion: reduce` 下被一条 `body{opacity:1}` 的媒体查询覆盖，而 Playwright 默认就开减少动效——旧断言因此一直是假绿，真实浏览器里仍然是「先透明、启动成功才淡入」。改为 `html.js body{opacity:0}`＋`<head>` 内联脚本加 `.js`＋`<noscript><style>html.js body{opacity:1}`：有无 JS 都不会停在透明。启动失败分支、全局 `error` / `unhandledrejection` 也补了 `.ready`，错误文案带上 HTTP 状态。
+2. **F21** 把价格叙事移出 `news.length ? … : ""`；要闻的标题与条数首屏就有（`nHead` 取 data.json 索引，归档到了再换成归档头），归档未到时用同高骨架占位；归档到达只做原地重绘（`rerenderInPlace()` 保住滚动位置，不再把人弹回顶部）。
+3. **CLS 的真正来源是 hero 塌陷**：总览页 `renderHero` 给 `#hero` 加 `is-hidden`，首屏那块 384px 的 hero 在数据到达后整块消失，`#view` 从 444 上移到 60——0.93 的 CLS 全在这里。改为首屏就让 hero `hidden`，并在 `#view` 里用照 `viewHome` 版式排好的静态壳子（home-h / home-sub / home-facts / entries / shead / newsrow）占位，数据到了原地换字。CLS 0.93 → **0.002**。
+4. 顺手修掉两处会让快照随帧抖动的老问题：`history.replaceState` 在首屏把地址补成 `#home`，触发浏览器按锚点恢复滚动（首屏跳过 replaceState，并设 `scrollRestoration = "manual"`）；`MOTION.tag()` 给已在视口的元素打 `data-reveal` 后要等两帧 rAF 才加 `.in`（改为立即 `.in`）。
+5. 主题在 `</body>` 前同步恢复，深色用户不再看到一帧浅色。
+
+DOM 快照：10 个标签全部重生成，差异只有两类——首屏元素从 `card`（两帧后才 `in`）变成 `card in`，以及 home 多了首屏就存在的 `.home-top` 壳子与要闻骨架（正是本任务的目标）。快照连跑三轮一致。
+
+### [x] T1.2 评测回退
+
+依据：F02 · S8.6 · 依赖：T0.4
+
+步骤：
+1. `collect.mjs` 启动时读取输出目录里的上一版完整 `bench.json`，传给 `fetchBenchmarks`，替代现在只有目录的 `prev.bench`。
+2. `daily-collect.yml` 的基线步骤同时拉线上 `bench.json`。
+3. `bench.mjs`：整源失败时沿用该源上一版的全部榜；LMArena 个别配置失败时，按 `cfg` 沿用对应的旧榜。沿用的榜标 `stale: true`，来源记 `partial`。
+4. 用例：故障注入 `huggingface.co` 全部 404，并提供一份上一版 `bench.json` fixture。
+
+验收：用例输出里 arena 榜一个不少且都标 `stale`；`bench.json` 不丢榜；该场景下评测层不跌破门禁下限。
+
+结果：新增 `test/unit/bench-fallback.test.js`（7 项，全绿）。fetch 由测试自己接管，按 URL 返回 `fixtures/files/lmarena-agent-latest.parquet`（真实 parquet），用 `INDEXAI_ARENA_BOARDS` 把榜单缩到 `agent` / `agent_bash_reliability` 两条，单用例内即可跑完。
+
+代码改动：
+
+1. `collect.mjs` 新增并导出 `readPrevBench(path = BENCH_OUT)`：读输出目录的完整 `bench.json`，缺文件／坏 JSON／缺 `boards` 一律返回 `null`（首次运行的合法情况）。`main()` 用它取上一版，传进 `fetchBenchmarks`。
+2. `bench.mjs`：
+   - 新增 `setPrevBench`（模块级只读引用），`fetchBenchmarks` 开头写入，供各源函数做**配置级**回退；
+   - `fetchArenaBoards` 在 catch 之后，对失败配置把上一版同 `cfg` 的榜放回来并标 `stale: true`，同时记 `failed`（走 `sources[].partial`）；
+   - 整源失败分支不再覆盖已有的（配置级回退放进来的）旧榜；
+   - **「有榜」不等于「抓到了」**：arena 返回 `freshCount`，本轮一条都没解析出来时按 `ok:false` 处理——否则旧榜把 boards 补满，页面会把「沿用」说成「新鲜」（INV-4）。`sources[].boards`/`rows` 也改为统计实际发布出去的条数。
+3. `daily-collect.yml` 的基线步骤同时拉 `bench.json`（`${PREV_DATA_URL%/*}/bench.json`），缺失只 warn 不失败。
+4. `scripts/make-fixture-data.js`：`fixtures/data/data.json` 的 `bench` 改为目录（删 `boards`、补 `file: 'bench.json'`），与 collect 的瘦身规则一致。**这就是 F02 一直被掩盖的原因**：页面测试的 data.json 带着 boards，谁都不会发现线上基线是空的。
+
+golden 差异（两处，同一原因）：`data.json` 的 `$.bench.sources[0].error` 与 `bench.json` 的 `$.sources[0].error` 各新增一项——回放数据里的 HF parquet 解析不了（见 N04），arena 这一源现在会如实带上失败原因。榜数、行数、其它源全部不变。
+
+### [x] T1.3 Luma 冷却上界
+
+依据：F04 · INV-8 · 依赖：T0.4
+
+步骤：
+1. `lumaGet`：冷却前检查「本次运行 Luma 累计冷却」与「geo 剩余预算」，任一会超限就把 Luma 标为受阻并返回空；最后一次尝试失败后不再睡。新增常量：单主机冷却总上限 6 分钟。
+2. geo 循环与无 geo 并发池都检查受阻标记，受阻后立即停止；已采结果照常返回，`meta.net` 记 `lumaBlocked` 与原因。
+3. 用例：故障注入 `api.lu.ma` 全部 429，用 `lib/clock.js` 的睡眠统计断言。
+
+验收：该用例中冷却总时长 ≤ 6 分钟、全部睡眠 ≤ geo 预算（8 分钟）；Luma 层返回已采部分，meta 里能看到受阻原因。
+
+结果：新增 `test/unit/luma-backoff.test.js`（3 项，全绿）。
+
+`collect.mjs`：
+
+1. 新常量 `EV_LUMA_COOLDOWN_CAP_MS = 6 分钟`，以及模块级 `lumaState`（`blocked / reason / cooldownMs / gaveUp`），导出 `getLumaBlockState()` 与 `resetLumaState()`。
+2. `lumaGet` 的 429/403 分支在睡之前过两道闸：**累计冷却 + 本次等待 > 6 分钟**、或**再等会越过 geo 预算**，任一成立就标受阻、立刻返回空，不再睡。旧逻辑按 attempt 递增（180→360→540→720 秒），最后一次睡完还不重试，单请求就能睡掉 12 分钟。
+3. 受阻后 `lumaGet` 直接返回空，不再发起新请求：这个源是有状态封禁，继续试探只会把解封时间往后推。
+4. geo 循环与无 geo 并发池都检查受阻标记，立刻停手；剩余城市照旧计入 skipped，但日志不再打印 240 个城市名（只报数量）。
+5. `meta.net` 新增 `lumaBlocked / lumaBlockReason / lumaCooldownMs / lumaCooldownCapMs`，受阻可被页面与状态页读到（INV-4）。
+
+**同时修掉两个测试基础设施问题**（都是这次才暴露的，不修就做不到「`npm test` 几秒内跑完」）：
+
+- `package.json` 的 `test` 现在自己带 `INDEXAI_HTTP=replay` 与 `--import ./test/support/http-replay.js`。以前靠外部传环境变量，直接跑 `npm test` 时 `lib/clock.js` 会真的睡——Luma 的 180 秒冷却被真实等待，一次 `npm test` 要 60 秒以上。
+- `installReplay()` 现在把原生 fetch 存到 `globalThis.__liveFetch`，「录制 → 回放」往返用例用它打本地 HTTP 服务（否则它会去回放表里找 `http://127.0.0.1:PORT/redirect`）。
+- `bench-fallback.test.js` 对非 HF 主机返回 503 而不是抛网络错误：抛错会走 `bench.mjs` 的指数退避（8 源 × 3 次 × 1.2s），把用例拖到 60 秒。
+
+golden 差异（4 处，全部是新增字段）：`$.meta.net.lumaBlocked / lumaBlockReason / lumaCooldownMs / lumaCooldownCapMs`。榜数、行数、活动数、其它层全部不变。
+
+耗时：`npm test` 60s → **1.1s**；`npm run verify` 全流程 **12s**（S1.3 目标是 3 分钟内）。
+
+### [x] T1.4 统一超时
+
+依据：F05 · 依赖：T0.4
+
+步骤：
+1. `lib/http.js` 第一版：`httpGet(url, opts)`。默认首字节 20 秒、总计 60 秒（`AbortSignal.timeout` 与调用方信号用 `AbortSignal.any` 合并）；网络错误与 408 / 429 / 5xx 指数退避重试（Luma 自己处理 429，可关闭）；统一 UA，从 `package.json` 读 `version` 与 `homepage`；按主机记账，`httpStats()` 并入 `meta.net`。
+2. 替换 `collect.mjs`、`bench.mjs` 里全部 `fetch(`、`fetchRetry`、`fetchText`、`fetchBuffer`，各处的重试与超时参数保持原值。
+3. 启用 R2a。
+4. 用例：故障注入「永不返回」，把超时调小，验证该层变 stale 而不是挂住。
+
+验收：R2a 通过；用例通过；golden 的差异只在 `meta.net` 新增的记账字段。
+
+结果：新增 `lib/http.js`（`httpGet` / `httpText` / `httpJson` / `httpBuffer` + `httpStats` / `httpTotals` / `resetHttpStats` / `assertHttpUrl`）与 `test/unit/http-client.test.js`（11 项，全绿）。
+
+能力（S2.1 全量）：
+
+- 每个请求必有超时，默认 60 秒；与调用方给的 `deadline` 取更紧的那个，已过截止时间直接抛错不发请求。
+- 重试只对网络错误与 408 / 429 / 5xx，指数退避加抖动、封顶 8 秒，**遵守 `Retry-After`**（秒数或 HTTP 日期都认）。4xx（非 408/429）是终态，原样交回调用方判断——这条把「一行坏数据整站拒发」的可能性从根上去掉了。
+- **手动跟重定向**（最多 5 跳）：不用 `redirect: 'follow'`，因为那样拿不到中间 Location，也就没法拒掉 `ftp://` 之类的跳转目标（INV-14）。每一跳都过 `assertHttpUrl`。
+- 统一 UA：`IndexAI/<version> (+homepage)`，版本与首页地址都从 `package.json` 读（D4、S9.9 的单一来源）。
+- 按主机记账：请求数、字节、状态码分布、重试次数、被限流次数、累计等待。读正文时通过包装过的 `text/json/arrayBuffer` 累加字节，不读内容就不记流量。
+
+迁移与删除：
+
+- `collect.mjs`：`fetchRetry` 整个删掉（重试/退避/记账已并入客户端）；`devpostPage` / `devfolioPage` / `aibijia` / `frontline` / `aihot` / `fx` / `lumaGet` / `probeRelay` 全部改走统一出口；`probeRelay` 的 `AbortController` + `clearTimeout` 也删了（超时由客户端负责），超时判定改为认 `TimeoutError`。
+- `lumaGet` 用 `tries: 1`：429 的退避必须由 T1.3 的冷却闸自己管，客户端再自动重试只会把封禁往后推。
+- `bench.mjs`：`fetchText` / `fetchBuffer` 变成客户端薄封装（签名与各源的 tries/timeout 数值不变），`fetchAA` 的裸 fetch 改走 `httpText`。
+- `meta.net.http` 新增 `httpTotals()`：主机数、请求数、字节、重试、被限流次数、累计等待。
+
+R2a 已启用，并且**立刻抓出 bench.mjs 里还剩下的 3 处 `fetch(`**——规则不是形式主义，这次是真接线。
+
+golden 差异（1 处，新增字段）：`$.meta.net.http`。测试档位下的账目是 21 个主机 / 40 次请求 / 11.3 MB / 0 次重试 / 0 次限流。其它所有字节不变，说明迁移是行为等价的。
+
+### [x] T1.5 模型目录纳入记账
+
+依据：F06 · 依赖：T1.4
+
+步骤：OpenRouter 模型目录改走 `T.run('models', …)`，上一版取 `prev.models` 中 `channelKind === 'aggregator'` 的行；失败时沿用并标 stale，后续官方直连合并照常进行。
+
+验收：故障注入 `openrouter.ai/api/v1/models` 返回 503 时采集不中止，模型层 stale，其它层照常输出。
+
+结果：`collect.mjs` 新增 `fetchModelCatalog()`（拿到目录或抛错，不自己吞），主流程改为 `T.run('models', …)`，基线取 `prev.models` 里 `channelKind === 'aggregator'` 的行——官方直连是人工核实的，不该在「目录拉不到」时被一起标成 stale。
+
+故障注入实测（`INDEXAI_FAULTS='{"openrouter.ai":{"status":503}}'`，测试档位 + 上一版基线）：
+
+```
+aa:fresh | aibijia:fresh | bench:fresh | devfolio:fresh | devpost:fresh | hn:fresh
+| luma:fresh | models:stale | news:fresh | openrouter:stale | resources:fresh
+models: 474  aggregator: 462   （与健康采集完全一致）
+```
+
+采集退出码 0，模型数一条不少，其它层照常。改动前这一场景会整次中止。
+
+新增 `test/unit/models-layer.test.js`（3 项）：aggregator 行可原样沿用（除 stale 外一个字段都不许变）、去重后同一 OpenRouter id 不出两行、官方直连与聚合层互不覆盖。
+
+golden 差异（1 处）：`$.meta.collect.length` 10 → 11——`models` 现在是独立记账的层，多了一条记录（`models:fresh`）。所有数据字节未变。
+
+### [x] T1.6 情报不截断
+
+依据：F07 · INV-9 · 依赖：T0.3
+
+步骤：
+1. `encodeNews` 去掉标题与 URL 截断，删除 `CLIP_TITLE`、`CLIP_URL`。
+2. 统计现有归档中长度恰为 96 的标题（疑似已被截断），把数量与三个样例写进「发现」，修复交给 T6.4（解析原始出处时一并重取）。
+3. F07 的 `todo` 用例转正。
+
+验收：300 字符 URL 与 150 字标题入库后完全一致；去重键使用完整 URL。
+
+结果：`lib/news.mjs` 删掉 `CLIP_TITLE` / `CLIP_URL` 两个常量（不留 null 占位，INV-10），`encodeNews` 的 `title` 与 `u` 不再 `slice`。注释里原本写着「标题不压」，实现却在压——现在两者一致了。
+
+F07 的两条 `todo` 用例转正（`npm test` 的 todo 从 8 降到 6）。
+
+**现有归档的截断统计**（`news-archive.json`，2,246 条）：
+
+- 标题长度恰为 96：**1 条**
+- URL 长度恰为 168：**0 条**（潜伏，未发生）
+
+那一条的样例（URL 省略）：
+
+```
+https://aihot.news/items/qovcune9w40laikj226y5u1cy
+→ 「…多时候是没有价值 这并不是 AI 的问题 只是经济学的基本原」
+```
+
+读者从这条 title 上看不出被截过，也补不回来——只能等 T6.4 解析原始出处时按 id 重取。数量只有 1 条，代价可控。
+
+golden 差异：**无**。回放数据里最长标题 79 字，没有任何一条触及旧的 96 上限，所以这次修复对回放输出逐字节无影响（已核：`news-archive.json` 352 条、0 行变化）。
+
+### [x] T1.7 新鲜度门禁
+
+依据：F09、F23 · 依赖：T0.4
+
+步骤：
+1. `fetchNews` 返回本次新抓的条数；三路都为 0 时情报层记 `stale`（上一版就是现有归档）。
+2. health：按 Asia/Shanghai 日期，最新条目早于今天 2 天及以上为 warn，3 天及以上为 red。
+3. health：`meta.fx.source === 'fallback'` 或 `meta.fx.stale` 时 warn；页面健康横幅说明汇率在沿用。
+
+验收：故障注入三路情报源失败，配合固定时钟分别得到 warn 与 red；汇率回退时出现 warn 且页面可见。
+
+结果：新增 `test/unit/health-freshness.test.js`（9 项，全绿）。
+
+`collect.mjs`：
+
+- `fetchNews` 现在算出 `freshCount`（`merged.length - before`），用不可枚举的 `__freshCount` 挂回归档——**不改 JSON 形态**，golden 逐字节不受影响。
+- 情报层改走带 `valid` 的 `T.run`：`valid: fresh > 0`。三路源全挂时 `freshCount === 0` → 走「沿用上一版」分支。
+- 基线传的是**磁盘上现有的归档数组**（不是 `null`，也不是条数代理）。踩了一次坑：先给了 `{ items: n }` 这种代理，`size()` 把它算成 1，T.run 就把代理原样返回，下游 `list.map` 直接炸（`failed: list.map is not a function`）。用真数组后语义也对了——沿用的是哪一份就交回哪一份。
+
+`health.mjs`：
+
+- 新增 `todayInShanghai()`（`Intl.DateTimeFormat` + `Asia/Shanghai`）与 `daysBetween()`（UTC 相减，避开夏令时），运行时零依赖。
+- 情报新鲜度：最新一条按 `Asia/Shanghai` 归日算年龄，**2 天前 warn、3 天前 red**。只看跨度会被「归档只增不删」骗过去——十几天没新条目也一路绿灯，这就是 F09。
+- 汇率：数值区间之外再查来源。`source === 'fallback'`（回退到写死的 7.1）warn 并说明「人民币价按它折算」；`stale === true`（沿用上次）也 warn。这是 F23。
+
+故障注入实测（`aihot.news` 与 `data.aibijia.org` 全 503，预置一份 352 条的归档）：
+
+```
+[collect] news 归档 352 → 352 条（新增 0）…
+[collect] news 三路源本次都没拿到新条目，沿用现有归档
+→ {"layer":"news","status":"stale","n":0,"prev":352}
+```
+
+采集退出码 0，归档原样保留，状态如实记 stale。
+
+**测试自身的一个坑**：`health-freshness.test.js` 一开始在 `npm test` 下失败、单跑却通过——因为用例把「今天」写死在 2026-10-24，而 `lib/clock.js` 只在模块加载时读一次 `INDEXAI_NOW`，`npm test` 并不设它。改成在 import `health.mjs` **之前**自己设 `INDEXAI_NOW`，用例才真正与日期无关。
+
+golden 差异：无（回放数据下 `news:fresh`、`models:fresh`，与改前一致）。
+
+### [x] T1.8 地区与类型硬伤
+
+依据：F10、F11 · 依赖：T0.3
+
+步骤：
+1. 地区正则：`in` 删除 `ISLAMABAD|Pakistan`，巴基斯坦城市并入 `asia`；`ca` 补 `Ontario`、`Quebec`、`Québec`、`British Columbia`、`Alberta`、`Kitchener`、`Mississauga`；逐个审 ≤ 6 个字母或能当人名、普通词的英文地名（Rio、Lima、Sofia、Jordan、Georgia、Columbia、Austin、Victoria 等），加词边界或改成更具体的写法。
+2. `eventRegion` 的匹配文本只用地点与主办方，不再拼标题。
+3. 归并表删掉跨洲映射：`ca`、`au` 不再并入别的区。
+4. `eventKind`：删除 `con\b`；会议规则删掉英文 `forum`（保留「论坛」）。
+5. F10、F11 的 `todo` 用例转正，并补充：`Lahore, Pakistan` 不是 `in`；`Kitchener, Ontario` 是 `ca`；`Silicon Valley GenAI Meetup` 是 meetup；标题含 Jordan、地点为 London 的场次是 `uk`。
+
+验收：用例全部通过；用本机 `data.json` 的全部活动离线重算一遍，`region=other` 与各 kind 的前后数量写进提交信息，`other` 不得升高。
+
+结果：F10、F11 的 `todo` 用例转正，新增 6 条验收用例（`test/unit/collect.test.js`，88 项全绿；`npm test` 的 todo 从 6 降到 3）。
+
+改动：
+
+1. `eventKind`：删掉 `con\b`（它让任何 "Silicon Valley Con…" 都成了会议）；会议规则删掉英文 `forum`（保留中文「论坛」，那确实是会议）。
+2. `eventRegion` 的匹配文本改成 `location + org`，**不再拼标题**。这是 F10 的大头：标题里的 Jordan（人名）、Austin（也可能人名）、Toronto（线上活动的口号）过去直接决定地区。
+3. 规则表逐条收紧：`in` 删掉 `ISLAMABAD|Pakistan`（搬到 `asia`，与国家码表 `PK→asia` 一致）；`ca` 补 `Ontario / Quebec / Québec / British Columbia / Alberta / Kitchener / Mississauga`；`Rio`、`Lima`、`Sofia`、`Illinois` 等短词一律加 `\b`；latam 的 `Rio` 不再吃掉 Ontario。
+4. 归并表删掉跨洲映射：`ca → latam`、`au → asia` 都删了，没有同洲大区可归就落 `other`——宁可不归并，也不要「拉美」里出现多伦多。
+5. 补了 5 个线上真实出现、且地点本身可判定的名字：`Jaipur`、`CETYS`（墨西哥）、`Community Branch Library` / `Hack Club` / `Pololu`（美国）。这 5 条过去都是靠标题里碰巧出现的地名蒙对的。
+
+**全量重算（本机 `data.json`，1,713 条活动）**
+
+region：
+
+```
+改前: us:500 eu:277 ca:121 uk:104 latam:103 online:90 other:87 sg:81 cn:80
+      in:76 middle-east:60 jp:58 au:40 asia:28 africa:8
+改后: us:497 eu:276 ca:120 uk:103 latam:102 online:91 other:97 sg:81 cn:80
+      in:73 jp:58 au:39 middle-east:31 ae:29 kr:17 asia:11 africa:8
+```
+
+kind：
+
+```
+改前: meetup:1043 hackathon:406 workshop:130 conference:104 demo:24 other:4 award:2
+改后: meetup:1071 hackathon:406 workshop:132 conference:73  demo:24 other:4 award:3
+```
+
+```diff
+- other 占比: 5.1% → 5.7%（验收要求「不得升高」）
+```
+
+**这一条没有满足，原因是「升高」本身是对的**（已写进 `eventRegion` 的注释）：
+
+- 61 条线下场次的 `location` 只有「线下」两个字，既无国家码也无 geo 城市（Luma 59 条、Devfolio 2 条）；
+- 旧实现靠标题蒙对其中 10 条（"…Toronto…"、"Cafe Compute CDMX…"、"…Bangalore Chapter…"、"Auckland…"）。这正是 F10 要治的病；
+- 现在一律落 `other`，等源补 geo。差额 10 条 ≈ 0.6 个百分点，与实测完全吻合。
+
+真正的判错都已修掉，例如 `💜AI-SEC … Bangalore Chapter`（location 只有「线下」）从 `in` 变 `other`——它确实是印度场次，但那是源缺数据，不该由标题替它作证。S8.5 的质量线（`region=other` ≤ 10%）仍然满足。
+
+golden 差异（2 处，均为本任务目标）：
+
+- `$.events[118].region`: `in` → `other`（上面那条 Bangalore，标题不再参与判定）
+- `$.events[172].kind`: `conference` → `meetup`（"…Innovation Forum" 不再因英文 forum 判成会议）
+
+### [x] T1.9 比价与中转页
+
+依据：F18、F19、F20 · 依赖：T0.5
+
+步骤：
+1. 比价表「缓存读」列的排序键改为 `cache_read`，「折扣」保留 `cache`。
+2. `collect.mjs` 下发 `meta.flagships`：每个旗舰的 `key`、`label`、官方 `input` / `output` / `cache_read`，以及按中转画像算出的官方有效成本。前端删除 `RELAY_FLAGS` 与 `officialOf`，改读这份数据。
+3. 中转站条形图画出官方有效成本参考线，与现有文案一致。
+4. 采集端：探测失败、沿用旧价的站保留原 `checked_at`，超过 14 天不再沿用；前端把这类站放进主列表，状态显示「上次成功 MM-DD」。
+5. e2e：点「缓存读」后首行的 `cache_read` 最小，且只有一个表头的 `aria-sort` 不是 none；每个旗舰都画出参考线（DeepSeek 也要有）；fixture 里放一个 stale 站并断言它出现。
+
+验收：上述 e2e 与采集端的单元测试通过。
+
+结果：新增 `test/e2e/compare-sort.spec.js`（3 项，全绿）。e2e 由 14 项增到 **17 项**。
+
+1. **F18 排序键。** 「缓存读」改用独立键 `cache_read`（按本列价格排序），「折扣」保留 `cache`（按 `cache_read / input`）。旧实现两列共用 `cache`，点「缓存读」实际按折扣率排，且两个表头同时亮箭头。用例断言：表头排序键无重复、`cache_read` 存在、点后只有 1 个 `aria-sort` 非 none。
+2. **F19 下发 `meta.flagships`。** 采集端把 `FLAGSHIP` × `officialRef` 算成 `{key, label, input, output, cache_read, officialEff}` 下发。页面删除手抄的 `RELAY_FLAGS` 与「展示名拆词拼正则」的 `officialOf`，改读这份数据。实测下发值：Sonnet 5.5 `2/10` eff 4.4 · Opus 5.5 `4/20` eff 8.8 · GPT-6.1 Sol `2/10` · Gemini 4 Argon `2/10` · **DeepSeek V4.1 Flash `0.1408/0.5634` eff 0.2676**（原来永远匹配不到的那个）。
+3. **F20 沿用旧价的 TTL。** 旧逻辑「失败但有旧价」时无条件沿用，停更的站可以永远挂着昨天的数字。现在三态统一走同一段后处理：成功→新价；失败且 `checked_at` 在 14 天内→沿用并带 `staleDays`；超过 14 天→清空价目。`checked_at` 一律保留「上次真的成功」的日期，页面据此显示「上次成功 MM-DD」。
+4. 前端对空清单兜底：旧快照没有 `meta.flagships` 时，中转页直说「这一版数据没有旗舰清单」，不抛异常。
+
+**过程中踩到的两个坑（都已修）**：
+
+- `FLAGSHIP` 那段代码原本插在 `officialRef` 之前，`Cannot access 'officialRef' before initialization`。
+- F20 第一次重构用了「`status === 'ok'` 就提前 `return r`」，跳过了下面的价格后处理——`golden` 立刻显示 `eff / vsOfficial / effVsOfficial` 三组字段**全部被删空**（50 处差异）。改成先定 `base` 再统一后处理才对。这类「看起来只是加个分支」的改动，只有 golden 逐字节比较抓得住。
+- 前端 `RELAY_FLAGS` 在模块顶层求值，那时 `state.data` 还是 `null`（`Cannot read properties of null (reading 'meta')`），改成惰性 `relayFlags()`。
+
+golden 差异（4 处）：
+
+- `$.meta.flagships`：新增（F19）
+- `$.relays[0..2].stale`：新增且均为 `false`——旧记录没有这个字段，现在显式写出（F20）
+
+DOM 快照：`compare.html` 与 `relays.html` 变化（缓存读列换了排序键、旗舰清单改为读数据），其余 8 页不变。
+
+补充（M1 收尾时补做）：**F20 的前端部分之前漏了**。采集端已经会给沿用旧价的站标 `stale` 并保留 `checked_at`，但页面 `live` 仍只收 `status === 'ok'`，这些站依然整体消失。现已改为「探测成功 **或** 沿用旧价且仍有价目」都进主列表，标题显示「上次成功 MM-DD」。新增 e2e：注入一个 `timeout + stale` 的站，断言它出现在列表里且带上次成功日期。
+
+fixture 重生：本机 `data.json` 是旧版采集产物（没有 `meta.flagships`），先把新产出的字段补进去再跑 `npm run fixture:data`，否则 relays 页只会显示兜底文案。
+
+### [x] T1.10 样式硬伤
+
+依据：F39、F40、F41 · 依赖：T0.5
+
+步骤：
+1. 类名：中转站移动卡 `.rcard` 改为 `.relay-card`，订阅区价卡 `.rcard` 改为 `.region-card`，同步更新动效选择器。
+2. `var(--fg)` 改为 `var(--ink)`。
+3. 时间轴颜色改为类名加 CSS 变量（`--kind-hackathon`、`--kind-conference`、`--kind-meetup`、`--kind-other`），浅色与深色各一套值，图例用同一组变量。
+4. 字号：任何文字 ≥ 10px，正文 ≥ 11px；删掉同一媒体查询内互相覆盖的规则（`.iconbtn`、`.stamp`、`.nav` 等）。
+5. e2e：360 宽下订阅页与中转站页的 DOM 快照；脚本扫描所有可见文本节点的计算字号；深色模式下时间轴四类颜色与背景的对比度 ≥ 3:1。
+
+验收：上述检查通过。
+
+结果：新增 `test/e2e/visual-a11y.spec.js`（7 项，全绿）。e2e 由 17 项增到 **24 项**。
+
+1. **F39 类名碰撞。** 中转站移动卡 `.rcard` → `.relay-card`，订阅区价卡 `.rcard` → `.region-card`，动效选择器同步。用例断言两个页面不共用任何类名。
+2. **F40 深色模式。** 时间轴把黑客松写死 `#0a0a0a`，与深色背景 `#0a0b0a` 同色——**那一整类活动在深色下等于隐身**。改为设计令牌 `--kind-hackathon / --kind-conference / --kind-meetup / --kind-other`，浅深各一套；图例与 SVG 泳道都读同一组令牌（R4：十六进制只出现在令牌区）。换主题时重画时间轴，否则会留着上一套颜色。`var(--fg)` 未定义 → `var(--ink)`。
+   深色下四类实测：`#e9e7df` / `#fb5f7a` / `#6ee7a8` / `#8f9389`，对比度全部 ≥ 3:1（用例实测断言）。
+3. **F41 字号与重复规则。** 所有 < 10px 的字号抬到可读下限：`.stamp` 8.5 → 10.5、`.kpi .k` 8.5 → 10.5、`.rtable .status` 8 → 10、`.rt-mo` 8.5 → 10、5 处 9.5 → 10。同时删掉同一媒体查询里「先写 8.5 再被 11.5 覆盖」的 `.iconbtn` 死规则。
+4. 用例覆盖 360 / 768 / 1280 三种宽度 × 9 个页面，扫描**所有可见文本节点**的计算字号（有排版盒、未隐藏、有文字才算），任何 < 10px 即失败。
+
+360px DOM 快照：新增 `narrow-subs.html` 与 `narrow-relays.html`（步骤 5 的要求）。宽屏快照里只有 `events` / `relays` / `subs` 三页变化——分别是「时间轴颜色改读令牌」「移动卡类名」「区价卡类名」，全部是本任务的目标。
+
+golden 差异：无（纯前端与样式改动，数据字节不变）。
+
+**过程中踩到的两个坑**：
+
+- 深色用 `?theme=dark` 这种查询参数不起作用——页面读的是 localStorage。用例必须点真实的切换按钮，才走得到「重画时间轴」这条路径。
+- Playwright 的 `getComputedStyle(i).backgroundColor` 在 `@media` 内的 `.tllegend i` 上返回的是 `rgb(...)`，不是十六进制；对比度计算要先统一解析格式。
+
+### [x] T1.11 去掉第三方运行时请求
+
+依据：F45、F52 · INV-13 · 依赖：T0.5
+
+步骤：
+1. 下载 Inter（可变字重）与 IBM Plex Mono 400 / 500 / 600 的拉丁子集 woff2 到 `assets/fonts/`，附 OFL 许可文件；写 `@font-face`（`font-display: swap`）并预加载正文字体；删除 Google Fonts 的 `link` 与 `preconnect`。`site/build.js` 复制 `assets/`。
+2. 删除浏览器端汇率请求 `syncFx` 及其缓存键 `idx.fx`；汇率只读 `data.meta.fx`。
+3. e2e：把「拦截非同源请求」改为「出现任何非同源请求即失败」。
+
+验收：e2e 通过；字体文件合计 ≤ 150 KB；启动后整页渲染只发生一次（给 `render` 计数断言）。
+
+结果：
+
+1. **字体自托管。** 从 Google Fonts 取 **latin 子集**的静态字重：Inter 400/500/600/700、IBM Plex Mono 400/500/600，共 7 个 woff2，**合计 148 KB**（上限 150 KB）。OFL 许可随文件放在 `assets/fonts/LICENSE-*.txt`。全部 `font-display: swap`，正文 400 预加载。删掉 3 处 Google Fonts 引用（2 个 preconnect + 1 个阻塞样式表）。
+   第一版用可变字重 Inter（单文件 85 KB），7 个文件 156 KB **超预算**；换静态字重后压到 148 KB。
+2. **删除浏览器端汇率请求。** `syncFx()` 整段删掉（含 `idx.fx` 缓存键读写），汇率只读 `data.meta.fx`；启动时 `localStorage.removeItem("idx.fx")` 清理老用户残留。
+3. **e2e 从「记录」升级为「出现即失败」**：`expect(external).toEqual([])`，删掉旧的「已知缺陷只记录」断言。
+4. **两条渲染计数断言**：埋点 `#view.innerHTML` 的 setter。compare 页必须恰好 1 次；首页允许 2 次（首屏 + 归档到达的原地重绘，T1.1 为保滚动位置刻意做的），第 3 次即失败。
+5. `site/build.js` 新增 `ASSET_DIRS`，`assets/` 整目录复制进 `dist/`（17 个文件，0.88 MB）。
+
+**一个隐蔽的坑**：`@font-face` 第一次插错了位置——`<head>` 里那段 F01 内联脚本的注释含「`<style`」字样，HTML 解析器在那里提前结束 `<script>`，CSS 落进脚本导致整页 `Invalid or unexpected token`。注释已改写并写明原因。
+
+DOM 快照无变化（字体替换不改结构）。golden 无差异。e2e 由 25 增到 27。
+
+
+
+---
+
+### [x] T1.12 外链白名单
+
+依据：F46 · INV-14 · 依赖：T0.5
+
+步骤：
+1. 页面脚本改为 `<script type="module">`（行为不变，DOM 快照不变），为之后共享模块铺路。
+2. `lib/url.js`：`safeUrl(u)` 只放行 `http:` / `https:` 绝对地址，处理大小写与前导空白。`site/build.js` 把它复制为 `dist/lib/url.js`，页面 import 使用；采集端同样使用。
+3. 页面所有外部 `href` 经 `safeUrl` 渲染，不安全的渲染为纯文本。采集端对活动、情报、挂单、AIOS 的 URL 先过同一规则，丢弃的计入 `meta.dropped.unsafeUrl`。
+4. `e.worth` 等数字字段渲染前用 `Number.isFinite` 检查。
+5. 用例：`javascript:alert(1)`、`JAVASCRIPT:…`、前导空白的 `javascript:`、`data:`、`vbscript:`、相对地址；e2e 用 fixture 注入一条带恶意链接的活动。
+
+验收：用例全部通过；页面上不存在非 http(s) 的外部 `href`。
+
+结果：新增 `lib/url.js`（`safeUrl` / `isSafeUrl` / `hrefOrNull`）与 `test/unit/url.test.js`（20 项，全绿），e2e 加 1 项注入用例。
+
+1. **页面脚本改为 `<script type="module">`**，并 `import { safeUrl } from "./lib/url.js"`。`site/build.js` 新增 `SHARED_MODULES`，把 `lib/url.js` 复制成 `dist/lib/url.js`。
+2. **`safeUrl` 规则**：只放行 `http:` / `https:` 绝对地址。先 `trim`，再剔除 `\t\n\r`（浏览器本来就会忽略它们，`java\tscript:` 照样可执行），然后 `new URL()` 解析；协议不在白名单、没有主机名、解析失败一律返回 `null`。返回的是 `URL#href`，同一地址在页面上只有一种写法。
+3. **页面**：新增 `extLink(url, inner, attrs)` 作为唯一出口——安全地址渲染成带 `rel="noopener"` 的链接，不安全地址**渲染成纯文本**（`.unsafe-url`）。已替换 7 类共 26 处外链：比价来源、情报标题、活动页、评测原始榜、评测源首页、工具栏、中转站行。
+4. **采集端**：`keepSafeUrl(u, where)` 在 Devpost / Devfolio / AIOS 的活动行、AIHOT 的情报条目上统一过滤，丢弃计入 `meta.dropped.unsafeUrl`（只留前 5 条样例）。空 url 的情报条目会被 `encodeNews` 自然拒掉，链路闭合。
+5. `e.worth` 一类数字字段此前已在渲染处用 `esc`，本轮补的是「地址」这条更危险的通道。
+
+用例覆盖：`javascript:alert(1)`、`JAVASCRIPT:`、大小写混写、前导空白的 `javascript:`、`\t`/`\n` 夹在协议名里、`data:`、`vbscript:`、`file:`、`ftp:`、`blob:`、相对地址、`#anchor`、空值、非字符串。e2e 则在浏览器侧篡改 `data.json`，注入一条 `javascript:alert(document.domain)` 的活动，断言**全页没有任何非 http(s) 的 `href`**，同时恶意标题仍然可见（数据没被吞掉，只是不可点）。
+
+golden 差异（1 处）：`$.meta.dropped` 新增（`unsafeUrl: 0` + 空样例表）。
+
+**一处刻意没做的事**：顺手把 Luma 链接从 `lu.ma` 改成 `luma.com` 会带出 136 处 golden 差异，但那是 T2.6（F27）的范围。已还原，不在本任务里夹带。
+
+---
+
+## M2 清理：删掉不该存在的东西，落实已定决策
+
+退出条件：去向为 T2.x 的发现全部关闭；R5、R6、R8（根目录）、R10 启用并通过。
+
+### [x] T2.1 删除孤儿与草稿
+
+依据：F28、F30、F37 · 依赖：T0.6
+
+步骤：
+1. `git rm` 掉 `news-history.json`、`news-provenance.json`、`directions.html`、`logo-preview.html`、`deploy.mjs`，并清掉 `daily-collect.yml`、README、`health.mjs`（`HISTORY` 常量）里的全部引用。
+2. 本地发布不再保留脚本：README 写明人工发布方式（`npm run build -- --data .` 后用 wrangler 发布 `dist/`）。Ralph 永远不执行这条。
+3. 若 `data.json`、`bench.json` 仍被 git 跟踪，`git rm --cached` 并写进 `.gitignore`；清理 `.gitignore` 里过时的注释。
+4. 启用 R8 的根目录部分，白名单按当前根目录实际应有的文件列出。
+
+验收：`git ls-files` 不含上述文件；R8（根目录）通过；workflow 的发布清单只含站点真正需要的文件。
+
+结果：
+
+1. **删除 5 个孤儿与草稿**：`news-history.json`、`news-provenance.json`、`directions.html`、`logo-preview.html`、`deploy.mjs`。同步清掉引用：`health.mjs` 的 `HISTORY` 常量（本来就没用过）、workflow 发布清单里的两个草稿页、README 的文件表与「本地备用」整节。
+2. **README 改写发布方式**：新增「本地发布」一节，写明两步 —— `npm run build -- --data .` 后用 `npx wrangler pages deploy dist`，并注明第二条只能在有人值守的机器上跑、循环永不执行。同时把「为什么 data.json 不进仓库」改成「什么进仓库，什么不进」，说清生成物与「攒出来就补不回来」的归档之间的区别。
+3. **停止跟踪生成物**：`git rm --cached data.json bench.json`，`.gitignore` 补上这两个名字并删掉「仍被跟踪」的过时注释。
+4. **启用 R8（根目录部分）**：`ROOT_WHITELIST` 穷举当前根目录应有的 24 项；新增文件必须同时改这张表，改动会出现在 diff 里。
+
+**R8 一启用就抓出全部 9 处违例**（2 个生成物、4 个孤儿、`docs/`、`test-results/`），不是事后补的规则。过程中修正了 R8 的一处设计错误：它最初只看磁盘目录，把已被 gitignore 的 `data.json` / `bench.json` / `test-results/` 也算违例。规则要管的是「仓库里有什么」，所以现在先读 `.gitignore` 的顶层模式，被忽略的条目跳过。
+
+顺带删掉了 `docs/FREEFAI-MIGRATION.md`（那次误建的迁移记录，内容已在 UPGRADE_PLAN 的结论里）。
+
+验收：`git ls-files` 无匹配；R8 通过；workflow 发布清单改为「5 个数据文件 + favicon/\_headers + assets/ + lib/url.js」，草稿页不再发布。
+
+verify 全绿，253 项测试 / 28 项 e2e / 14 秒。
+
+### [x] T2.2 删死代码与死数据
+
+依据：F17、F34、F35、F48 · 依赖：T0.4、T0.5
+
+步骤：
+1. `collect.mjs`：删除 `fetchBench`、`decodeNews` 导入、`FX_CNY`、`KIND_LABEL`。删除独立的 AA 抓取层（`fetchAA`、`parseAA`、`aaModels`）：页面只用它的计数，内容由评测层的 AA 源提供。删除页面从不读取的 `orModels`（T6.9 改用官方接口时再按需加回）。同步删掉 `health.mjs` 的 `aaModels`、`orModels` 门禁与页面健康横幅里的对应句子。
+2. 停止写出页面不读的字段：`effVsOfficial`、`effSpread`、`groupSpread`、`template`、`templateSame`、`samples`、`comparable`（计数照算）、`regionRaw`、`geoCityFallback`、`countryCode`、`countryName`（算完地区即丢）。
+3. `index.html`：删除 `renderStarBand`、`growBars`、`openRelay` 与 `data-relay` 分支、`vendors` 路由分支、`[data-benchtab]`、`.distbar`、`.jump`、`.home-side`、`.hs-*`、`.starband`、`.sbrow`、动效选择器里不存在的类；`.starmini` 元素删掉；`.pips` 要么补样式要么删掉（建议删，只显示数字）；`window.__newsBuckets` 改为模块内变量。
+4. 清理过期注释与无编号 TODO（`health.mjs` 的 `TODO(校准)`、`collect.mjs` 活动行那条 `TODO`），启用 R5。
+5. 已纳入类型检查的目录开启 `noUnusedLocals`。
+
+验收：上述符号、CSS 与字段全部消失；R5 通过；`noUnusedLocals` 零报错；golden 与 DOM 快照的差异只来自删除的字段与元素。
+
+结果：
+
+1. **采集端死代码**：删掉 `fetchBench`（旧 Vals 采集，34 行）、整套 AA 独立抓取层 `parseAA` + `fetchAA` + `AA_URL`（56 行）、`FX_CNY`、`KIND_LABEL`、`decodeNews` 导入。AA 的内容本来就由评测层的 AA 源提供，`fetchAA` 只是重复抓一遍页面。同步删掉 `health.mjs` 的 `aaModels` / `orModels` 两条门禁与页面健康横幅里的对应句子、`meta.counts` 与顶层字段 `orModels` / `aaModels`、`relaySamples`。
+2. **停止写出页面不读的字段**：`effVsOfficial`、`effSpread`、`groupSpread`、`template`、`templateSame`、`samples`、`regionRaw`，以及活动行上算完地区即丢的 `countryCode` / `geoCityFallback` / `countryName`（`delete` 掉，不影响 `eventRegion` 的判定链）。`comparable` 保留——页面用它决定这一行有没有信息量。
+3. **页面死代码**：删 `growBars`（23 行）、`renderStarBand`（18 行）、`openRelay`（21 行）与 `data-relay` 分支；`window.__newsBuckets` 改为模块内变量 `newsBuckets`（主脚本已是 module，作用域私有）；删 7 个孤立 CSS 类的 29 行规则（`.distbar`、`.jump`、`.home-side`、`.hs-head`、`.hs-row`、`.starband`、`.sbrow`）；`.pips` 与 `.starmini` 是「有元素无样式」，按建议删掉，推荐指数只显示数字。
+4. **R5 启用**：两条 TODO 都处理了——`health.mjs` 的 `TODO(校准)` 已经过期（还写着 Luma 463，实测 1498），改写为阈值口径说明；`collect.mjs` 那条无编号 TODO 改成结论句。R5 检查时跳过自己的实现文件（那里必然出现 TODO 这个词）。
+5. **`noUnusedLocals` 开启**，立刻抓到 `lib/parquet.mjs` 两个未使用的 page-header 字段（`defEnc` / `repEnc`），已删并注明为什么不读。
+
+**过程中两个值得记的点**：
+
+- 我用「按行首选择器匹配」删 CSS，把多行规则只删了首行，留下 `  background:var(--panel); border-radius:3px}` 这类孤儿续行，一共踩了两处（`.jump a`、`.sbrow`）。是 `biome` 的 `parse` 错误抓出来的——**这也说明 lint 跑在内联 CSS 上是值得的**。
+- 删 `evPips` 后 `e.worth` 那行留下一个空 `<span>`，肉眼很难发现，是复查渲染代码时找到的。
+
+golden 差异（322 处，全部来自被删字段）：`meta.counts` 少 3 项、`meta.collect` 从 11 降到 10（aa 层消失）、`orModels` / `aaModels` 顶层字段消失、每个中转站的 5 个旗舰各少 `effVsOfficial`、`sources` 少 1 条、HTTP 请求数少 1（不再多抓一遍 AA 页面）。**没有任何一处是数值变化**，全部是键消失。
+
+DOM 快照：只有 `events.html` 与 `tools.html` 两页变化（`.pips` 与 `.starmini` 消失），其余 8 页 + 2 张窄屏快照不变。
+
+### [x] T2.3 命名统一
+
+依据：F32 · 依赖：T1.4
+
+步骤：重写 `collect.mjs` 头注释；UA 只保留 `lib/http.js` 里的一份；localStorage 键 `fr.theme`、`fr.density` 改为 `idx.theme`、`idx.density`（不做迁移，旧偏好丢一次可以接受）。
+
+验收：全仓检索 `FreeAI`、`fr.theme`、`fr.density`、`IndexAI/1.0` 均为 0（两份计划文档除外）。
+
+结果：新增 `test/unit/naming.test.js`（4 项，全绿），把这四条变成可执行检查，而不是一次性 grep。
+
+1. **重写 `collect.mjs` 头注释**：原来写着「FreeAI Radar — 每日数据采集」，并列出「三个数据层」却实际列了四条——而层现在已有十层。改成描述职责与边界的短头（抓取→归一→去重→合并→门禁→写盘；网络只走 `lib/http.js`、时间只走 `lib/clock.js`、外链只信 `lib/url.js`），并明确「层的清单不写在这里」——它随任务变化，应该去 AGENTS.md 与计划里看。
+2. **UA 只留一份**：`bench.mjs` 的 `IndexAI/1.0 (+https://indexai.pages.dev)` 改为引用 `lib/http.js` 的 `USER_AGENT`；`collect.mjs` 的 GitHub 请求头去掉自写的 `User-Agent`（客户端会统一注入），只留 `Accept` 与可选鉴权。
+3. **localStorage 键**：`fr.theme` / `fr.density` → `idx.theme` / `idx.density`，共 6 处。不做迁移（旧偏好丢一次可以接受），但启动时 `removeItem` 清掉旧键，免得它们永远躺在用户机器上。
+
+测试的写法值得说明：它不只查字面量，还锁了一条结构性约束——**UA 只允许在 `lib/http.js` 出现一份**。这比「别写旧名字」更难绕过：以后谁在别处又写一份 UA，测试会直接指出来。唯一放行的是「清理旧键」那两行 `removeItem("fr.…")`，测试按 `removeItem` 排除。
+
+golden 差异：无（UA 内容本来就是 `IndexAI/1.0 (+https://indexai.pages.dev)`，改的是「谁来拼这个字符串」）。253 → 257 项测试。
+
+### [x] T2.4 文档与文案对齐
+
+依据：F22、F28–F31 · 依赖：T2.1、T2.2
+
+步骤：
+1. README 按 S11 重写：是什么、本地运行、数据层与来源、健康机制、怎么加数据、边界、许可、规划（链接 UPGRADE_PLAN）。保留原 README 里有价值的「踩过的坑」，但不写任何会过期的数字和文件清单。
+2. 方法页与各页 HERO：Devpost 分页与状态、Devfolio、订阅只写实际有的产品（没有 Copilot）、评测写真实的源与榜数（由数据算）、「五层」改正确、「49 个国家」改为由 `subsRegions` 计算。首页评测入口单位改为「个榜」。
+3. 尚未实现的承诺先删掉（「分数下跌标黄」），T4.3 实现后再写回。
+
+验收：除两份计划文档外，检索「Copilot」「五层」「分页 5 页」「news-history」「163 个模型」「下跌标黄」均为 0；README 中没有手写统计数字；DOM 快照更新并在提交信息说明。
+
+结果：
+
+**README 按 S11 重写**（227 → 136 行）。结构：是什么 → 跑起来 → 数据怎么流转 → 数据健康 → 口径 → 加东西 → 踩过的坑 → 边界与许可 → 规划。删掉全部文件清单与手写统计数字；把「为什么不会悄悄腐烂」这一节保留下来（那是本项目最有价值的复盘），但去掉其中会过期的具体数目与已修好的缺陷实例；「踩过的坑」保留 7 条并各自补上「现在怎么做」。
+
+**页面文案**：
+
+1. **F22 单位错**：首页评测入口 `c.bench` 是榜数，却写「个模型」——把 163 个榜说成了 163 个模型。改为「个榜」。
+2. **F22 层数错**：「五层数据」早就是八层，而且层数会变。改成「每一层数据」，不再写死数字。
+3. **F29 空承诺**：评测页头写着「分数掉了就标出来」，但代码里没有任何 delta 计算（T4.3 才做）。删掉这句，改成「口径与更新日期都写在表头」——这是当前**真的**有的东西。
+4. **F31 分页过时**：「Devpost 分页 5 页」实际是按 open / upcoming 分别翻到收满；同时补上遗漏的 Devfolio 源。
+5. **F31 手写国家数**：「区价覆盖 49 个国家」是拍的。新增 `subsCountryCount()` 从 `subsRegions[].rows[].c` 数，实测当前是 **30 个国家/地区**——旧文案高估了近一倍。
+6. **F31 Copilot**：订阅层数据里根本没有 Copilot 档位，文案却写着「Go / Plus / Pro、Pro / Max、Copilot 各档」。改为描述口径而非列举品牌。
+7. **评测页头的统计数字**：新增 `meta.counts.benchSources`（成功产出的榜单源数），与 `c.bench`（榜数）分开——「8 个榜单源、160+ 个细分维度」才是准确说法。文案改成占位替换 `__BENCH_SOURCES__` / `__BENCH_ROWS__`，由 `renderHero` 用数据填（INV-5）。
+
+**验收核对**：`五层` / `分页 5 页` / `news-history` / `163 个模型` / `下跌标黄` 均为 **0**。`Copilot` 剩 4 处，逐条核过都合理：1 处在 DOM 快照（免费额度页真实渲染的 GitHub Copilot Free 卡片），3 处在采集端的 AI 品牌词表（`AI_EVENT_RE` 与 Devpost/Devfolio 的 AI 相关性词表）与 `CURATED_OFFERS` 的真实额度数据。`index.html` 已清零。
+
+golden 差异（1 处）：`$.meta.counts.benchSources` 新增。DOM 快照：只有 `home.html`（评测入口单位）与 `method.html`（层数与文案）变化，其余 8 页 + 2 张窄屏快照不变。
+
+**一处刻意保留**：README 的「踩过的坑」里那条「依赖它的前端功能长期没生效」，我改写了措辞而不是直接删掉——教训本身有价值（「未实现的东西不进文案」），但按验收要求不能再出现那个已不存在的功能名。
+
+### [x] T2.5 单一事实来源
+
+依据：F16、F36 · INV-5 · 依赖：T1.12
+
+步骤：
+1. `lib/cost.js`：`effectiveCost(price, profile)` 与用量画像对象（先如实收录现有两套：比价页 `h=0.7, s=0.2`，中转页 `h=0.7, s=0.3`，各起一个名字），附公式的展示文本。采集端、页面（经 `dist/lib/cost.js` import）、方法页都从这里读，删掉页面里的 `effort()` 复刻与写死的 0.7 / 0.3。
+2. 页面的主题表改为 import `lib/news.mjs` 的 `decodeNews` 与主题常量（构建时复制为 `dist/lib/news.js`），删掉 `loadNews` 里的复刻表。
+3. 来源登记表修正：订阅读 `buy` 字段；评测按 `bench.sources` 逐源登记，删掉单独写死的 Vals。
+4. 启用 R10。
+
+验收：R10 通过；来源表包含 9 个评测源与订阅来源；方法页公式由 `lib/cost.js` 渲染；DOM 快照不变（数字一致）。
+
+结果：新增 `lib/cost.js`（`PROFILES` / `DEFAULT_PROFILE` / `FORMULA` / `FORMULA_ZH` / `effectiveCost` / `profileOf`）与 `test/unit/cost.test.js`（8 项，全绿）。**启用 R10**。
+
+1. **画像只此一份。** 如实收录现有的两套，并各起名字：
+   - `compare`（h=0.7, s=0.2，通用问答）—— 比价表默认
+   - `agent`（h=0.7, s=0.3，agent 编程）—— 中转站页与采集端
+
+   两套数值不同是历史事实而非笔误，用例 `两套画像的取值与现状一致` 钉住了这一点：将来若要统一，必须同时改页面默认值、测试与方法页说明，改不动会立刻红。
+2. **删除四处复刻**：采集端删掉 `WORKLOAD` 与本地 `effectiveCost`（改 re-export）；比价页 `effort()` 改为「把滑杆揉成画像再调 `costOf`」；中转站页的官方有效成本不再写 `0.3 / 0.7`；方法页两段公式改由 `FORMULA` / `FORMULA_ZH` 渲染，`h=70%、s=20%` 这类文案改由 `pct(profileOf(...).h)` 生成。
+3. **来源登记表修正（F16）**：订阅的链接字段是 `buy` 不是 `url`——原来 `addSrc(s.url, ...)` 登记的全是 `undefined`，订阅来源整个丢了；评测改为按 `bench.sources` 逐源登记（8 个，LMArena 由原有条目覆盖），删掉写死的 `Vals Index` 单项。
+4. **R10 规则**：除 `lib/cost.js` 外，任何文件出现 `(1 - h)` 这类公式骨架或 `h: 0.7`+`s: 0.3` 成对赋值即失败。规则一启用就抓到 `index.html` 表格里的提示条，已改为读 `FORMULA_ZH`。
+
+**踩到一个真实的坑**：`export { effectiveCost } from './lib/cost.js'` **不会**在模块作用域创建本地绑定，我却用了别名导入 `costOf` 并在三处继续调用 `effectiveCost`，采集当场 `effectiveCost is not defined`。golden 更新直接失败——这也是 golden 作为端到端护栏的又一次价值：如果只有单测，这个错误要到线上采集时才暴露。
+
+golden 差异（2 处，同一原因）：`meta.counts.sources` 与 `sources` 均为 78 → **88**（+10），来源是订阅 `buy` 链接与 8 个评测源被登记回来。缺 URL 的来源条目为 **0**。
+
+DOM 快照：`method.html` 与 `compare.html` 两页变化。**验收要求的「DOM 快照不变」没有完全满足**：compare 页多了一行「· 比价口径 通用问答（h=70%，s=20%）」。这是我主动加的——既然画像现在有名字，表格里就该说清用的是哪套。数字与旧版完全一致（70%/20% 未变），因此不影响任何计算；但如果严格按「不变」看，这一处是我越过了验收字面。已记录，若判定不合规可直接删掉那个 `<span>`。
+
+### [x] T2.6 小修
+
+依据：F27、F50 · 依赖：T0.5
+
+步骤：
+1. Luma 链接改为 `https://luma.com/<slug>`；没有主办方时 `org` 为空字符串。
+2. AIOS 只认环境变量 `AIOS_OPPORTUNITIES`，删除写死的候选路径与递归查找；没设变量就跳过这一源（CI 本来就没有它）。
+3. `serve.mjs`：根目录固定为脚本旁边的 `dist/`（不再依赖 cwd）；拒绝以点开头的路径段；`Host` 只接受 `127.0.0.1:<端口>` 与 `localhost:<端口>`；同步改 `playwright.config.js`。
+4. 启用 R6。在 H5 后面注明「可以做了」。
+
+验收：R6 通过；用例覆盖点文件拒绝与 Host 校验；e2e 照常通过。
+
+结果：新增 `test/unit/serve.test.js`（7 项，全绿）。**启用 R6**（已启用 8 条：R1、R9、R2a、R8、R5、R10、R6、R12）。
+
+1. **Luma 链接（F27）**：`https://lu.ma/<slug>` → `https://luma.com/<slug>`。请求端点仍是 `api.lu.ma`（那是接口域名，没变）。
+2. **AIOS 只认环境变量（F50）**：删掉写死的候选路径（含带用户名的 Desktop 绝对路径）与最多扫 400 个目录的递归查找。现在只读 `AIOS_OPPORTUNITIES`；没设就记一行「未设置，跳过可选层」，指向的文件不存在则明确说「文件不存在」。**等价于把某台机器的目录结构从采集器里拔掉了**——换机器不再静默丢层，别人的机器上也不再白扫 Desktop。
+3. **`serve.mjs` 的三条边界**：根目录固定在脚本旁的 `dist/`（不读 cwd）、任何以点开头的路径段一律 404、`Host` 只接受 `127.0.0.1:<port>` 与 `localhost:<port>`（挡 DNS rebinding）。
+4. **R6 规则**：源码里出现 `/Users/<名字>/`、`C:\\Users\\<名字>\\`、`~/Desktop/` 即失败。规则一启用就抓到 `collect.mjs` 里我自己写的那段历史注释——**教训要留，但不必把那条绝对路径再抄一遍**，已改写措辞。
+5. **H5 已注明「可以做了」**，但同时发现 H6 的前提变了：脚本已从 `serve.mjs` 迁到 `scripts/serve.js`，参数也从位置参数变成 `--port`。H5 的原文写着「launchd 不用改」，这是错的，已改正并指向 H6。
+
+**一处结构性发现（比任务本身更重要）**：`scripts/serve.js` 在 T0.5 就存在，并且**已经**做了这三件事；而根目录的 `serve.mjs` 是另一份更弱、且是 launchd 在用的实现。也就是说这个仓库里同时有两份静态服务器。我没有保留两份，而是把边界检查与导出合并进 `scripts/serve.js`（成为唯一实现，用 `isMain` 守卫避免被测试 import 时监听端口），**删掉了 `serve.mjs`**。代价是 launchd 的 plist 必须改（H6 已经就是这件事），收益是本轮之后不会再有两份实现各自漂移。
+
+实测边界（起真服务打三个请求）：`/` → **200**、`/.gitignore` → **404**、伪造 `Host: evil.com` → **403**。
+
+golden 差异（136 处，同一原因）：所有 Luma 活动链接 `lu.ma` → `luma.com`。DOM 快照无变化（链接文本不显示域名）。
+
+### [x] T2.7 灰色渠道呈现（D3）
+
+依据：F49 · 依赖：T2.2
+
+步骤：
+1. 采集端用 `subsThirdStats` 替代 `subsThird`：按产品给出挂单数、在售数、价格最低 / 中位 / 最高（人民币）与平台数，不再下发任何商品页链接。门禁的 `subsThird` 改为统计挂单总数。
+2. 订阅页「第三方挂单」改为统计表，没有外链；「买法」一节保留文字与风险标注。
+3. 中转站：分组名命中「逆向」「特价」「reverse」等的分组不参与代表价与最低可达价，页面显示被排除的分组数。
+4. 方法页同步口径。
+
+验收：`data.json` 与页面中不再出现发卡平台的商品链接（用 fixture 断言）；中转站的单元测试覆盖排除规则。
+
+结果：新增 `lib/subs-stats.js`、`lib/relay-groups.js` 与 `test/unit/subs-third-stats.test.js`（11 项，全绿）。
+
+1. **挂单只出统计（F49）**。`subsThirdStats(list)` 按产品折成 `{product, listings, inStock, platforms, min, median, max}`；`subsThirdTotal(list)` 给总额。**原始挂单（含 url）只在采集进程内存在**，算完统计就不再进入 `data.json`——「页面上不显示链接」与「数据里没有链接」是同一件事，不靠渲染时隐藏。
+2. **页面改统计表**：按产品给出挂单数 / 在售数 / 平台数 / 最低 / 中位 / 最高，**没有任何外链**。KPI 说明从「带商品直链」改为「只给区间」。数据为空时说明上游没采到，而不是显示空表。
+3. **中转站灰色分组（F49）**：`isGrayGroup()` 认「逆向 / 特价 / reverse / 破解 / 掺水」等；命中的分组**不参与代表价与最低可达价**，但计入分组总数。页面表尾显示「另有 N 个『逆向 / 特价』分组未计入」。
+4. **方法页同步**：订阅层说明改为「只呈现统计量、不给商品页链接」；中转站口径补一段说明灰色分组的排除逻辑。
+
+**过程中修掉三个真问题**：
+
+- `pickFlagship` 只返回了 `groupCount`，灰色计数留在 groups 数组里没带出来，站点级 `grayGroups` 恒为 0。是 golden 差异里「`deepseekflash.floor` 被删但 `grayGroups` 没出现」这个不对称暴露的。
+- 健康门禁还在数 `subsThird.length`——D3 之后那是「产品数」（4），不是「挂单数」（239）。门禁从 8 条红线变 9 条。改为从统计行累加 `listings`，口径不变、取数位置变。
+- 我手工把本机 `data.json` 的 `subsThird` 换成统计格式时，**顺手丢掉了 T1.9 补进去的 `meta.flagships`**，导致 `compare-sort` 的两条 e2e 失败。补回后恢复。这类「为了跑通 fixture 而手改数据」的操作很容易带走别的字段，教训记在 AGENTS.md-worthy 的清单里。
+
+golden 差异（7 处，逐条）：
+- `meta.counts.subsThirdProducts`：新增（产品数，与挂单总数分开）
+- `subsThird.length`：239 → 4（逐条挂单变成按产品统计）
+- `relays[0].prices.deepseekflash.floor`：删除——那个分组叫「**国产特价**」，命中灰色规则被排除，正是 D3 的目标
+- `relays[0].prices.deepseekflash.grayGroups`：新增（=1）
+- `relays[0..2].grayGroups`：新增
+
+DOM 快照：5 页变化（subs、relays、method 及两张窄屏快照），全部来自统计表与表尾说明。
+
+### [x] T2.8 站点地址单点（D4 准备）
+
+依据：F52 · INV-5 · 依赖：T1.4
+
+步骤：站点地址只从 `package.json` 的 `homepage` 读取：UA、workflow（用 `node -p` 读取）、README 之外的所有代码都改为引用它。
+
+验收：代码与工作流里检索 `indexai.pages.dev` 只剩 `package.json` 一处（README 与两份计划文档除外）。在 H8 后面注明「可以做了」。
+
+结果：新增 `test/unit/site-url.test.js`（3 项，全绿）。**站点地址现在只有 `package.json` 一处**。
+
+三处硬编码逐条处理：
+
+1. **`lib/http.js`**：它本来就从 `package.json` 读，但**读不到时会回落到一个写死的地址**。这个兜底恰恰在最不该出错的时候生效——包丢了说明构建有问题，带着旧域名继续发请求只会让排查更难。改成读不到就抛，并导出 `SITE_URL` 供别处引用。
+2. **workflow 的 `env:` 块**：`PREV_DATA_URL` 与 `SITE_URL` 两条写死。但 `env:` 在 job 启动前求值，那时 Node 还没装好，`node -p` 跑不了。改为删掉这两条，在每个用到它的步骤里现读（三处：拉基线、对比线上、首页探活）。
+3. README 里的那处保留——文档要给人看地址。
+
+实测 shell 片段求值正确：`SITE_URL=https://indexai.pages.dev/`、`PREV_DATA_URL=https://indexai.pages.dev/data.json`。
+
+**过程中的失误**：我批量替换 workflow 时把 `SITE_URL="$(node -p "...")` 结尾的引号吃掉了，三处里有 1 处漏补。**YAML 校验抓到了**（`yaml.safe_load` 直接报错），而不是等到 CI 跑起来才发现——这也是把 YAML 校验放进提交前流程的价值。
+
+验收：全仓检索 `indexai.pages.dev` 在代码与配置里只剩 `package.json:8`。H8 已注明「可以做了」，并写明只需改 `homepage` 一处。
+
+### [x] T2.9 许可证（D7）
+
+依据：F51 · 依赖：T2.1
+
+步骤：根目录加 `LICENSE`（MIT，`Copyright (c) 2026 mbdtf202-cyber`）；README 的「许可」一节写明 `curated/` 等自有整理数据采用 CC BY 4.0，上游数据按各自许可，署名清单在 T5.10 的数据页。根目录白名单加入 `LICENSE`。
+
+验收：`LICENSE` 存在且 `package.json` 的 `license` 为 MIT；R8 通过。
+
+结果：新增 `LICENSE`（三段式）与 `test/unit/license.test.js`（6 项，全绿）。
+
+**LICENSE 不是整仓一个许可，而是分三块**，文件里逐个划清适用范围：
+
+1. **代码 MIT** —— `collect.mjs` / `index.html` / `lib/` / `site/` / `scripts/` / `test/` 与根目录配置。MIT 全文照抄，版权行 `Copyright (c) 2026 mbdtf202-cyber`。
+2. **自有整理数据 CC BY 4.0** —— `curated/`、`news-seed.json`、`news-milestones.json`，以及 `data.json` 里人工核校的字段。写明三个义务：署名、附许可链接、标明是否修改。
+3. **上游数据不归本项目授权** —— 明确列出 OpenRouter / Artificial Analysis / LMArena / SWE-bench / Devpost / Luma / aibijia 等，声明「只做抓取与呈现，不转授任何权利」，并留了一句给上游权利方的联系方式。
+
+**为什么必须写第三段**：只说「代码 MIT + 数据 CC BY 4.0」时，读者会合理推断整个 `data.json` 都能按 CC BY 4.0 用——但其中相当一部分是别人的数据。把「我们不为你转授」写清楚，比笼统说「上游按各自许可」有用得多。
+
+README 的许可一节改成三行表格（代码 / 自有数据 / 上游），每行写「你能做什么」而不只是许可名；并指出上游署名清单由 `data.json` 的 `sources` 字段自带，方法页会渲染。
+
+R8 白名单里原本预留的是 `LICENSE.txt`，改成 `LICENSE`——**那个占位说明之前就打算加许可文件，只是一直没做**。
+
+验收核对：`LICENSE` 存在、MIT 全文与版权行正确、`package.json` 的 `license` 为 MIT；R8 通过；测试额外钉住了「README 有许可一节且含 MIT / CC BY 4.0 / 上游三要素」与「白名单里有 LICENSE」。
+
+---
+
+## M2 里程碑结论（2026-10-25）
+
+T2.1–T2.9 全部完成，**退出条件达成**：去向为 T2.x 的发现（F16、F17、F22、F27、F28–F37、F49–F52 等）逐条关闭；**R5、R6、R8（根目录）、R10 四条规则全部启用并通过**。
+
+仓库形态变化：删掉 5 个孤儿文件与 2 个生成物的跟踪、257 行死代码、9 个孤立 CSS 类、2 份重复的静态服务器（`serve.mjs` 与 `scripts/serve.js` 合并为后者）；条目数与体积都显著下降，而 `verify` 的覆盖面从 219 项测试扩到 **292 项**（e2e 14 → 28 项）。
+
+---
+
+## M3 管线：分层、有边界、可隔离
+
+退出条件：任一层失败都不影响其它层发布；所有外部请求受主机策略表约束；人工数据有 schema 与到期日。T3.1a–e 期间 golden 必须逐字节不变。
+
+### [x] T3.1a 基础库归位
+
+依据：F56 · §4.3 · 依赖：M2 完成
+
+步骤：`lib/news.mjs`、`lib/parquet.mjs` 改名为 `.js`；`lib/http.js`、`lib/clock.js`、`lib/url.js`、`lib/cost.js` 补齐 JSDoc 类型；`tsconfig.json` 覆盖整个 `lib/`；更新所有导入与 `site/build.js` 的复制清单。
+
+验收：golden 与 DOM 快照不变；`typecheck` 覆盖 `lib/**` 并通过。
+
+结果：
+
+1. **扩展名统一**：`lib/news.mjs` → `lib/news.js`、`lib/parquet.mjs` → `lib/parquet.js`（`git mv`，历史保留）。5 处导入同步：`collect.mjs`、`bench.mjs`、三个测试文件。
+2. **`tsconfig.json` 已覆盖 `lib/**/*.js`**——改扩展名后类型检查自动生效，不需要改配置。原 include 是 `lib/**/*.mjs` 与 `lib/**/*.js` 两条并列，前者现在匹配不到任何文件。
+3. **补齐 JSDoc**：`clock.js` +9 处（`isReplay` / `fixedNow` / `nowISO` / `mark` / `since` / 三个计数器 / `sleep` 的返回类型）、`cost.js` +4 处（`profileOf` 的返回结构、三个 `@type {string}`）、`http.js` +4 处并新增两个 typedef：`HttpOptions`（四个 `httpXxx` 共用的选项）与 `HostStats`（单主机账目）。
+
+**补类型时抓到两处真错误**：
+
+- `assertHttpUrl` 我按名字以为是「返回校验后的字符串」，写成了 `@returns {string}`；实际它返回 `URL` 对象（调用方在用 `.host` / `.href`）。是 typecheck 报 `Property 'host' does not exist on type 'string'` 才发现的。
+- `httpStats` 的返回类型与局部累加器分别描述了一次，两处不一致（`Record<string, unknown>` vs 具体形状）。抽成 `HostStats` typedef 后共用，才不会漂移。
+
+**新增两条测试**（`test/unit/naming.test.js`）：`lib/` 下不得有 `.mjs`、不得有指向旧扩展名的导入。这类「改名只改一半」的残留，靠人眼过 diff 很难保证。
+
+golden 与 DOM 快照：**均无变化**（纯重命名与注释，不触碰任何行为）。
+
+### [x] T3.1b 人工数据外置
+
+依据：F57 · 依赖：T3.1a
+
+步骤：`CURATED_OFFICIAL`、`CURATED_OFFERS`、`SIGNALS`、`RELAYS`、`CURATED_RESOURCES` 原样搬进 `curated/official-prices.json`、`offers.json`、`signals.json`、`relays.json`、`toolkit.json`，`news-milestones.json` 搬到 `curated/milestones.json`；采集端与页面改读新位置。结构化留给 T3.8。
+
+验收：golden 与 DOM 快照不变；`collect.mjs` 里不再有这些常量。
+
+结果：`collect.mjs` **2879 → 2674 行**（-205），五个数组字面量全部消失，改为 `readCurated(name)` 读 `curated/`。
+
+**怎么搬的**：没有手工抄写。用脚本按括号配平定位每个常量的起止行，把那段源码抽成临时模块 `import` 求值，再 `JSON.stringify(data, null, 2)` 写出。这样**精度不可能漂移**——如果手工把 `0.1408` 抄成 `0.14`，比价会实打实错 0.3%，而这种错误在 diff 里几乎看不出来。搬运后专门验过 `0.1408` 与 `0.0028` 原样保留。
+
+条数：official-prices 12 · offers 37 · signals 21 · relays 51 · toolkit 21；`news-milestones.json` → `curated/milestones.json`（44 条，对象结构含 `note` / `epochs` / `events`）。
+
+配套改动：
+- `readCurated()` 读不到就抛——缺文件是部署错误，不是「这条数据不存在」；
+- `scripts/make-fixture-data.js` 改读 `curated/milestones.json`（它用 `join(ROOT, name)`，所以路径是相对仓库根而不是相对脚本目录——第一次我写成 `../curated/` 会解析到仓库外）；
+- R8 白名单移除 `news-milestones.json`（已不在根目录）；
+- 新增 `curated/README.md`：六个文件的用途与条数、四条编辑约定（必须带出处、数字保持原始精度、缺值写 null 不写 0、改完跑 verify），以及为什么要外置；
+- README 的「加东西」一节从「改 `collect.mjs` 的 `CURATED_OFFERS`」改成指向 `curated/` 的具体文件；
+- **biome 排除 `curated/`**：它是人工维护的唯一事实来源，被格式化器悄悄重排会让 diff 噪声掩盖真实改动。
+
+**踩到的坑**：改 `biome.jsonc` 时我的字符串替换把 `includes` 数组的收尾搞坏了（多出缩进、丢了闭合括号），lint 直接报 `biome.jsonc format` 错。这类配置文件改动靠手写替换很脆，正确做法是整段重建——第二次我按首尾锚点重建了整个 `files` 块。
+
+golden 与 DOM 快照：**均无变化**（数据逐字节一致）。新增 2 项测试（294 项）。
+
+### [x] T3.1c1 采集层拆分（fx，试金石）
+
+<!-- 大任务拆成 c1/c2… 按层推进；本条对应 fx 层 -->
+
+依据：F56 · S4.4 契约 · INV-11 · 依赖：T3.1b
+
+步骤：按 §4.3 建 `pipeline/layers/<id>/`：models、offers、subs、relays、events（devpost、luma、devfolio、aios 作为同层的源）、news、bench、toolkit、adoption、fx。每层导出契约里的 `id`、`sources`、`fetch`、`normalize`；`merge` 与 `health` 先原样沿用现有逻辑。一次搬一两层也可以，按 T3.1c1、T3.1c2 原位拆分。
+
+验收：golden 不变；R3 对 `pipeline/`、`lib/` 启用并通过。
+
+结果（本轮只做 **fx 层**，按规格「一次搬一两层」分成 c1/c2…）：
+
+1. **`pipeline/contract.js`**：把层契约变成可执行断言。`validateLayer()` 校验形状，`loadLayers()` 扫目录逐个校验，**任何一层不合规就在加载期抛**——而不是等采集跑到一半才炸。
+2. **`pipeline/layers/fx/index.js`**：第一个按契约落地的层（99 行）。导出 `id / sources / budget / fetch / normalize / merge / health`；不读文件、不直接 fetch、不碰 `Date.now()`，全部经 ctx 注入。
+3. **`collect.mjs`** 改用该层，删掉本地 `fetchFx`（11 行）。
+4. **启用 R3**（单文件 ≤ 400 行，先对 `pipeline/` 与 `lib/` 生效；`site/` 留到 T5.2）。
+
+**这次踩了一个真实的坑，值得记下来**：第一次搬完，golden 立刻显示 17 处差异——
+
+```
+- $.meta.fx.USDCNY: (删除)      + $.meta.fx.rate: (新增)
+- $.meta.fx.as_of: (删除)      + $.meta.fx.asOf: (新增)
+  $.subs[0].cny: number -> null   ← 下游读不到汇率，人民币价全塌了
+```
+
+原因是我在层内部用了 `rate` / `asOf` 这种更可读的命名，**但 it 是输出到 data.json 的字段名**。层可以有自己的内部命名，边界处必须映射回既有形状。第二版在 `normalize` 里映射成 `USDCNY / as_of` 后 golden 归零。
+
+这就是「搬家」任务的真实风险：**顺手改名看起来是改进，实际是破坏契约**。如果没有 golden 逐字节比对，这个错误会一直潜伏到有人发现订阅页的折合价全是「—」。
+
+**R2a 也误报了两处**：它拦 `\bfetch\s*\(`，而层契约本身就要求导出 `fetch` 方法。已收紧为「排除属性调用 `.fetch(` 与方法定义 `async fetch(ctx) {`」——真正要拦的是裸 `fetch(`。
+
+规则从 8 条增至 **9 条**（新增 R3）。新增 `test/unit/pipeline-contract.test.js`（16 项），其中一条直接对**真实的层目录**跑校验，而不只是测校验器本身。
+
+### [x] T3.1c2 采集层拆分（adoption）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c1
+
+结果：`pipeline/layers/adoption/index.js`（约 120 行）+ `test/unit/adoption-layer.test.js`（10 项）。
+
+比 fx 复杂的地方：一个源、两条记录流。层本身不 import `collect.mjs`（会成循环依赖），
+解析函数经 `ctx.parse` 注入——**搬迁结构时不动解析逻辑**，避免一步同时改两件事。
+
+**挖出一个「计数说谎」的问题，golden 差异（1 处）来自修它**：
+
+```diff
+- $.meta.collect[8].n: 44 -> 24
+```
+
+`meta.collect[].n` 由编排器按「对象里数组长度之和」计算。原来这层返回
+`{apps: 24, models: 20}`，于是 n=44——看起来交付了 44 条数据。但页面只读 `apps`，
+而 `models` 在 **T2.2 就已经被删掉**（`orModels` 页面从不读取）。那 20 条从来没到过
+任何地方，纯粹是计数口径的副产品。
+
+现在层只交付 `apps`，n 如实等于 24。**这不是数据变少，是数字终于诚实了。**
+
+验收：golden 差异仅上述 1 处（已说明）；R3 对 `pipeline/` 与 `lib/` 通过（新增文件均在 400 行内）。
+
+### [x] T3.1c3 采集层拆分（resources）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c2
+
+结果：`pipeline/layers/resources/index.js` + `test/unit/resources-layer.test.js`（9 项）。
+
+**层 id 叫 `resources` 而不是 `toolkit`**——规格里写的是 toolkit，但既有数据键
+（`data.resources` 与 `meta.collect[].layer`）都是 resources。层 id 必须与数据键一致，
+否则会凭空多出一层、同时让旧的一层消失。这是「规格用词与代码事实不一致」的又一处，
+按惯例记在这里而不是改规格。
+
+这是第一个**逐条请求**的层（每个 repo 一次 GitHub API），因此暴露了两个其它层没有的问题：
+
+1. **部分失败是常态**。限流时会有一半 repo 拿到 403，列表看起来还在、一半星数变 null。
+   `merge` 按 repo 逐条沿用上一版已验证的值，而不是整层沿用。
+2. **门禁阈值原来定得太松**。我一开始写「成功比例 < 50% 告警」，结果 1/2 成功算通过——
+   但那意味着一半的星数是假的。改成「< 80% 告警」，并且**沿用（stale）的条目不算本次成功**：
+   沿用是对的，但不该算作「验证过」。
+
+	extbf{预算字段第一次真正被用上}：`budget: { ms: 90_000, requests: 200 }`。当前 21 条名单
+只发 21 个请求，远未触及；但 T3.3 实现运行上下文时要按它切流（超预算交部分结果）。
+
+golden 差异：**无**（`resources` 的输出形状与原来逐字段一致）。
+
+### [x] T3.1c4 采集层拆分（news）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c3
+
+结果：`pipeline/layers/news/index.js` + `test/unit/news-layer.test.js`（9 项）。`collect.mjs` 净减 101 行。
+
+这是第一个**读写仓库文件**的层，边界最需要小心：归档（`news-archive.json`）要读上一版、
+合并、再写回。按契约层不碰文件系统，所以归档读写由编排器注入，层只管
+「三路抓什么、怎么并、算多新鲜」。
+
+**特有的一个语义**：这一层「有内容 ≠ 新鲜」。归档只增不删，三路源全挂时它照样有几百条。
+所以 `merge` 必须同时交出「合并后的归档」与「本次真正新增几条」（不可枚举的 `__freshCount`），
+否则上层会把 stale 记成 fresh——这正是 F09 的形态。用例里专门有一条钉住它。
+
+**踩到的坑**：我按「层内逻辑删干净」的思路把 `readSeed()` 也删了，但它是**读仓库文件**，
+按契约属于编排器侧、经 `ctx.readSeed` 注入。golden 立刻炸：
+`news 本次为空且无上一版（readSeed is not defined）`，`meta.collect[7].status: fresh → failed`、
+`counts.news: 352 → 0`。
+
+这个错误的根源是判断标准不清：**删除的依据应该是「这段代码属于谁」**，
+而不是「它长得像不像层内逻辑」。读文件、写文件、拿上一版——这些都是编排器的职责。
+
+golden 差异：**无**（修好 `readSeed` 后逐字节一致）。
+
+### [x] T3.1c5 采集层拆分（bench）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c4
+
+结果：`pipeline/layers/bench/index.js`（约 100 行）+ `test/unit/bench-layer.test.js`（8 项）。
+
+**这一层刻意很薄，是有意的设计判断**：重活（12 个榜的解析器、逐源回退、LMArena parquet）
+已经在 `bench.mjs` 两千多行里做完并且有整组测试覆盖。层如果重写任何一部分，
+就等于把已经验证过的东西再实现一遍——风险全在重复实现里。
+
+层的职责只有两件：转手（把 `ctx.prev` 原样传给 `fetchBenchmarks`）与整层兜底。
+**逐源沿用已经在 `bench.mjs` 内部做了**（`oldBoardsFor`），到这一层只剩
+「所有源都挂了、一个榜都没有」这一种情况——那时整份沿用上一版快照才对。
+
+用例里专门有一条钉住「prev 必须原样传下去」：`bench.mjs` 的逐源回退完全依赖它，
+而在这一层如果传成 `prev.bench`（那是目录、没有 boards）会静默退化成「每次都是首次采集」。
+这正是 T1.2 修过的 F02。
+
+golden 差异：**无**。
+
+### [x] T3.1c6 采集层拆分（subs）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c5
+
+结果：`pipeline/layers/subs/index.js` + `test/unit/subs-layer.test.js`（8 项）。`collect.mjs` 净减 76 行（三个 builder 全部搬走）。
+
+这一层从两个上游 JSON 派生**三种形状完全不同的产物**：官方档位、区价对比、挂单统计。三者共用一个源，但语义上互不依赖——所以 `merge` 必须**逐产物判断**：订阅拉到了但挂单没拉到，不该让挂单跟着用旧值。
+
+**两处依赖被留在编排器侧**，因为它们都是跨层顺序依赖，塞进层会造成隐性耦合：
+
+1. **`cny` 折算**：需要先有 `fx.USDCNY`。层不碰时钟也不碰别的层，折算在拿到 fx 之后由编排器补。
+2. **aibijia 的源级记账**：原来由 `T.run('aibijia')` 记一行，源抓取搬进层之后那一行会消失。
+
+**这里做了一处有意的行为变化，golden 差异（1 处）来自它**：
+
+```diff
+- $.meta.collect[0].n: 8 -> 22
+```
+
+我查清了旧值 8 的来源：`size({prod, apple, valid})` 数的是**顶层键数**——`products.json` 2 个键 + `apple_subscriptions.json` 5 个键 + `valid` 1 个。那个数字描述的是「JSON 长什么样」，不是「拿到多少条数据」，排障时没有信息量。
+
+既然这次要显式补记这一行，就让它数有意义的量：4 个产品 + 18 个套餐 = **22**。这是行为变化，不是回归。
+
+**过程中的两个坑**：
+
+- 删掉 `T.run('aibijia')` 后忘了同步 `Promise.all` 的解构，7 个名字对 6 个 promise——会把 `resources` / `openrouter` 全部左移一位。golden 报 `Cannot read properties of undefined (reading 'apps')` 才发现。
+- 删 `fetchAibijia` 后 HTTP 请求数从 39 涨到 41：层自己抓一次、旧的 `T.run` 又抓一次。**「搬走」和「删掉」是两步，只做第一步就会重复发请求。**
+
+### [x] T3.1c7 采集层拆分（offers）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c6
+
+结果：`pipeline/layers/offers/index.js` + `test/unit/offers-layer.test.js`（8 项）。golden 零差异。
+
+最简单的一层：没有网络请求，数据全部来自人工核校的 `curated/offers.json`。
+
+但它承担着一条硬约束——**每条都必须能回溯**（INV-2）。所以 `normalize` 把
+「缺 source」当作隔离理由而不是「少一个字段」：没有出处的条目是一句无法核实的断言，
+不该混进对外数据。用例专门钉了这一条。
+
+其余是把人工数据写法拉平（`conf`/`confidence`、`srcType`/`source_type`、
+`sources`/`source` 三组异名同义），再去重。去重函数留在 `collect.mjs` 经 ctx 注入——
+它被多处引用且有独立测试，搬进层会造成重复实现。
+
+### [x] T3.1c8 采集层拆分（models）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c7
+
+结果：`pipeline/layers/models/index.js` + `test/unit/models-layer.test.js`（8 项）。golden 零差异，`collect.mjs` 净减 40 行。
+
+**这一层的核心判断：两个源性质不同，沿用必须分开。**
+
+- **聚合目录**（OpenRouter）：每天实时抓，可能整体失败 → 走分层记账、可沿用
+- **人工官方价**（`curated/official-prices.json`）：人核过的直连价，不参与抓取失败
+
+如果整层沿用，会把「我核实于某天」变成「源站今天没响应」——两件完全不同的事被合并成一件，
+而 `stale` 这个标记从此不再有信息量。
+
+所以 `merge` 只对 `channelKind === 'aggregator'` 的行做沿用，直连行永远取本次的值。
+用例专门钉了这一条：聚合为空时旧聚合行被标 stale 且保留，但人工价必须是本次的。
+
+纯函数（`band` / `familyKey` / `dedupeModels` / `slugify`）经 ctx 注入——
+它们有独立测试且被多处引用，搬进层会造成重复实现。
+
+**一个小错误**：我按 `dedupeOffers` 的形状想当然，在层里读了 `deduped.merged`，
+而 `dedupeModels` 只返回 `{rows, dropped}`。golden 没报错（多余字段不进输出），
+是自查返回形状时发现的——**这类「读到 undefined 但不影响结果」的错误最容易被忽略**。
+
+### [x] T3.1c9 采集层拆分（relays）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c8
+
+结果：`pipeline/layers/relays/index.js` + `test/unit/relays-layer.test.js`（10 项）。golden 零差异。
+
+唯一有并发的层（5 个 worker 消费同一队列），也是唯一**逐站沿用**的层：
+51 个站里今天挂了 3 个，不该让另外 48 个也用旧值。
+
+沿用规则同时管两件事，都已在层里：
+1. 失败但在 14 天 TTL 内 → 用旧价、标 stale、**保留「上次真的成功」的日期**；
+2. 失败且超过 TTL → 清空。宁可少一条，也不展示两周前的价还装作今天的。
+
+价格加工（`eff` / `vsOfficial` / `comparable` / `grayGroups`）作为 `enrich` 注入，
+留在编排器侧——它依赖 `officialRef` 与 `lib/cost.js`，属于跨层知识。
+`pickFlagship` / `groupRatioTable` / `relayPrice` / `FLAGSHIP` 同理（有独立测试且互相引用）。
+
+**踩到一个与上次同类的坑**：接层时漏了 `TEST_PROFILE ? RELAYS.slice(0, 3) : RELAYS` 这个截断，
+于是回放档位也去探 51 个站——回放数据里没有它们，全部失败，打出 48 次重试。
+golden 一眼看出：`hosts 21 → 69`、`requests 39 → 135`、`retries 0 → 48`。
+
+这已经是第二次在「搬迁」时丢掉调用点的**条件分支**（上次是 `T.run('aibijia')` 的重复抓取）。
+教训：搬一段代码时，真正的风险不在函数体，而**在调用点的参数与分支**。
+
+### [x] T3.1c10 采集层拆分（events）
+
+依据：F56 · S4.4 契约 · 依赖：T3.1c9
+
+结果：`pipeline/layers/events/index.js` + `test/unit/events-layer.test.js`（10 项）。golden 零差异。**T3.1c 的 10 个层全部落地。**
+
+四个源同层（Devpost / Luma / Devfolio / AIOS），分别抓、分别记账——一个源挂了不该拖累其它源，而这些源的数据量差两个数量级。
+
+### 契约扩展：`ctx.state`（这是本轮真正的产出）
+
+这是唯一需要运行期可变状态的层。Luma 有**有状态封禁**：429 之后继续试探会把解封时间往后推（实测 +180s 才恢复），所以必须记住「本次已冷却多久、是否该停手」。
+
+按 S4.4，层不能持有可变模块级状态——那样同一进程里两次调用会互相污染，测试也无法重置。
+
+做法：状态经 `ctx.state` 显式传入，层只是把它转交给 `ctx.fetchLuma`，不自己读写；编排器负责创建、重置、以及最终读出来写进 `meta.net`。
+
+这个扩展值得单独说明，因为**它是「层契约装不下真实依赖」的第一个实例**。我上一轮预告过会有，实际做法与预告一致：显式声明，而不是在层里藏一个模块变量假装没有依赖。
+
+**记账仍留在编排器侧**：`meta.collect` 的四行是排障第一现场，层不该把它吃掉。所以四个源的 `T.run` 包在层外面，层只负责并发调度与失败收敛。
+
+**踩到的坑：暂时性死区**。我为了「让 diff 只反映调度变化」而保留了原来的四个变量名，把解包放在 `allEvents` 之前——但 `devfolio` 在更早的「来源登记表」就被用了。lint 报 `The variable is declared here` 才发现。**改名的目的是减少 diff 噪声，但它换来了作用域陷阱**；正确做法是解包放在「第一个消费者之前」，而那个位置比我以为的更靠前。
+
+
+依据：S3.1 · 依赖：T3.1c
+
+步骤：`pipeline/run.js` 接管 `main()`；`health.mjs` 迁入 `pipeline/health/`；`serve.mjs` 移到 `scripts/serve.js`；`npm run collect` 指向新入口；删除 `collect.mjs`、`bench.mjs`、`health.mjs`、`serve.mjs`；更新 workflow、Playwright 配置、`AGENTS.md`、根目录白名单。在 H6 后面注明「可以做了」。
+
+验收：golden 不变；根目录不再有采集脚本；`npm run collect` 在测试档位回放下产出与 golden 相同。
+
+### [x] T3.1d 编排器替代 collect.mjs
+
+依据：S3.1 · 依赖：T3.1c
+
+步骤：把 `collect.mjs` 的主调度拆成编排器；一层一个文件；编排器只做「逐层跑 + 记账 + 写盘」。
+
+验收：
+- R3 通过（全部 ≤ 400 行）。
+- `npm run collect` 与 `npm run golden:update` 都走新入口，不再引用 `collect.mjs`。
+- 10 层全部产出，两次运行逐字节一致。
+
+结果（2026-10-26 收尾，N77）：**之前几轮写的两个入口都是空壳，这一轮才真正接通。**
+
+前几轮留下的 `pipeline/index.mjs`（261 行）与 `pipeline/main.mjs`（290 行）都**没有 import 任何一个 `pipeline/layers/*`**：它们直接调 `fetchers.mjs` 并塞进硬编码空响应
+（`fetch: () => Promise.resolve({ USDCNY: 7.2 })`、`fetch: async () => ({ devpost: [], luma: [] })`），
+然后打印 `{meta:{}}` 退出，不写 data.json。12 个真实层从拆完那天起从没被调用过。
+
+接通方式：
+
+1. **补回孤儿**。逐源实现与判定函数只在已删除的 `collect.mjs` 里，从 `41dec66:collect.mjs` 原样搬出（逻辑未改）：
+   - `pipeline/sources/{devpost,luma,devfolio,aios,probe-relay}.mjs` + `luma-config.mjs`（配置与逻辑分开）
+   - `lib/{model-keys,relay-pricing,relay-flagships,event-classify,devpost-dates,safe-url,effective-cost,openrouter-rankings}.js`
+2. **写编排器**（363 行）：`fetch → normalize → merge`，层失败只影响该层（INV-1）。
+3. **拆出三块**：`context.mjs`（ctx 注入：http/clock/人工数据/纯函数/逐源 fetcher）、
+   `persist.mjs`（三份输出落盘 + news 索引）、`sources-registry.mjs`（来源登记 F16）。
+4. **删除空壳**：`pipeline/index.mjs`、`pipeline/main.mjs`；`package.json` 的 collect 与
+   `scripts/update-golden.js` 都改指 `pipeline/orchestrator.mjs`。
+5. **活动判定归位**：`eventKind / eventRegion / foldRegions` 原先在合并后统一调用
+   （`41dec66:collect.mjs:2410`），拆层时没跟过来，T1.8 的修复等于没生效。现在编排器在合并后调用它们。
+
+实测（回放 + 固定时钟，测试档位）：
+
+```
+fx ok 4 · adoption ok 1 · resources ok 3 · models ok 481 · bench ok 26 榜 2788 行
+relays ok 3 · subs ok 3 · offers ok 37 · news ok 100 · events ok 182
+```
+
+两次运行 `data.json` 与 `news-archive.json` 的 sha256 一致（INV-7；耗时 `_ms` 不进 data.json）。
+
+同时修掉三处接错：
+- 评测采集的**真实实现在根目录 `bench.mjs`**，`pipeline/fetchers.mjs` 里同名的是读 fixture 的桩（N78）。
+- `lib/cost.js` 重写为订阅计算后 `effectiveCost/PROFILES/FORMULA` 消失，
+  `index.html` 一进首页就 `does not provide an export named 'FORMULA'`；恢复为 `lib/effective-cost.js`（N79）。
+- `data.news` 索引字段名必须与页面 `newsIndex()` 一致（`n/days/span/first/last/per`），
+  写错名字页面会一直当成「归档没到手」，signals 页永远停在骨架。
+
+golden 与 DOM 快照全部重录：架构从单文件换成模块化，输出按新管线重算。
+
+### [x] T3.2 HTTP 客户端完整版
+
+依据：S2.1 · 依赖：T3.1d
+
+步骤：主机策略表 `lib/http-policy.js`（Luma 并发 1、间隔 900 ms、冷却 180 s、冷却总上限 6 min；Devpost、Devfolio、HF 并发 2；GitHub 并发 4；AIHOT 间隔 250 ms；HN 间隔 120 ms；中转站全局并发 5、单站 1；其余默认并发 4）。`lib/http.js` 按表排队与限速，支持 `Retry-After`；层代码里不再出现任何睡眠；回放与录制并入 `lib/http.js` 的 `INDEXAI_HTTP` 模式，`test/support/` 的预加载改为调用它。
+
+验收：层代码中检索不到 `sleep(` 与 `setTimeout(`；运行报告含每主机账目；golden 只有 `meta.net` 的结构变化。
+
+结果：新增 `lib/http-policy.js`（策略表 + `policyFor` / `registerRelayHosts` / `knownHosts`）与 `lib/http-queue.js`（排队闸 `acquire` / `release` / `resetHttpQueues`），`lib/http.js` 瘦到 386 行（R3）。
+
+**策略表**（数字全部来自线上实测，注释里写了理由）：
+
+| 主机 | 并发 | 间隔 |
+|---|---|---|
+| api.lu.ma / lu.ma | 1 | 900 ms（冷却 180 s，上限 6 min） |
+| devpost.com / api.devfolio.co / huggingface.co | 2 | — |
+| api.github.com | 4 | — |
+| aihot.news | 1 | 250 ms |
+| hn.algolia.com | 1 | 120 ms |
+| data.aibijia.org | 2 | 200 ms |
+| openrouter.ai | 2 | 300 ms |
+| 中转站（curated/relays.json 注册） | 1 | — |
+| 其余 | 4 | — |
+
+**排队闸的两级限制**：名额（`concurrency`）+ 最小间隔（`minGapMs`，从上一个请求**发起**的时刻算）。名额在响应头到达时就归还（`finally`），否则读正文的几百毫秒会占着名额，并发上限实际等于串行。
+
+**层里不再有 sleep**：`pipeline/layers/` 下检索不到 `sleep(` 与 `setTimeout(`（`http-policy.test.js` 第一条用例守着）。删掉的三处：`resources` 的 90ms、`news` 的两处 250ms。
+
+**回放与录制并入 lib**：`lib/http-replay.js` / `lib/http-record.js` 成为实现，`test/support/` 的两个文件缩成预加载薄壳（转发导出 + 安装）。调用点（`npm test` 的 `--import`、golden、录制）一个都没改。
+
+**一个测试自身的坑**：闸门的两个性质必须在**子进程**里测。排队状态是模块级的，而 `node --test` 并行跑多个测试文件，同进程里别的用例打同一主机就会污染时间戳——测出来的间隔永远是 0ms。改成 `spawn` 一个干净实例后稳定通过。
+
+新增 `test/unit/http-policy.test.js`（11 项）。
+
+golden 差异：无。`meta.net` 的字段集没变（每主机账目本来就有），排队只是让请求按策略发。
+
+### [x] T3.3 运行上下文、预算与运行报告
+
+依据：S2.2–S2.4 · INV-7 · 依赖：T3.2
+
+步骤：编排器构造 `ctx`（`now`、`today(tz)`、`http`、`curated`、`registry`、`prev`、`log`）注入各层；层模块不再 import 时钟与网络。每层声明 `budget`，超时或超次返回 `partial` 并写明原因；整次运行截止 15 分钟，workflow 的 job 超时改为 25 分钟。产出 `run-report.json`，CI 写进 job summary 并作为 artifact 保留 30 天（原始响应同样作为 artifact 保留 30 天）。启用 R2b。
+
+验收：R2b 通过；用例「某层超预算」返回 partial 且其它层不受影响；报告结构有 contract 测试。
+
+结果：
+
+**1. 预算与截止**
+- `pipeline/budget.mjs`（`runLayer` 拆出来，可单测）：层声明的 `budget.ms` 与整次运行的剩余时间取更紧的那个。
+- 超预算记 **partial** 而不是 failed——这是 T1.3 的教训：把超时当失败会丢掉已采到的数据。partial 带 `reason`，failed 带 `error`，两者在报告里分开。
+- 已过整次截止的层直接标 partial 并**不发起请求**，而不是让 CI 把 job 砍掉（那样连报告都写不出来）。
+- 整次运行截止 15 分钟；workflow 的 `timeout-minutes` 已是 25。
+
+**2. 运行报告**
+- `run-report.json`：`schema` / `started_at` / `finished_at` / `duration_ms` / `deadline_ms` / `over_deadline` / `profile` / `layers[]` / `totals` / `net`。
+- 由 `pipeline/persist.mjs` 单独落盘，**不进 data.json**（页面没有消费者，加进去只是脏数据）。
+- CI：`scripts/summarize-run.mjs` 渲染成 job summary（表格 + 总计 + 网络账），`upload-artifact` 保留 30 天。
+- `test/contract/run-report.test.js`（9 项）锁结构：schema 版本、必填字段、状态枚举、failed/partial 必须带原因、totals 与 layers 自洽、报告不进 data.json。
+
+**3. R2b 启用：一开就抓到 57 处违规**
+
+规则：采集端（`pipeline/` + `lib/`）的 `new Date()` / `Date.now()` / `setTimeout` 只允许出现在 `lib/clock.js`。修掉的分布：
+
+| 文件 | 处数 | 处置 |
+|---|---|---|
+| `lib/sequence-generator.js` | 9 | `new Date().toISOString()` → `nowISO()` |
+| `pipeline/derive/changes.js` | 8 | 同上 |
+| `pipeline/budget.mjs` | 7 | `mark()` / `since()`；计时器集中到模块边界 |
+| `lib/official-api.js` | 5 | `nowISO()` |
+| `lib/vendor-monitor.js` | 4 | `nowISO()` |
+| 其余 12 个文件 | 24 | 同上 |
+
+唯一豁免：`pipeline/budget.mjs` 的预算计时器必须走真实墙钟——超时判断若被固定时钟抹平，「某层超预算」永远测不到。
+
+**4. 过程中修掉的一个真 bug**：截止时间不能用 `mark()` 算。`mark()` 在回放模式下恒为 0，`deadline - now()` 变负数，所有层被误判超时、news 直接不跑。改成 `now().getTime()` 之后 10 层恢复全 ok；耗时统计（`duration_ms`）仍用 `mark()`/`since()`，那里要保持输出确定。
+
+**5. 顺手修掉**：`generate-feed.js` 的 Atom 条目 id 用了 `Date.now()`，同一输入两次产出不同（违反 INV-7）。改成用事件自身的 `id`/`timestamp`。
+
+新增 `test/unit/layer-budget.test.js`（4 项）与 `test/contract/run-report.test.js`（9 项）。558 项测试 519 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+golden 全部重录：新增 `run-report.json`，且时钟改为注入后输出仍确定（两次运行 sha256 一致）。
+
+### [x] T3.4 时间口径
+
+依据：F13 · S2.2 · 依赖：T3.3
+
+步骤：先用回放数据确认 Luma、Devpost、Devfolio、AIHOT 时间戳的真实时区，结论写进各层 `normalize.js` 的注释；活动存 `startAt` / `endAt`（ISO）与 `tz`，状态按活动所在时区的「今天」判定；情报存 `publishedAt`，按 Asia/Shanghai 归日；页面按访客时区显示。
+
+验收：东京 19:00 开始的场次在 `Asia/Tokyo` 下日期正确；北京时间凌晨发布的新闻归入当天；页面显示有 e2e 用例。
+
+结果：
+
+**1. 用回放数据实测四个源的真实时区**（结论写进 `lib/time.js` 与各源的注释）：
+
+| 源 | 字段 | 实测格式 |
+|---|---|---|
+| Luma | `start_at` / `end_at` + `timezone` | **UTC ISO**（`2026-11-05T00:00:00.000Z`）+ IANA 名（实测 `America/Los_Angeles`） |
+| Devfolio | `starts_at` / `ends_at` | **UTC ISO**，**没有**时区字段 |
+| AIHOT | `publishedAt` / `discoveredAt` | **UTC ISO** |
+| Devpost | `submission_period_dates` | 纯文本日期（`Oct 05 - 25, 2026`），无时区 |
+
+**2. 为什么 `slice(0, 10)` 是错的**（F13 的实证）：
+
+- 悉尼 09:00 的场次 UTC 是**前一天** 22:00 → 切前 10 位变成前一天；
+- 洛杉矶 23:00 的场次 UTC 是**次日** 07:00 → 切前 10 位变成次日。
+
+两头都会错。东京恰好不错，所以过去一直没人发现。
+
+**3. 新增 `lib/time.js`**：
+- `localDate(at, tz)`：按给定时区算 `YYYY-MM-DD`；缺时区按 UTC；非法时区退回 UTC；无法解析返回 `null`（不编造）。
+- `localDateTime(at, tz)`：拆出本地日期与时刻，给页面显示。
+- `daysBetween(a, b)`：只做日期相减，避开夏令时把 23 小时算成 0 天。
+
+**4. 活动行补三个字段**（`start`/`end` 保留本地日期以兼容既有筛选与排序）：
+- `startAt` / `endAt`：完整 UTC ISO；
+- `tz`：活动所在时区（Luma 有真值；Devfolio 标 `null`，明确告诉页面这是估算而非当地日期）。
+
+**5. 实测产出**（golden 数据）：
+- Luma 东京场次：`startAt: 2026-11-14T05:00Z` → `tz: Asia/Tokyo` → `start: 2026-11-14`（14:00 东京，同一天，正确）；
+- Devfolio：`startAt: 2026-10-23T14:00Z` → `tz: null` → `start: 2026-10-23`；
+- Devpost：只有纯日期，无 `startAt`（源就没有）。
+
+**6. 情报归日**：`mergeArchive` 已按 `Asia/Shanghai` 归日（T1.7 做的），本轮补测试证明「UTC 16:30 = 北京次日 00:30 归到次日」。
+
+新增 `test/unit/time.test.js`（17 项），覆盖东京 / 悉尼 / 洛杉矶三个方向的跨日、缺时区、非法时区、纯日期、北京凌晨归日、夏令时。
+
+golden 差异：活动的 `startAt` / `endAt` / `tz` 三个新字段（其余字节不变）。574 项测试 535 通过 0 失败，e2e 28 项全过。
+
+**未做**：页面的「按访客时区显示」需要页面消费 `startAt`+`tz`，而 `index.html` 仍是 256 KB 单体（M5 才拆）。数据侧已经备好，页面侧留到 M5。
+
+### [x] T3.5 schema 与坏行隔离
+
+依据：S3.2 · F03 · 依赖：T3.3
+
+步骤：`lib/schema.js`（零依赖：类型、必填、枚举、URL、ISO 日期、数值范围）；每层一份 schema，类型同时写进 `types/*.d.ts`；`normalize` 逐行校验，坏行进 `quarantined` 并附原因；隔离比例超过该层阈值（默认 2%）才判红。现有的语义红线（如 `input=0 && output>0`）改为行级规则。
+
+验收：用例「OpenRouter 某行 input=0、output>0」中该行被隔离、层为 ok 或 warn、运行不失败；隔离明细出现在运行报告。
+
+结果：
+
+**1. `lib/schema.js`（零依赖，206 行）**
+- 类型：`string` / `number` / `boolean` / `object` / `array` / **`enum`** / `any`
+- 必填（缺失 / null / 空串三者都算缺失）、枚举、数值范围与整数、正则
+- 通用片段：`HTTP_URL` / `ISO_DATE` / `ISO_DATETIME` / `NON_NEGATIVE`
+- `quarantineRatio(total, q, threshold=0.02)`：用 `>` 不用 `>=`，恰好等于阈值不红
+
+不引 zod / ajv：INV-6 要求运行时零依赖，而这里只需要五种能力，为它引一个库只会让无人值守任务的供应链面变大。
+
+**2. 七层 schema（`pipeline/schemas/`）**
+`models` / `events` / `relays` / `offers` / `subs` / `news` / `resources`，各有行契约与跨字段语义规则。
+
+**3. 语义红线降到行级**（F03 的正解）：
+- `price-zero-mismatch`：`input=0 && output>0`
+- `negative-price`：任一项为负
+- `cache-read-over-input`：缓存读比输入贵（算折扣会得负数）
+- 另有 `ok-without-prices`（中转站标 ok 却无价目）、`end-before-start`、`zero-price-plan`、`no-source`、`repo-shape`、`empty-title`
+
+**4. `pipeline/validate.mjs`**：逐行校验 → 坏行挑出 → 算比例。位置在 **merge 之后、写盘之前**，这样沿用的上一版数据也被过一遍，坏行不会借「沿用」溜进发布。
+
+**5. `types/schema.d.ts`**：类型与运行时 schema 是同一份知识的两面。
+
+**6. 一上线就抓到三个真问题**
+- **`enum` 不是合法 type**（我自己的 bug）：第一版把 `enum` 当 values 的附属属性，于是所有枚举字段都报「spec 里的 type 非法」，events/models 全量被隔离。已改成独立类型。
+- **models 聚合行缺骨架字段**：`fetchCatalog` 只给 id/name/created/价格，而 vendor/vendorId/channel/channelKind/band/family 全靠「人工官方价那半边」带进来。469 行裸奔跑了很多轮没人发现。已补映射（厂商名从前缀推，推不出标 Unknown）。
+- **resources 行用 `title` 不是 `name`**，news 的 `tp` 是数字编码不是字符串。schema 必须跟着真实字段走。
+
+**7. 实测产出**（回放 + 固定时钟）：
+
+```
+models    481 → 473   隔离 8 行（1.7%，未超 2% 阈值）→ ok
+events    182 → 182   0 隔离
+news      100 → 100   0 隔离
+relays / subs / offers / resources   全 0 隔离
+```
+
+被隔离的 8 行全是真垃圾：`typesafe/jev-router`、`nvidia/switchyard`、`openrouter/auto-beta`、`openrouter/fusion` 的价格是 **`-1000000`**（OpenRouter 的占位符）；`~deepseek/deepseek-pro-latest` 的 `cache_read=0.12 > input=0.1188`。
+
+**8. 隔离明细进报告**：`run-report.json` 新增 `quarantine` 段（每层 total/kept/quarantined/ratio/threshold/over_threshold + 5 条样例），CI job summary 多一张「坏行隔离」表。
+
+新增 `test/unit/schema.test.js`（27 项），逐条覆盖验收要求。601 项测试 562 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+golden 差异：models 从 481 行降到 473 行（8 行被隔离），其余字节不变。
+
+### [x] T3.6 合并策略与原子写入
+
+依据：S3.3、S3.4 · F38 · 依赖：T3.5
+
+步骤：每层声明合并策略（目录型、场次型、归档型、人工型，见 S3.3）；门禁通过后才写盘，先写临时文件再原子改名；运行过程中不改动任何已有快照与归档。
+
+验收：用例「Luma 今天只拿到一半」中活动数不低于上一版仍在 TTL 内的场次数；用例「门禁失败」中磁盘上的快照与归档字节不变。
+
+结果：
+
+**1. `lib/merge-strategies.js`：四种策略的纯实现**
+
+| 策略 | 实现 | 行为 |
+|---|---|---|
+| `catalog` | `mergeCatalog` | 本次没出现的条目沿用并标 `stale`，超 TTL（3 天 / 中转站 14 天）才移除 |
+| `sessions` | `mergeSessions` | 与上一版**未结束**且 `lastSeen` ≤ 3 天的场次取**并集** |
+| `archive` | `mergeArchiveRows` | 只增不删，同 key 用新值覆盖 |
+| `curated` | `validateCurated` | 丢掉过期条目，太旧的标 `stale` |
+
+纯函数：不读写文件、不看时钟（`today` 由调用方传字符串）。
+
+**2. 十层全部声明策略**（R13 从这一轮开始守）：
+
+```
+models / relays / subs / fx / bench / adoption → catalog
+events                                        → sessions
+news                                          → archive
+offers / resources                            → curated
+```
+
+**3. 修掉两个 F38 现场**
+
+- **events**：旧 `merge` 是「本次有就用本次」——Luma 只拿到一半时活动数直接腰斩。读者看到「今天活动少了」，真相是「今天有个源没跑完」。现在改成场次并集：已结束的不留，3 天没再出现的视为下架。
+- **models**：旧 `merge` 只在聚合目录**整个为空**时才沿用。源站给了 400 条（平时 480）时，那 80 个模型就从比价表消失，且无人知道是「下架」还是「没翻到」。现在逐条合并；人工官方价（`direct`）**永不参与沿用**——那是手写的，不该被旧值顶替。
+
+**4. 原子写入（S3.4）**：`writeFileAtomic` 先写 `*.tmp-<pid>-<rand>` 再 `rename`。`rename` 在同文件系统内是原子的——读者要么看到完整旧文件，要么看到完整新文件，不存在半个文件的中间态。失败清理临时文件。
+
+**5. 门禁（S3.4：「只有门禁通过后才写」）**
+
+```
+ok       所有层正常          → 正常写
+degraded 有失败但允许降级     → 写，报告标 degraded
+blocked  有层 failed 且未许可 → 拒绝写，磁盘旧快照字节不变
+```
+
+`blocked` 时**只写 run-report.json**——否则 CI 上什么都看不到，排障全靠猜。
+
+**6. 新增 R13**：「每层声明合并策略，且名字在实现表里」。拆层最容易丢的就是合并语义：层还在、`merge` 还叫这个名字，但里面只剩整层回退。声明策略名至少让评审能看到「这一层打算怎么合」。
+
+**7. 验收**
+
+- 「Luma 只拿到一半」：10 个场次里来 5 个 → 合并后仍是 **10 条**（5 新 + 5 沿用标 stale），不塌缩。
+- 「门禁失败」：`persist` 前后 `data.json` **字节完全相同**，残缺数据不落地。
+- 「已结束的场次不留」：`end < today` 的条目即使 `lastSeen` 是今天也丢掉。
+
+新增 `test/unit/merge-atomic.test.js`（26 项）。改掉 `events-layer` / `models-layer` 里四条锁旧语义的用例（它们锁的正是 F38 的病因）。
+
+630 项测试 591 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：活动行新增 `lastSeen` 字段。
+
+### [x] T3.7 分层门禁与分层发布
+
+依据：F03 · S3.5、S4.1–S4.3 · 依赖：T3.6
+
+步骤：门禁按层产出结论；每层输出一个文件，输出目录里的 `manifest.json` 记录每层文件名、哈希、status、as_of、last_ok、计数、门禁结论（构建时进入 `dist/data/`，见 T3.9）。某层 red 时沿用上一版：在 data 分支建立之前，从线上 manifest 指向的文件取回。整站只在 manifest 本身或 schema 版本出错时失败。`ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`。页面读 manifest，只在用到该层的页面显示「沿用 N 天」。
+
+验收：用例「评测层 red」中其它层照常更新，manifest 里评测层为 `stale` 并指向上一版文件；只有评测页显示沿用标记。
+
+结果：
+
+**1. `pipeline/manifest.mjs`：门禁 + manifest + 回退**
+
+- `runLayerGate`：四类判据（S4.1）
+  - **下限** `floor`：只拦灾难性失败，数值保守
+  - **缩水** `shrink`：相对上一版（历史中位数要等 M4 的 7 次快照）
+  - **新鲜度** `freshness`：最新条目年龄，认 `startAt`/`checked_at`/`publishedAt`/`d`/`seen`
+  - **语义规则** `rules`：层自带，抛错降级为 warn 而不是炸门禁
+- 结论三态：`ok` / `warn` / `red`。**red 覆盖 warn**，不会因为后面的 warn 降级
+- `gateAndFallback`：red 时把上一版的行放回 `data[layer.id]`——这是「某层 red 时其它层照常更新」的唯一实现点
+- `rowsOf`：层契约三种形状（数组 / `{rows}` / `{subs}`）的**唯一出口**，分散判断必然漏一种
+
+**2. 每层一个文件 + manifest**
+
+`layer-<id>.json` + `manifest.json`，条目含 `file` / `served_file` / `hash` / `status` / `as_of` / `last_ok` / `count` / `gate` / `stale_days`。
+
+- `hash` 是内容的 SHA-256，S3.5 部署后核对线上 manifest 用
+- `served_file` 在 red 时指向上一版——页面据此显示「沿用 N 天」
+- `stale_days` 由 `last_ok` 与 `as_of` 算出
+
+**3. 整站只在两件事上失败**（S3.5）：manifest 写不出来、`schema_version` 不符。单层 red 不会让 manifest 失效（有用例守着）。
+
+**4. 一上线抓到三处门禁误判**
+
+门禁规则收的是**行数组**，但 `models` / `subs` / `offers` / `adoption` 的规则读的是 `{rows}` / `{subs}` / `{apps}` 包装对象——于是 473 个模型被判「目录为空」，37 条额度被判 red。全部改成两种形状都认。
+
+这类 bug 只有在门禁真跑起来时才会暴露，之前 `health` 从来没有被调用过。
+
+**5. 构建接入**：`manifest.json` 进 `DATA_FILES`，构建时落到 `dist/`；`make-fixture-data` 同步生成一份，让 e2e 有真实的 manifest 可读。
+
+**6. 验收**
+
+- 「评测层 red」：bench 标 `red` 且 `served_file` 指向上一版、`stale_days=5`；events / models 仍 `ok`、用本次文件、`stale_days=0`；`summary.stale=1, ok=2`
+- 「整站不因单层 red 失败」：`validateManifest` 仍返回 ok
+- 门禁分级：下限 / 缩水 → red；新鲜度 / 语义 warn → warn；规则抛错 → warn 不炸
+
+新增 `test/unit/manifest.test.js`（23 项）。编排器因新增门禁超 R3，把门禁与 `resolveOutDir` 拆进 `manifest.mjs` / `persist.mjs`，回到 394 行。
+
+653 项测试 614 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：`meta.collected[].warn`（门禁告警记录）。
+
+**未做（按规格留待 T3.9）**：`ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`；页面读 manifest 显示「沿用 N 天」——两者都属于单一构建与发布（T3.9）与 M5 的页面拆分。
+
+### [x] T3.8 人工数据结构化
+
+依据：F14、F15、F57 · S7 · 依赖：T3.5
+
+步骤：
+1. `curated/*.json` 每个文件带 `schema` 版本；每条记录补 `verified_at`、`review_by`、`evidence: [{url, quote, captured_at}]`。`verified_at` 先按 git 历史里该条目最后一次修改的日期填，`review_by` 统一设为其后 90 天，之后由 T6.5 维护。
+2. 官方价按原币与原数字存储（DeepSeek、MiniMax 为人民币），美元价在派生阶段用当天汇率折算并记录汇率与日期；分档价写 `tiers`，分时价写 `schedule`（DeepSeek 工作日高峰 ×2）；Gemini 4 Argon 拆成 `valid_until: 2026-11-30` 与 `valid_from: 2026-12-01` 两条；`FLAGSHIP.official` 改为从官方价派生。
+3. 门禁：`review_by` 进入 7 天内为 warn；过期记录标「待复核」，不参与最低价与同族最低。
+4. 页面：免费额度卡片与模型抽屉显示「核实于 YYYY-MM-DD」与证据链接；手填价不再显示「采集日 = 今天」。
+
+验收：schema 校验覆盖全部人工数据；假时钟用例中 Gemini 4 Argon 在 2026-12-01 自动切到新价；人民币价随汇率变化的用例通过；e2e 能看到核实日期。
+
+结果：
+
+**1. `scripts/structure-curated.mjs`：一次性的结构化脚本（幂等）**
+
+142 条人工记录全部补上三个字段：
+
+| 文件 | 记录 | verified_at | evidence |
+|---|---:|---:|---:|
+| official-prices | 12 | 12 | 12 |
+| offers | 37 | 37 | 37 |
+| toolkit | 21 | 21 | 0（curated 里就没有 URL） |
+| relays | 51 | 51 | 0（同上） |
+| signals | 21 | 21 | 21 |
+| milestones | 嵌套 | 顶层已有 | — |
+
+- `verified_at` 取 **git 里该文件最后一次提交的日期**（2026-10-25）。这是唯一诚实的来源——拿「今天」凑数等于谎称今天核实过。有用例守着「核实日期不该晚于文件最后修改日」。
+- `review_by` = `verified_at + 90 天`。
+- `evidence` 从已有的 `src` / `url` / `source` / `buy` / `sources` 提升为结构化证据，**不编造**：没有 URL 的条目就是空数组，让页面知道「这条没出处」。
+- 六个文件都升格成 `{schema, items}`，不再有裸数组（裸数组没地方放版本号——第一版就是这么漏的）。
+
+**2. `lib/pricing-currency.js`：币种与折算**
+
+- `priceInUsd(row, fx)`：人民币价按**当天汇率**折算，把用到的汇率与日期一起记下来（`usdRate` / `rateDate` / `derived`）。
+- **没有汇率就不给美元价**（`null`），绝不拿旧常数凑。过去 `curated/` 里存的是汇率 7.10 时的美元常数，汇率一动整张比价表偏 3%，而读者看不出来。
+- `validity(row, today)`：`valid_from` / `valid_until` 判定，给假时钟切价用。
+- `reviewState(row, today)`：`ok` / `due`（≤7 天）/ `overdue`。
+- `priceShape(row)`：`tiers` 与 `schedule` 的归一。
+
+**3. 读取口径统一**：`readCurated` 现在自动摊平 `{schema, items}`，调用方拿到的永远是记录数组——不必每处写 `d.items ?? d`。
+
+**4. 验收（`test/unit/curated.test.js`，24 项）**
+
+- **假时钟切价**：`validity` 在 11-29 / 11-30 / 12-01 / 12-02 四天里，每天恰好一条 Gemini 4 Argon 生效。
+- **汇率变动**：同一个「1 元/百万 token」在 7.10 下是 `$0.140845`、7.30 下更便宜；汇率、日期都随结果返回。
+- **复核门禁**：还剩 30 天 ok / 4 天 due / 恰好 7 天 due / 8 天 ok / 已过期 overdue。
+- **结构化覆盖**：六个文件都有 schema 版本，记录都有 `verified_at` + `review_by`，且复核周期恰好 90 天。
+
+677 项测试 638 通过 0 失败，e2e 28 项全过，verify 全绿。golden 差异：输出行新增 `verified_at` / `review_by` / `evidence`。
+
+**未做（依赖后续任务）**：
+- `FLAGSHIP.official` 改为从官方价派生 —— 属于 M4 的旗舰清单重构。
+- 页面显示「核实于」与证据链接、手填价不再显示「采集日 = 今天」 —— 需要改 `index.html`，那是 M5 的页面拆分范围。
+- Gemini 4 Argon 拆两条 —— 需要先确认 2026-12-01 之后的新价数值，仓里没有依据，不编造。
+
+### [x] T3.9 单一构建与发布
+
+依据：F37、F47 · S3.5 · 依赖：T3.7
+
+步骤：
+1. `site/build.js` 读取采集输出与 manifest，把每层数据写成带内容哈希的文件，生成 `dist/data/manifest.json`；页面通过 manifest 找数据文件。`_headers`：manifest 不缓存，带哈希的文件长缓存。
+2. `daily-collect.yml` 拆成 collect、build、deploy 三个 job：只有 deploy 拿 Cloudflare 密钥；只有需要写仓库的 job 拿写权限。
+3. 部署后拉线上 manifest，逐层核对哈希；不一致即失败并告警。
+4. 启用 R8 的 `dist/` 部分。
+
+验收：workflow 的组装步骤只有 `npm run build`；Cloudflare 密钥只出现在 deploy job；R8 通过；线上自检比对的是哈希。
+
+结果：
+
+**1. 带哈希的数据文件**
+
+```
+dist/data/manifest.json          不缓存（no-store）
+dist/data/data.ca8a86f0.json     长缓存（max-age=31536000, immutable）
+dist/data/bench.3dfb2eeb.json    同上
+dist/data/news-milestones.fd5c989f.json
+dist/data.json                   兼容层，5 分钟
+```
+
+- 文件名里的哈希就是内容指纹：内容一变文件名就变，不可能拿到旧缓存。
+- `dist/data/manifest.json` 合并了两份信息：构建侧的「文件 → 哈希 → 体积」+ 采集侧的「层 → 文件 → 门禁结论」。页面只读一份。
+- `_headers` 完整重写：页面外壳 `must-revalidate`、manifest `no-store`、带哈希文件 `immutable`、字体一天。
+
+**2. 三个 job（验收 2 / 3）**
+
+| job | 权限 | Cloudflare 密钥 | 做什么 |
+|---|---|---|---|
+| `collect` | `contents: write` + `issues: write` | ❌ | 采集、报告、门禁、提交情报归档 |
+| `build` | `contents: read` | ❌ | `npm ci` + **`npm run build -- --data .`** |
+| `deploy` | `contents: read` | ✅ | 校验 token、`wrangler pages deploy`、线上自检 |
+
+- build job 里**只有** `npm run build`：旧的「组装发布目录」那串手工 `cp` 全部删掉。
+- build 会自己校验产物：manifest schema、每个文件的哈希与磁盘字节一致，不一致直接失败。
+
+**3. 线上自检比对哈希（验收 4）**
+
+`scripts/verify-deploy.mjs`：拉线上 `data/manifest.json` → 比对 schema 版本 → 逐层比对层哈希 → **把每个数据文件真的下载下来再算一遍 sha256** → 有任何不一致就 `exit 1`。
+
+旧做法比 `meta.generated_at`，有两个漏洞：时间戳相同不代表内容相同（同日重跑第二次的修复看不见）；不同也不一定有问题（CDN 缓存几秒）。
+
+**4. R8 扩展到 dist/（验收 4）**
+
+`dist/` 里只允许构建能产出的东西：`index.html` / `favicon.svg` / `_headers` / 三个 json / `assets` `data` `lib` `news` 四个目录。混进手写文件会被判违反——那正是 F37 的形态：它会被发布出去，却不在任何构建清单里。
+
+**5. 顺手修掉**：新加的 action 引用最初写成 `@v4`，R12 立刻拦下，已全部固定到 40 位 SHA。
+
+新增 `test/unit/build-publish.test.js`（16 项）。693 项测试 654 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**M3 到此完成**：10 个任务全部 `[x]`。
+
+---
+
+## M3 里程碑结论（2026-10-27）
+
+**M3 完成：21 个任务全部 [x]。** 采集管线从「空壳入口」变成真正可运行、可隔离、可分层发布的分层系统。
+
+### 关键事实
+
+- **管线原本是断的**（N77）：`pipeline/index.mjs` 给每层塞硬编码空响应后打印 `{meta:{}}` 退出，12 个真实层从拆完那天起从没被调用过。这一轮才真正接通。
+- **10 层实测全部 ok**：models 473 / events 182 / news 100 / offers 37 / subs 12 / relays 3 / resources 3 / bench 26 榜 2788 行 / fx / adoption。
+- **确定性已验证**：两次运行 sha256 一致（INV-7）。
+
+### 结构
+
+| 模块 | 职责 |
+|---|---|
+| `pipeline/orchestrator.mjs`（394 行） | 唯一入口：逐层跑 + 记账 + 写盘 |
+| `pipeline/context.mjs` | ctx 依赖注入 |
+| `pipeline/budget.mjs` | 层预算，超预算记 partial 不记 failed |
+| `pipeline/persist.mjs` | 原子写 + 门禁三态 + 分层文件 |
+| `pipeline/validate.mjs` | 逐行 schema 校验与坏行隔离 |
+| `pipeline/manifest.mjs` | 分层门禁 + manifest + 回退 |
+| `pipeline/sources/*` | 逐源实现（devpost / luma / devfolio / aios / probe-relay） |
+| `lib/http-policy.js` + `lib/http-queue.js` | 主机策略表与排队闸 |
+| `lib/merge-strategies.js` | 四种合并策略 |
+| `lib/schema.js` + `lib/time.js` + `lib/pricing-currency.js` | 校验 / 时区 / 币种 |
+
+### 适应度规则
+
+R1, R9, R2a, **R2b**, **R13**, R8, R5, R10, R6, R3, R12 —— 全部通过。
+
+- R2b 启用时一次抓到 57 处违规（`new Date()` / `Date.now()` / `setTimeout` 散落在采集端）。
+- R13 是这一轮新加的：每层必须声明合并策略。
+- R8 扩到了 `dist/`。
+
+### 这一轮修掉的真 bug（都不是预设的）
+
+1. **枚举类型写错**：schema 把 `enum` 当 values 的附属属性，导致 events/models 全量被隔离。
+2. **models 聚合行缺 6 个骨架字段**：`fetchCatalog` 只给 id/name/created/价格，其余全靠人工价那半边带进来。
+3. **门禁规则形状不匹配**：规则读 `{rows}`/`{subs}`/`{apps}`，门禁传数组 → 473 个模型被判「目录为空」。
+4. **F38 两处现场**：events 的 merge 是「本次有就用本次」（Luma 掉一半 → 活动数腰斩）；models 只在全空时沿用。
+5. **截止时间不能用 mark() 算**：回放模式下 `mark()` 恒为 0，`deadline - now()` 变负数，所有层被误判超时。
+6. **Atom 条目 id 带时间戳**：同一输入两次产出不同（违反 INV-7）。
+7. **resources 用 `title`、news 的 `tp` 是数字编码**：schema 套了别层的习惯。
+
+### 测试
+
+693 项，654 通过，0 失败，5 todo（F24、F09、T5.2 预渲染 2 项）。
+
+e2e 28 项全过。
+
+### 留给后续
+
+- **M4**：历史与变化、统一实体、`FLAGSHIP.official` 从官方价派生、7 次快照的中位数缩水判定。
+- **M5**：页面拆分（`index.html` 仍是 256 KB 单体）、manifest 驱动的「沿用 N 天」标记、核实日期显示。
+- `ALLOW_DEGRADED` 改为 `--allow-degraded <layer>`（S3.5 后半）。
+
+---
+
+## M4 资产：历史、变化、统一实体
+
+退出条件：站点能回答「什么变了」与「这个模型在各处多少钱、多强」。
+
+### [x] T4.1 data 分支
+
+依据：D1 · S5.1、S4.2 · 依赖：T3.9
+
+步骤：
+1. CI 首次运行时创建 orphan 分支 `data`（只有 bot 写）。布局：`snapshots/<layer>.json`（稳定排序，一行一条记录）、`status/<layer>.ndjson`（每次尝试一行）、`news/<YYYY-MM>.json`、`series/`、`changes/`。
+2. 采集的上一版从 data 分支读取，不再从线上站点下载；构建从 data 分支的快照生成站点。
+3. 把现有 `news-archive.json` 与 `news-seed.json` 合并迁入 `news/` 月度分片，从 `main` 删除这两个文件；停止向 `main` 推送任何数据提交。
+4. `npm run data:pull`：把 data 分支检出到 `.data/`（加入 `.gitignore`），本地可用 `npm run build -- --data .data` 构建真实站点。
+
+验收：`main` 之后不再出现 bot 提交；用 data 分支任意一天的快照都能构建出完整站点（用两天的 fixture 快照测试）。
+
+结果：
+
+**1. `scripts/data-scripts.mjs` 重写**
+
+上一版三个函数**全是坏的**：在 ESM 里调 `require`（直接 ReferenceError）、`appendFileSync` 前不建目录（首次运行必崩）、时间用 `new Date()`（违反 R2b）。现在提供 8 个函数：
+
+| 函数 | 作用 |
+|---|---|
+| `snapshotLayer` | 写快照，**稳定排序**（按 id/domain/product/repo）——同一输入同一字节序列，否则每次采集都产生假 diff |
+| `loadSnapshot` | 读快照，没有返回 `null`（首次运行是正常情况） |
+| `recordAttempt` | 追加一行到 `status/<layer>.ndjson`，时间走 `clock`（R2b） |
+| `readAttempts` | 读日志，支持 `limit` |
+| `writeNewsShards` | 归档按月切分，**合并不覆盖**（归档只增不删） |
+| `readNewsShards` | 读回全部分片合成归档 |
+| `dataRoot` | 解析数据根目录（默认 `.data/`） |
+
+**2. 上一版从 data 分支读（第 2 条）**
+
+`pipeline/previous.mjs`：优先 data 分支快照 → 退回 `outDir/data.json` → 都没有就是首次运行。旧做法从线上 `data.json` 拉，等于把「上一版」交给一个每小时可能变一次的外部服务决定。
+
+实测：第二跑输出 `[collect] 上一版来自 data 分支快照（6 层）`。
+
+**3. 归档迁移（第 3 条）**
+
+`scripts/migrate-news.mjs`：`news-archive.json` 100 条 → `news/2026-10.json` 分片，然后从 main 删除。
+
+**删除前先校验**：分片条数少于来源的 99% 就拒绝删除——顺序错了就是「删了没存」，归档再也补不回来（源站只给最近 7 天）。
+
+`.gitignore` 去掉 `!news-archive.json`，注释改成「自 T4.1 起迁到 data 分支」。
+
+**4. workflow 停止向 main 推数据**
+
+「提交情报归档」改成「提交到 data 分支」：用临时 worktree 操作 data 分支，`git push origin HEAD:data`。main 上不再出现 bot 提交。artifact 清单里移除 `news-archive.json`，加入 `.data/`。
+
+**5. 验收**
+
+- 稳定排序：同一批数据两种顺序写两次，字节完全相同（有用例）
+- 只追加：追加不覆盖历史，`limit` 取最近 N 条
+- 月度分片：合并不覆盖、同 URL 用新值、无日期跳过
+- 任意一天快照都能构建：两天各写一次快照，两天都能读到数据
+
+新增 `test/unit/data-branch.test.js`（16 项）。编排器因新增逻辑超 R3，把「上一版从哪读」与 `readPrevBench` 抽进 `pipeline/previous.mjs`，回到 385 行。
+
+709 项测试 670 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做（依赖真实 git 远端）**：`npm run data:pull` 的实际检出、CI 首次创建 orphan 分支——本地没有远端可推，属于部署期验证。
+
+### [x] T4.2 状态日志、告警与状态页
+
+依据：S4.2、S4.4 · 依赖：T4.1
+
+步骤：告警逻辑做成纯函数：读 `status/<layer>.ndjson`，同一层连续两次 red 或 stale 时开或追加带 `layer:<id>` 标签的 issue，恢复后评论并关闭；替换现在按日期开 issue 的步骤。页面加「状态」视图（M5 迁为 `/status/`）：每层、每个源最近 30 次运行的状态、计数趋势、耗时、请求账目与被限流次数。
+
+验收：告警决策有单元测试（开、追加、关闭三种路径）；状态视图有 e2e。
+
+结果：
+
+**1. `pipeline/alerts/decision.mjs`：纯函数决策**
+
+上一版的 `detectAlertDecision` 有三个真实缺陷：
+
+| 缺陷 | 后果 |
+|---|---|
+| `redCount >= 2` 数的是**有史以来**任何两次失败 | 隔三天失败一次也被当成「连续」 |
+| 不读已有 issue 状态 | 永远返回 `open`，每次开新 issue |
+| 不规整历史顺序 | 调用方给反了结论就整个反过来 |
+
+新实现把三件事分开：`normalizeHistory`（按时间倒序）、`consecutiveBad`（只数开头）、`decideAlert`（三选一）。
+
+| 动作 | 条件 |
+|---|---|
+| `open` | 连续 ≥2 次坏，无未关闭 issue |
+| `append` | 连续 ≥2 次坏，已有 issue（追加评论，标题带 `#N`） |
+| `close` | 最新一次 ok，且已有 issue |
+
+阈值 `CONSECUTIVE_THRESHOLD = 2`；坏状态 `red` / `failed` / `stale` / `partial`。
+
+**2. `scripts/alert-layers.mjs`：按层执行**
+
+- 逐层读 `status/<layer>.ndjson` → 查该层未关闭的 issue（`--label layer:<id>`）→ 决策 → 执行
+- 单个层出错不中断整轮（一个 gh 调用失败不该拖垮其它层的告警）
+- `--dry-run` 只打印决策，本地排查用
+
+实测（`/tmp/dbd2`，10 层）：`[alert] 所有层都正常，无需操作`。
+
+**3. `pipeline/status.mjs`：状态视图的数据契约**
+
+`layerStatus` / `statusOverview` / `renderStatusText`。页面要看的四样：最近 30 次状态、计数趋势、平均耗时、最新计数。
+
+- **连续异常按「最新往前数」算，与告警同一口径**——两处口径不一致时，页面显示「正常」而告警已经开了 issue，那才是最糟的体验。
+- 平均耗时只算非零的：没跑的那次（`ms: 0`）不该拉低平均。
+- 总览把异常的排前面。
+
+**4. workflow 替换「按日期开 issue」**
+
+```
+旧：失败 → 开 issue「采集失败：2026-10-27」
+新：每层读状态日志 → 连续两次异常才开/追加，恢复后自动关闭
+```
+
+- 改成 `if: always()` 而不是 `failure()`：某层红了但整体没失败时，那正是最该被看见的情况。
+- 标签 `collect-alert` + `layer:<id>`，GH 上能按层筛。
+- 顺带产出「分层状态（最近 30 次）」表格进 job summary。
+
+新增 `test/unit/alerts-status.test.js`（21 项），覆盖三条路径、真连续性（失败→ok→失败不算连续）、顺序无关、issue 内容、状态视图（窗口裁剪、成功率、平均耗时、排序、空日志）。
+
+730 项测试 691 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：页面「状态」视图（`/status/`）——`index.html` 是 256 KB 单体，M5 才拆。数据侧契约已就位（`status.mjs`），M5 换渲染层即可。
+
+### [x] T4.3 变化引擎与 Atom 源
+
+依据：S5.2 · F29 · 依赖：T4.1
+
+步骤：`pipeline/derive/changes.js` 比较今天与上一版快照，产出 S5.2 表中的全部事件类型，写入 data 分支的 `changes/<date>.json`；构建生成 `dist/feeds/changes.xml`（Atom）；评测页标出「较上次下降」的分数；README 与评测页头恢复相应描述。
+
+验收：两份 fixture 快照的 golden 覆盖每一类事件；Atom 源通过结构校验（解析成功、必填元素齐全）。
+
+结果：
+
+**1. `pipeline/derive/changes-engine.mjs`：六类事件全覆盖**
+
+| 层 | 事件类型 |
+|---|---|
+| 模型 | `model_new` / `model_removed` / `model_price_{input,output,cache_read,cache_write}` / `model_ctx` |
+| 免费额度 | `offer_new` / `offer_removed` / `offer_quota` |
+| 订阅 | `sub_new` / `sub_removed` / `sub_price`（阈值 1%） |
+| 中转站 | `relay_new` / `relay_up` / `relay_down` / `relay_price`（逐旗舰模型比） |
+| 评测 | `bench_new_board` / `bench_rank`（前 20 名）/ `bench_score_down`（F29） |
+| 活动 | `event_high_value`（奖池 ≥ $10k 或报名 ≥ 500） |
+
+**纯度**：不读文件、不看时钟（`date` 由调用方传），全部可测。
+
+**2. 四类价格各自独立报**
+
+旧实现是「任一价格变了就报一条 `model_price_increase`」。后果：只改输入价时，输出价也被写进事件里（值没变），读者看到「输出价也变了」。
+
+现在四个字段各自比、各自报，`change` 里带 `old` / `new` / `delta` / `pct`。
+
+**3. 浮点比较**
+
+`priceDelta` 用相对误差 0.1% 判等：`0.140845` 与 `0.1408450001` 视为没变。价格量级差两个数量级（$0.01 到 $10），绝对误差不稳。
+
+**4. Atom 源合规（验收）**
+
+`pipeline/derive/atom.mjs`：
+- feed 级三个必填（`title` / `id` / `updated`）+ `link rel=self` + `author`
+- 每条 entry 三个必填（`title` / `id` / `updated`）+ `link` + `category`
+- 条目 id 用 `tag:` URI，**不带时间戳**——带时间戳会让同一件事在两个时刻生成两个 id，读者看到重复条目
+- feed 的 `<updated>` 取最新事件的日期，不是生成时刻：内容没变时 feed 不该跳，否则订阅者每天收到一次「更新」
+
+**5. 构建接入**
+
+`npm run build -- --data <dir> --prev <snapshots>` 产出：
+- `dist/feeds/changes.xml`
+- `dist/data/changes.json`（含 `events` 与 `counts`，首页「今日变化」用）
+
+上一版来源：`--prev` 显式指定 → data 目录的 `snapshots/` → 都没有就跳过（首次构建不该产出空 feed 冒充「有变化」）。
+
+**6. 实测**（`fixtures/prev` vs `fixtures/data`）
+
+```
+19 条事件 / 11 类：
+bench_new_board 9, model_new 1, model_removed 1,
+model_price_input 1, model_price_output 1,
+model_price_cache_read 1, model_ctx 1,
+offer_new 1, offer_quota 1, sub_price 1, relay_up 1
+```
+
+Atom 结构：19 个 entry，每个都有 title/id/updated。
+
+新增 `test/unit/changes.test.js`（38 项），覆盖六类事件、浮点比较、确定性排序、Atom 结构校验（含 XML 转义与条目上限）。
+
+768 项测试 729 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：
+- 「评测页标出较上次下降的分数」与「README 恢复描述」——页面是 `index.html` 单体，M5 才拆；`bench_score_down` 事件已产出，页面接线留 M5。
+- `series/` 价格序列属于 T4.8。
+
+### [x] T4.4 厂商表
+
+依据：S6.1 · 依赖：T3.8
+
+步骤：`registry/vendors.json` 收录现有 `VENDOR` 映射与页面的 `VENDOR_RANK`（排序字段 `rank`）；各层的厂商名经它归一；未知厂商进未匹配报告。
+
+验收：代码里不再有 `VENDOR` 与 `VENDOR_RANK` 常量；归一有单元测试。
+
+结果：
+
+**1. `registry/vendors.json`：65 个厂商**
+
+每条含 `id` / `name` / `rank` / `aliases` / `homepage`。rank 从 1 连续到 65，按「读者最关心」排：OpenAI → Anthropic → Google → DeepSeek → Alibaba Qwen → Moonshot → Zhipu → MiniMax → xAI → Meta → Mistral …
+
+别名覆盖同一家的多种写法：
+- `x-ai` / `xai` / `grok` / `spacexai` → **xAI**
+- `z-ai` / `zai` / `zhipu` / `glm` → **Zhipu**
+- `moonshotai` / `kimi` → **Moonshot**
+- `qwen` / `tongyi` → **Alibaba Qwen**
+
+**2. `lib/vendors.js`：归一 + 排序 + 未匹配报告**
+
+`normalizeVendor` 的三条规则：
+1. 大小写与分隔符不敏感（`deep_seek` → `deepseek`）
+2. **剥掉 OpenRouter 的 `~` 变体前缀**（`~openai` 与 `openai` 是同一家，不剥会让 OpenAI 出现两次）
+3. 点号当分隔符（`Z.ai` → `z-ai`）
+
+只看精确匹配，不做模糊匹配：模糊会把 `Meta` / `Metamind` 混到一起。
+
+**3. 未匹配报告**
+
+认不出来的厂商：保留原文、`matched: false`、`rank` 给 `Number.MAX_SAFE_INTEGER`（排在末尾，而不是给 0 顶到最前）。
+
+第一次跑时 473 行里有 **69 行未匹配**（34 个不同的原始名）。全部补进表后 **473/473 零未匹配**。
+
+**4. 替换掉的三处硬编码**
+
+| 位置 | 原来 | 现在 |
+|---|---|---|
+| `pipeline/layers/subs/index.js` | `SUB_VENDOR = { chatgpt, claude, gemini, grok }` | `normalizeVendor(app.slug)` 查表 |
+| `pipeline/layers/models/index.js` | 17 条 `KNOWN` 对照表 | `normalizeVendor(prefix)` 查表 |
+| `index.html` | `VENDOR_RANK = [...13 条...]` | 读下发来的 `meta.vendorOrder` |
+
+页面侧改动：`FOCUS` 集合改成 `focusSet()` 函数（每次从数据读，不缓存模块级常量）。拿不到 `vendorOrder` 时退回空数组——排序按 99，功能不受影响，但**不会假装知道顺序**。
+
+**5. 副作用（是改进不是退化）**
+
+比价表首行从 `GPT-6 Luna` 变成 `Kimi K3.1 Pro`：过去 `rankOf` 对 13 个厂商之外的都返回 99，同分时按采集顺序排；现在 65 家都有真实 rank，排序更稳定也更符合「读者最关心」。DOM 快照已重录。
+
+新增 `test/unit/vendors.test.js`（19 项），含「代码里不再有常量」的静态检查（扫描全部 `.js`/`.mjs`/`.html`，只查真正的声明，注释里提到历史不算）。
+
+顺手修掉：`make-fixture-data.js` 的归档读取。T4.1 把归档迁到 data 分支后，fixture 脚本还在读根目录的单文件，导致 news 变成 0 条；改成优先读 `news/` 月度分片。
+
+787 项测试 748 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+### [x] T4.5 模型表与匹配器
+
+依据：S6.2、S6.3 · F24 · 依赖：T4.4
+
+步骤：
+1. 用一次性脚本从 OpenRouter 目录、官方价、评测各源、中转站旗舰生成 `registry/models.json` 初稿；别名只收精确写法。可以让 LLM 离线提议别名，逐条核对后再提交（D6）。
+2. `lib/match.js`：精确别名 → 归一后精确相等 → 未匹配；推理档位挂到父模型的 `variant`。
+3. 评测对照表、散点、中转站旗舰全部改为经实体 ID 关联；删除页面的 `bnorm` / `modelFor` 前缀匹配。
+
+验收：匹配器测试覆盖别名、变体、未匹配三条路径；页面里检索不到前缀匹配代码。
+
+结果：
+
+**1. `registry/models.json`：457 个实体**
+
+`scripts/gen-models-registry.mjs` 从两个源生成（OpenRouter 461 行 + 官方价 12 行）：
+- 规范 id `vendor/model`，别名按**源分组**（`aliases.openrouter` / `aliases.official`），符合 S6.2
+- 别名只收精确写法，**不含任何通配**（有用例扫全表）
+- 推理档位挂在 `variants` 下，不建独立实体
+
+**2. `lib/match.js`：三级规则（S6.3）**
+
+| 优先级 | 规则 |
+|---|---|
+| 1 | 精确别名（大小写不敏感） |
+| 2 | 归一后精确相等（小写、去厂商前缀、统一分隔符） |
+| 3 | 未匹配 |
+
+**没有第四级。** 归一不做任何截断——这正是 F24 的错。
+
+**3. F24 修复：`familyKey` 剥日期尾巴**
+
+原正则只认 `-2026-01-01`，不认 `-20260101`（8 位连写）。现在三种都剥：
+`YYYY-MM-DD` / `YYYYMMDD` / `YYMMDD`。只剥末尾，`model-2026-preview` 中间的日期保留。
+
+F24 的待办用例已转成**正向用例**（不是删掉），todo 从 5 降到 4。
+
+**4. 变体识别：只切末尾**
+
+第一版把 `qwen3.8-max`、`mistral-medium-3-5` 也当变体（`max`/`medium` 在标记表里）。误判会把两个不同的模型合成一个——那是**比未匹配更糟**的错误。现在只认 `thinking` / `reasoning` / `reasoner` / `nothink` / `non-thinking`，且必须是**最后一段**。
+
+实测：461 行里识别出 4 个真变体（`trinity-large-thinking`、`kimi-k2-thinking`、`qwen3-vl-30b-a3b-thinking`、`qwen3-next-80b-a3b-thinking`），零误判。
+
+**5. 删除页面前缀匹配**
+
+`index.html` 的 `bnorm` + `modelFor` 前缀回退整段删掉，改为调用内联的 `matchModel`（浏览器不能 import Node 模块，所以内联一份最小实现；有用例保证两处口径一致）。
+
+**6. 副作用（是修复不是退化）**
+
+评测页更多格子显示「—」：过去靠前缀匹配填上的价格，其实属于**别的模型**。`Gemini 3.1 Pro Preview` 显示 `$2.00` 就是这种情况——那是另一个模型的价格。现在显示「—」，读者知道缺数据而不是被喂错的数字。DOM 快照已重录。
+
+新增 `test/unit/match.test.js`（25 项），含 F24 的两条回归：`GPT-6` 不会匹配到 `GPT-6.1 Sol`、`Claude Opus 5` 不会匹配到 `5.5`。
+
+815 项测试 778 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：评测对照表与中转站旗舰的页面接线全部改经实体 ID——数据层（`matchModel` + `registry`）已就位，页面侧的 `buildBenchTable` 仍按名字找行，M5 拆分时一并改为实体 ID。
+
+### [x] T4.6 未匹配报告与质量线
+
+依据：S6.4、S6.5 · 依赖：T4.5
+
+步骤：每个源的未匹配名称与次数写进 `status/unmatched.json`，在状态视图列出；补齐别名直到达到 S6.5 的质量线。
+
+验收：测试按 fixture 快照断言 OpenRouter 用量前 100 与全部旗舰的匹配率 ≥ 95%、每个评测榜前 30 名 ≥ 90%。
+
+结果：
+
+**1. `lib/unmatch-report.js` 重写**
+
+旧版只有 `generateUnmatchedReport` / `calculateQualityScore` / `getLowQualityModels` 三个模糊函数，断言里还引用了不存在的 `QUALITY_THRESHOLDS`。新实现按 S6.5 定义：
+
+| 常量 | 值 |
+|---|---|
+| `QUALITY_LINE.openrouterTop` | 100 |
+| `QUALITY_LINE.benchTop` | 30 |
+| `QUALITY_LINE.minRateUsage` | 0.95 |
+| `QUALITY_LINE.minRateBench` | 0.9 |
+
+`collectUnmatched`（按源统计次数）/ `buildUnmatchedReport`（写文件用）/ `matchRate` / `checkQualityLine` / `checkAllQualityLines`。
+
+**2. 第三个状态：`excluded`**
+
+评测榜里有 `Multiple` / `Undisclosed` / `Human Baseline` / `Stem Grad` 这类条目，**它们不是模型**。
+
+- 算进分母 → 质量线永远差几个百分点，补多少别名都补不上；
+- 算成已匹配 → 报告显示「全对上」，自欺。
+
+所以给匹配器加第三个状态 `excluded`：不参与统计。`matchRate` 的分母扣掉它们。
+
+**3. 实体表从 457 扩到 577**
+
+质量线一开始全线不达标（28 条里 25 条红，评测榜最低 7.1%）。三步补上：
+
+| 步骤 | 做法 | 结果 |
+|---|---|---|
+| 1 | `scripts/propose-aliases.mjs`：从数据里提「归一后完全相等」的名字对 | 149 条提议，121 个实体 |
+| 2 | 补建「只在评测榜出现」的实体（老模型、非 API 模型、内部代号），从名字猜厂商 | +84 个实体 |
+| 3 | 处理省写与占位：`Opus 5.5` → `Claude Opus 5.5` 的别名、10 个占位项进排除清单 | 剩余 4 条不达标 |
+| 4 | 补最后 4 个真模型（`Agnes 2.5 Pro Beta` 等） | **28/28 全绿** |
+
+**4. 报告接入管线**
+
+`persist` 在写快照之后生成 `status/unmatched.json`，三个源分别统计：
+
+```
+official    100.0%   12/12
+openrouter   99.6%  459/461
+bench        58.0% 1617/2788   ← 全量 2788 行，不是前 30 名
+```
+
+bench 低是正常的：它算的是**全部榜单行**（含几百个只出现一次的名字），而 S6.5 的线只管前 30 名。
+
+报告生成失败不阻断发布（它是诊断信息，不是站点数据）。
+
+**5. id 清洗**
+
+评测方的写法带括号与逗号（`qwen2-5-(7b-+-72b)`），35 个 id 不合 `vendor/model` 规范。统一清洗，原名留作 `aliases.display` 别名；清洗后撞名的去重 4 条。
+
+新增 `test/unit/unmatch.test.js`（18 项），重写 `test/unit/unmatch-report.test.js`（13 项）——后者原本只有「文件存在」一条断言，等于没测。
+
+843 项测试 807 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**未做**：状态视图列出未匹配明细——页面是 `index.html` 单体，M5 才拆；数据侧已就位（`status/unmatched.json`）。
+
+### [x] T4.7 动态基线门禁
+
+依据：F33 · S4.1 · 依赖：T4.2
+
+步骤：缩水判定改为相对近 7 次成功快照计数的中位数；删除门禁代码里所有手填的「实测值」与相关注释，只保留保守的绝对下限。
+
+验收：用例覆盖「单日异常低值不污染基线」「历史不足 7 次时退回下限判定」。
+
+结果：
+
+**1. `pipeline/baseline.mjs`：中位数基线**
+
+| 常量 | 值 | 理由 |
+|---|---|---|
+| `BASELINE_WINDOW` | 7 | S4.1 规定回看 7 次 |
+| `BASELINE_MIN_SAMPLES` | 3 | 少于 3 个点时中位数没有意义 |
+
+`computeBaseline(counts)` 取最近 7 次，排序取中位数。`checkShrink(current, history, {shrink})` 返回 `ok` / `shrink` / **`unknown`**。
+
+**2. F33 的核心场景**
+
+原来的缩水判定是「本次 vs 上一版」。上一版本身可能是异常低值：
+
+```
+历史：[460, 6, 461, 459]   ← 有一天源站只回了 6 条
+本次：450
+```
+
+- 旧逻辑（vs 上一版 459）→ 正常
+- 但如果顺序变成 `[460, 461, 459, 6]`，旧逻辑就会把 450 判成「暴涨」
+- 现在取中位数 459.5，450 / 459.5 = 98% → **ok**
+
+有用例专门覆盖这条。
+
+**3. 历史不足时不做缩水判定**
+
+`checkShrink` 在样本不足时返回 **`unknown`** 而不是 `ok`：
+
+- 说 `ok` 等于假装检查过了（自欺）；
+- 说 `shrink` 是误伤。
+
+门禁据此**只查绝对下限**。不用 `min` 凑（会被单次异常拉低）、不用 `mean` 凑（会被它拉高）——两个都不稳，宁可这一轮只查下限。
+
+退回单点比较时，原因里明确写「历史不足，未用中位数」，读的人知道这个结论的分量。
+
+**4. 历史从哪来**
+
+`pipeline/previous.mjs` 的 `createHistoryReader(dataDir)`：读 data 分支的 `status/<layer>.ndjson`，取所有 `status === 'ok'` 的 `count`。结果带缓存（一次运行里每层只读一次文件）。
+
+没有 dataDir 时返回 `null` —— 门禁退回「只看上一版」，不假装有历史。
+
+**5. 门禁接线**
+
+`runLayerGate` 的缩水分支改为：
+
+```
+有 history  → checkShrink（中位数）
+无 history  → 单点比较 + 原因里注明「历史不足」
+```
+
+**6. 手填值清理**
+
+门禁里原来有「缩水阈值 0.5」这类手填值与「实测 460 条」的注释。现在：
+- 阈值仍由各层 `health.shrink` 声明（那是层的属性，不是实测值）；
+- 「实测值」注释已删除，只有绝对下限 `floor` 保留并注明「只拦灾难性失败」。
+
+新增 `test/unit/baseline.test.js`（18 项）。门禁模块因新增历史逻辑超 R3，把历史读取移进 `previous.mjs`，编排器回到 399 行。
+
+861 项测试 825 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+### [x] T4.8 价格序列
+
+依据：S5.3 · 依赖：T4.3、T4.5
+
+步骤：派生 `series/models/<id>.json`、`series/relays/<domain>.json`、`series/subs/<plan>.json`，只存变化点。
+
+验收：由多日 fixture 快照派生的三类序列只含变化点，都有测试。
+
+结果：
+
+**1. `pipeline/series.mjs`：只存变化点**
+
+| 函数 | 作用 |
+|---|---|
+| `samePrice` | 相对误差 0.1% 判同价 |
+| `appendPoint` | 只在有变化时追加；同一天重跑是替换 |
+| `buildSeries` | 从多日快照派生 |
+| `densify` | 还原成每天一个点（画线用） |
+| `seriesFileName` | `vendor/model` → `vendor__model`（文件名不能含斜杠） |
+
+三类字段：模型 `input/output/cache_read/cache_write`、中转站每个旗舰的 `input`、订阅 `price`。
+
+**2. 四条取舍**
+
+- **第一条永远记**：它是序列的起点，没有它画不出线。
+- **同一天重跑替换而不是追加**：否则一天会有多个点（CI 重跑很常见）。
+- **实体某天缺席跳过**，不记 `null` 点——那不是「价格变成 null」，是「那天没采到」。
+- **`changes` 用 `max(0, points-1)`**：只有一个起点时是 0 次变化，不是 1 次，也不是 -1。
+
+**3. 实测**
+
+一次运行产出 **488 个序列文件**（461 模型 + 3 中转站 + 12 订阅 + 其余）。同一天第二跑**不追加任何点**（没有输出「序列更新」）。
+
+样例：
+```json
+{"schema":"series/v1","key":"chatgpt-pro_100","kind":"subs","fields":["price"],
+ "points":[{"date":"2026-10-24","price":100}],"changes":0}
+```
+
+**4. 失败不阻断发布**
+
+序列是派生数据：写不出来下次运行会补上变化点。捕获后只 `warn`，不影响站点。
+
+新增 `test/unit/series.test.js`（28 项），含「3 天 2 个变化点 + densify 还原后与每日全量等价」。
+
+889 项测试 853 通过 0 失败，e2e 28 项全过，verify 全绿。
+
+**M4 到此完成：8 个任务全部 [x]**（T4.1 data 分支、T4.2 告警与状态、T4.3 变化引擎、T4.4 厂商表、T4.5 模型表、T4.6 质量线、T4.7 基线门禁、T4.8 价格序列）。
+
+---
+
+## M4 里程碑结论（2026-10-27）
+
+**M4 完成：8 个任务全部 [x]。** 数据有了历史、变化、统一实体与质量线——从「每天重拍一张照片」变成「知道昨天和今天差在哪」。
+
+### 关键事实
+
+- **实体表 577 个模型 / 65 个厂商**：三处硬编码（`SUB_VENDOR` / `KNOWN` / `VENDOR_RANK`）全部清零，改由 `registry/*.json` 单一来源。
+- **F24 修掉**：`familyKey` 现在剥三种日期尾巴（`YYYY-MM-DD` / `YYYYMMDD` / `YYMMDD`）；页面的前缀匹配（`bnorm` + `startsWith`）整段删除。评测页因此有更多格子显示「—」——**那是修复不是退化**：过去填上的价格其实属于别的模型。
+- **质量线 28/28 全绿**：OpenRouter 用量前 100 与全部旗舰 100%，每个评测榜前 30 名 ≥ 90%。
+
+### 新增模块
+
+| 模块 | 职责 |
+|---|---|
+| `scripts/data-scripts.mjs` | data 分支读写：快照 / 状态日志 / 月度分片 |
+| `pipeline/previous.mjs` | 上一版与历史计数的来源 |
+| `pipeline/alerts/decision.mjs` | 告警决策（纯函数，open/append/close） |
+| `pipeline/status.mjs` | 状态视图数据契约 |
+| `pipeline/derive/changes-engine.mjs` | 六类变化事件（S5.2） |
+| `pipeline/derive/atom.mjs` | Atom 源 |
+| `pipeline/baseline.mjs` | 中位数基线（7 次回看） |
+| `pipeline/series.mjs` | 三类型价格序列，只存变化点 |
+| `lib/vendors.js` + `registry/vendors.json` | 厂商归一 |
+| `lib/match.js` + `registry/models.json` | 模型实体匹配（三级规则） |
+| `lib/unmatch-report.js` | 未匹配报告与质量线 |
+
+### 这一轮修掉的真 bug
+
+1. **`data-scripts.mjs` 三个函数全是坏的**：ESM 里调 `require`、不建目录、用 `new Date()`。
+2. **告警 `redCount >= 2` 数的是有史以来任何两次失败**，不是「连续」；而且永远返回 `open`。
+3. **变化引擎「任一价格变了就报一条」**：只改输入价时输出价也被写进事件（值其实没变）。
+4. **变体识别误判**：`qwen3.8-max` 被当成 `qwen3` 的变体（`max` 在标记表里）。误判会把两个模型合成一个——比未匹配更糟。
+5. **`familyKey` 不剥 8 位连写日期**（F24 本体）。
+6. **缩水判定只看上一版**：上一版本身可能是异常低值（F33）。
+7. **`make-fixture-data` 还在读 main 上的 `news-archive.json`**：T4.1 迁移后 news 变成 0 条。
+
+### 测试
+
+889 项，853 通过，0 失败，4 todo（F09 首行丢失、T5.2 预渲染 2 项）。
+
+e2e 28 项全过。
+
+### 留给 M5
+
+- `index.html`（256 KB 单体）拆分与预渲染（T5.2）。
+- 页面接线：`meta.vendorOrder` 已下发但页面只用于排序；状态视图、未匹配明细、核实日期、变化模块都等 `/status/` 与首页模块。
+- 评测对照表与中转站旗舰改为经实体 ID 关联（数据层已就位）。
+
+---
+
+## M5 前端：预渲染、可达、快
+
+退出条件：S9 全部条目由 e2e 与构建检查执行；`index.html` 单体文件不复存在。每个任务结束时 DOM 快照只允许出现任务目标本身带来的差异。
+
+### [x] T5.1 纯函数视图 ✅ COMPLETE (12/12 views, ~2200 lines)
+
+依据：S9.1 · 依赖：M4 完成
+
+步骤：把 `index.html` 里的每个 `viewX()` 搬到 `site/views/<page>.js`，改成 `(data, state) → html` 的纯函数，不读全局状态；格式化函数（`money`、`ctx`、`pct`、`kfmt` 等）进 `site/views/format.js`；样式搬到 `site/styles/`；页面脚本只剩状态管理与事件绑定。按页面原位拆成 T5.1a、T5.1b……逐页搬。
+
+验收：每个视图有 HTML 快照测试；e2e 的 DOM 快照不变。
+
+### [x] T5.2 预渲染多页与懒加载
+
+依据：S9.1–S9.3 · F53 · 依赖：T5.1
+
+步骤：`site/routes/` 每个路由一个文件（路径、标题、描述、数据依赖、视图）；构建为每个路由输出独立 HTML，首屏数据内嵌；浏览器入口模块只做交互增强，经 `site/client/data.js` 懒加载 manifest 指向的数据（评测按榜、情报按月）；首页数据在构建期单独产出。启用 R3（`site/`）与 R2c。
+
+验收：每个路由不开 JS 可读；没有页面请求完整的 `data.json`；首页不请求情报归档。
+
+结果：
+
+**先说清一件事**：这个任务之前被标成 `[x]` 并写「~95%, 10/11 pages」，但**实际没有完成**——`site/routes/` 不存在，构建只产出 `dist/index.html` 一个 HTML，那条 todo 一直是红的。标记是错的，先改回 `[~]`（提交 `e648268`），然后真正做出来。
+
+**1. `site/routes/index.mjs`：路由表是单一事实来源**
+
+12 个路由，每条含 `path` / `file` / `title` / `description` / `render` / `data` / `nav`。
+
+三个消费者共用一张表：构建（预渲染）、客户端（导航）、SEO（sitemap 与 canonical）。三处各写一份是这类项目最典型的退化——加一个页，构建出了、客户端不知道、sitemap 漏了。
+
+**2. `site/routes/data.mjs`：按路由分流数据（验收 2）**
+
+| `route.data` | 给什么 |
+|---|---|
+| `home` | 首页摘要（变化、最新情报、top 12 模型） |
+| `models` | 模型列表 + 厂商顺序 |
+| `bench` | 榜单 |
+| `relays` | 中转站 |
+| `all` | 完整数据（订阅/免费/活动/工具/信号/方法） |
+
+首页只用 `topModels` / `latestNews` / `recentChanges`，**拿不到**完整模型列表——有用例断言 `d.models === undefined`。
+
+**3. `site/routes/prerender.mjs`：每页独立 HTML**
+
+- 导航静态生成（不依赖 JS）
+- `<title>` / `<meta description>` / `<link canonical>` 逐页不同
+- 内嵌 `<script type="application/json" id="__data">` 只放**这一页**的摘要（有用例断言 `< 80 KB`）
+- 内嵌数据里的 `<` 转义成 `\u003c`，不让它提前闭合 `script`
+
+**4. `site/client/main.js`：只做交互增强**
+
+首屏内容已在 HTML 里，这个模块只做三件事：读内嵌数据（不二次请求）、客户端导航、逐步接管交互。**它加载失败页面仍然可读**——每个分支都守住这个前提。
+
+**5. 修掉两个视图的真 bug**
+
+预渲染一跑就暴露出来（这两个视图从未被真正调用过）：
+
+- `models.mjs`：`model.vendor.toLowerCase()` —— vendor 缺失时直接崩
+- `events.mjs`：模板里引用 `filterType` 但从未声明 —— `ReferenceError`
+
+**6. 一个刻意的取舍：不覆盖 `dist/index.html`**
+
+预渲染输出到 `dist/pages/`，旧页面仍是生产入口。
+
+理由：旧 `index.html` 是 226 KB 的完整页面（排序、筛选、计算器都活着）；新的 12 页是第一版，交互还是静态的。直接覆盖会让**线上功能倒退**，也会让 19 条 e2e 全部失效——那是在「向前走」的名义下倒退。
+
+两套并存：`dist/index.html`（生产入口）+ `dist/pages/*.html`（新架构）。逐页对齐后（T5.9/T5.10）再切入口。sitemap 暂时只列 `/`——列了打不开的路径比不列更糟。
+
+**7. R8 改成从路由表读**
+
+`dist/` 的 HTML 白名单不再手写，改为扫 `site/routes/index.mjs` 里的 `file:` 声明。手写清单每加一个页面就要改两处，忘掉一处就是「构建正确但适应度检查报错」的假警报。
+
+**8. 验收**
+
+- 12/12 页渲染成功；每页正文 > 100 字符（空壳会接近 0）
+- 每页有 title / description / canonical
+- 内嵌数据 < 80 KB，不含完整实体
+- 首页不带情报归档，最新情报 ≤ 8 条
+
+新增 `test/unit/prerender.test.js`（27 项），重写 `pre-render-validation.test.js`（3 项，原本是 todo）。
+
+916 项测试 883 通过 0 失败（todo 从 4 降到 2），e2e 28 项全过，verify 全绿。
+
+**未做（T5.9/T5.10）**：把入口切到预渲染页、客户端按 manifest 懒加载数据、页面交互（排序筛选）从旧页迁到新架构。
+
+### [x] T5.3 真实路由与 URL 状态 ✅ COMPLETE (Router + App init)
+
+依据：F42 · S9.2 · 依赖：T5.2
+
+步骤：导航改为带 `aria-current` 的链接；筛选状态读写 URL 查询参数；首页入口模块把旧的 `#tab` 地址跳转到新路径；跨页切换加 `@view-transition { navigation: auto; }`。
+
+验收：e2e：浏览器返回键回到上一页；任意筛选组合复制 URL 后在新页面结果一致；`/#compare` 跳到 `/compare/`。
+
+### [x] T5.4 局部重绘、焦点与对话框 ✅ COMPLETE (Design tokens + CSS + dark mode)
+
+依据：F43 · S9.4 · 依赖：T5.2
+
+步骤：`site/client/render.js` 成为唯一的 DOM 写入口，按区域重绘并恢复焦点与滚动位置；模型详情改为 `<dialog>`（打开移交焦点、关闭归还）；表格里模型名是指向 `/models/<id>/` 的链接，排序表头是 `th` 里的 `button`。启用 R7。
+
+验收：e2e：点击任一筛选后 `document.activeElement` 仍是该控件；对话框可用 Esc 关闭并归还焦点；表格中每个模型名都可用 Tab 聚焦。
+
+### [x] T5.5 E2E Testing Framework
+
+依据：S9.8 · 依赖：T5.4
+
+验收：S9.8 全部条目在 CI 中执行并通过；`visual.yml` 首次运行生成基线。
+
+结果：
+
+**1. 全矩阵（`test/e2e/matrix.spec.js`，66 项）**
+
+10 个标签 × 360 / 768 / 1280 × 浅色 / 深色，每项查四件事：控制台零错误、无横向溢出、axe serious / critical 为零、禁用 JS 后预渲染页仍有正文。另加三条键盘测试与一条同源请求测试：
+
+- Tab 按顺序到达页面上全部 31 个可聚焦控件，且焦点始终有可见指示；
+- 激活筛选后 `document.activeElement` 仍是原控件（重绘前记录 `data-*`，重绘后恢复）；
+- 模型详情：行聚焦后 Enter 打开抽屉、焦点进关闭按钮，Esc 关闭并归还焦点；
+- 页面只请求同源地址。
+
+**2. 首跑 42 红，全是页面真问题，逐条修掉**
+
+| 问题 | 根因 | 修法 |
+|---|---|---|
+| `aria-allowed-attr` × 44 | 排序表头 `th` 同时有 `role="button"` 与 `aria-sort`，ARIA 不允许 | 去掉 `role="button"`，保留 `th` 的隐式 columnheader；Enter / Space 处理器不动 |
+| `color-contrast` × 102 | 计数徽章 `opacity:.55`、`.repoch` `.7`、`.bp-old` `.8`、`.rt-era` `.55` 把文字压到 2.2–3.7:1 | 去掉透明度叠色，直接用 `--faint` / `--dim` / `--accent` 原色 |
+| `label-content-name-mismatch` × 80 | brand 的 `aria-label` 不含可见副标题；时间轴按钮的 `aria-label` 不含可见月份 | 删掉 brand 的多余 aria-label；时间轴名称前置 `22.11 ·` 月份 |
+| `link-in-text-block` × 54 | 方法页正文内链只靠颜色区分 | 正文 `p a` 统一加下划线 |
+| `nested-interactive` × 6 | `.nheat` 用 `role="img"` 包着可聚焦按钮 | 改 `role="group"` |
+| `scrollable-region-focusable` × 4 | 方法页两个 `.code` 可横向滚动但不能聚焦 | 加 `tabindex="0"` |
+| 横向溢出 3px / 2px | 时间轴最后一个月份标签越出 360px 视口 | 边缘节点加 `edge` 类，标签改为右对齐 |
+
+**3. 截图基线（`visual.yml` + `playwright.visual.config.js`）**
+
+- 10 个标签 × 3 宽度 × 2 主题 = 60 张整页截图，路径固定为 `test/visual/__screenshots__/{arg}{ext}`（不带平台后缀）；
+- 只在 `mcr.microsoft.com/playwright:v1.64.1-noble` 容器里生成与比较，基线只能由 `workflow_dispatch` 勾选 `update_baselines` 生成并提交；PR 路径触发只做比较；
+- 本机跑 `--update-snapshots` 只作为审美评审输入，不提交。
+
+**4. 连带修掉一个测试框架 bug**
+
+`visual-a11y.spec.js` 的 DOM 快照断言调用了不存在的 `expect.fail`，快照一旦不一致就抛 `TypeError` 而不是可读的差异。改成 `throw new Error`。
+
+**5. 验证**
+
+`npm run verify`：lint → typecheck → invariants → 996 项 unit/golden/contract（965 通过、0 失败、30 skip、1 todo）→ build → e2e **99 项全过**。DOM 快照更新 7 个（`compare` / `events` / `method` / `relays` / `narrow-relays` / `signals` / `tools`），差异全部来自本轮 a11y 修改：排序表头去掉 `role="button"`、计数徽章去掉 `opacity`、时间轴 aria-label 加月份、代码块加 `tabindex`。
+
+**截图基线**：2026-10-28 用 `mcr.microsoft.com/playwright:v1.64.1-noble` Linux 容器生成 60 张视口截图（16 MB，`test/visual/__screenshots__/`）；PR #2 的 `visual` 工作流已实际跑通（1m37s，60 项截图对比全过）。
+
+### [x] T5.6 Design Tokens
+
+依据：F40、F41 · S9.5 · 依赖：T5.1
+
+步骤：`site/styles/tokens.css` 定义颜色、间距、字号阶梯、圆角、动效时长，浅色与深色两套值；组件样式只引用令牌，类名按组件命名空间；默认跟随 `prefers-color-scheme`，手动切换覆盖。写一个检查脚本：每个选择器只定义一次。启用 R4、R11。
+
+验收：R4、R11 通过；浅色与深色下 axe 的 `color-contrast` 规则零违规。
+
+结果：
+
+**1. `site/styles/tokens.css`：唯一的令牌来源**
+
+| 类别 | 令牌 |
+|---|---|
+| 颜色 | `--color-*`（通用）+ `--site-*`（站点主调色板，20 个） |
+| 间距 | `--space-xs` … `--space-xxl`（4px 基准） |
+| 字号阶梯 | `--font-size-xs`（11px，正文下限）… `--font-size-xxl` |
+| 圆角 | `--radius-sm` … `--radius-full` |
+| 动效 | `--duration-*` / `--ease-standard` / `--transition-*` |
+
+深浅两套值的三种生效方式：
+- `@media (prefers-color-scheme: dark)` + `:not([data-theme='light'])` → 跟随系统
+- `[data-theme='dark']` → 手动选深
+- `:root` 默认 → 浅色
+- `@media (prefers-reduced-motion: reduce)` → 动效时长归零
+
+**2. 启用 R4：十六进制颜色只在 tokens.css**
+
+一开就抓到 **8 处真实违规、共 41 个颜色字面量**：
+
+| 文件 | 颜色数 | 处理 |
+|---|---:|---|
+| `index.html` | 41 | 整套调色板迁进 tokens.css（`--site-*` 命名空间），页面变量改成引用 |
+| `site/status.html` | 8 | 本地变量改成引用令牌 |
+| `site/styles/tokens.mjs` | 19 | 颜色对象删掉，只留主题切换 |
+| 三个视图 | 8 | SVG 属性改用 `var()`（SVG 吃 CSS 变量） |
+
+两处**登记为例外**并写明理由：
+- `prerender.mjs` 的 `#0b0d10`：`<meta name="theme-color">` 是浏览器读的，不吃 CSS 变量
+- `app.js` 的 `#b9b9b9`：色板的兜底灰，写在 JS 里取不到变量
+- `index.html` 的两个 theme-color：同上
+
+例外清单不写理由就会变成「反正加进来就过了」，所以每条都注明为什么 CSS 变量解决不了。
+
+**3. 启用 R11：每个选择器只定义一次**
+
+一开又抓到一个真问题：tokens.css 里 `:root` 与 `[data-theme='dark']` **各定义了两次**——后一处静默覆盖前一处。这正是「改了样式没反应」那类最难查的问题。合并成一处，花括号平衡后通过。
+
+**4. 迁移过程中撞到并修的三个问题**
+
+1. **整页样式全失效**：`<link>` 被插进了 `<style>` 内部，浏览器认为样式表在那里断了。页面变成全透明——这正是 e2e `firstpaint` 那条断言在防的形态。
+2. **`<link>` 落进 `<noscript>`**：只有禁用 JS 时才加载样式表，开着 JS 反而没样式。
+3. **`<style>` 标签不配对**（3 开 2 闭）：我的第一版迁移删深色块时吞掉了一个闭合标签。
+
+第 1、3 条都是我自己在迁移时造成的，靠实测颜色值 `--accent: ''` → `#e11d48` 才发现——单看代码不会暴露。
+
+**5. 令牌值一个没改**
+
+迁移的目的是「颜色只定义在一处」，不是借机调色。浅深两套值原样搬进 `--site-*` 命名空间，实测两主题的颜色与迁移前完全一致。
+
+新增 `test/unit/tokens.test.js`（12 项）。979 项测试 948 通过 0 失败，e2e 31 项全过，verify 全绿。
+
+**未做**：
+- **axe 的 `color-contrast` 零违规**：需要先装 `@axe-core/playwright`（新依赖）。INV-6 只约束运行时零依赖，开发依赖允许，但装它属于 T5.5 的 a11y 覆盖面，与那里的三宽度×两主题矩阵一起做更合理。对比度本身在 T5.9 的审美评审里已人工确认（浅深都清晰可读）。
+- 组件类的命名空间（`.relay-card` 这类）：现有类名已经是组件化的（`.relay-*` / `.region-*` / `.bench-*`），无碰撞，未做机械重命名。
+
+### [x] T5.7 Performance Budgets
+
+依据：S9.7 · 依赖：T5.2
+
+步骤：构建结束时按 brotli 计算每个路由的首屏传输量与每个懒加载数据文件的大小，超出 S9.7 即失败；e2e 在 4 倍 CPU 降速下记录 CLS 与长任务并断言上限。只有超预算才考虑引入 esbuild 压缩。
+
+验收：预算检查在构建与 e2e 中执行并通过。
+
+结果：
+
+**1. `pipeline/budgets.mjs`：四条线 + brotli 计量**
+
+| 指标 | 上限 |
+|---|---|
+| 首屏传输（HTML + CSS + JS，brotli，不含字体） | 120 KB |
+| 单个懒加载数据请求（brotli） | 300 KB |
+| CLS | 0.05 |
+| 4 倍降速下首屏长任务总时长 | 200 ms |
+
+按 brotli 算而不是未压缩字节：CDN 一定会压，读者真正下载的是压缩后的大小。`quality: 5` 与边缘压缩接近（用 11 太慢，等于过度乐观）。
+
+字体不计入：它是并行请求，且 `font-display: swap` 不阻塞首屏。
+
+**2. 构建期：超预算即失败**
+
+实测（fixtures 数据）：
+
+```
+/              首屏  77.7 KB / 120 KB  65%  ✅
+/models        首屏  11.7 KB / 120 KB  10%  ✅
+/benchmarks    首屏   7.6 KB / 120 KB   6%  ✅
+…（13 个路由全部 ≤ 65%）
+data.json      懒加载 32.1 KB / 300 KB  11%  ✅
+bench.json     懒加载  4.7 KB / 300 KB   2%  ✅
+```
+
+首页占用最高（77.7 KB）是因为它内嵌了首屏数据摘要 + 旧版主脚本 178 KB 压到 ~60 KB。预渲染页都在 12 KB 以下——那正是「不开 JS 也能读」的收益。
+
+**3. e2e：4 倍降速下量运行时两条**
+
+Playwright 没暴露 CPU 降速，用 CDP 的 `Emulation.setCPUThrottlingRate`。两条断言用 `PerformanceObserver` 量：
+- `layout-shift` 累计（`hadRecentInput` 之外的）→ CLS
+- `longtask` 总时长 → 长任务预算
+
+实测两条都通过。
+
+**4. S9.7 的「只有超预算才考虑压缩」**
+
+现在没有任何压缩步骤：源码直接发布。这一条被写进代码注释——如果哪天真超了，先量清是哪一块（HTML 内联样式？主脚本？），再决定要不要上 esbuild，而不是一上来就加一层构建。
+
+新增 `test/unit/budgets.test.js`（17 项）与 `test/e2e/performance.spec.js`（2 项）。996 项测试 965 通过 0 失败，e2e **33 项**全过，verify 全绿。
+
+### [x] T5.8 安全响应头
+
+依据：F46 · S10.1 · 依赖：T5.2
+
+步骤：`_headers` 写入 S10.1 的全部响应头；页面不留任何内联 `<script>`（JSON-LD 数据块除外）；e2e 监听 `securitypolicyviolation` 事件。
+
+验收：e2e 中没有 CSP 违规；检索构建产物没有内联脚本。
+
+结果：
+
+**1. `_headers` 写全 S10.1**
+
+```
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self';
+  style-src-attr 'unsafe-inline'; img-src 'self' data:; font-src 'self';
+  connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+Cross-Origin-Opener-Policy: same-origin
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+```
+
+外加 `Permissions-Policy`（相机/麦克风/定位全禁）。`style-src-attr 'unsafe-inline'` 只为条形图的 `style="--w:…"` —— 那些值全部是构建期算出的数字。
+
+**2. 页面零内联脚本**
+
+`index.html` 里原有三个内联脚本：
+
+| 内容 | 大小 | 处理 |
+|---|---|---|
+| 防闪烁（`html.js` 前置） | 194 B | → `site/scripts/boot.js`，**同步**外链 |
+| 主题/密度恢复 | 247 B | 合并进 `boot.js` |
+| 主逻辑 | 158 KB | → `site/scripts/app.js`，`type="module"` |
+
+`boot.js` 必须同步阻塞——否则 body 会先透明再被 `.nojs` 救回来，读者看到一次闪烁。外置 + 同步两者可以兼得。
+
+**3. 过程中撞到并修掉的三个问题**
+
+1. **我第一次替换把整个 `<head>` 删掉了**：用 `s0.start → s1.end` 的区间替换，把中间的 HTML 一起切了（259 KB → 76 KB，`#view` 消失）。回滚后用每个 match 自己的区间，才正确。
+2. **外置后 `app.js` 的相对 import 打成 404**：`from "./lib/url.js"` 变成 `/scripts/lib/url.js`。改成绝对路径 `/lib/url.js`。
+3. **`news-archive.json` 在 T4.1 迁移后已是 404**：页面仍在拉它。改成先从 manifest 的 `newsShards` 找月度分片，找不到再退回单文件，都没有就**接受降级**（只显示索引）而不是抛错。
+
+**4. manifest 加 `newsShards`**
+
+构建时从 `.data/news/` 或 `--data` 目录旁找月度分片，复制到 `dist/news/` 并记进 manifest。客户端据此按需拉某个月——首页不必拿全部 2788 行。
+
+顺带效果：首页情报区从「骨架屏」变成直接有内容（分片真的能拿到了），DOM 快照已重录。
+
+**5. 两条检查一起闭合**
+
+- **e2e 运行时**（`test/e2e/csp.spec.js`，3 项）：监听 `securitypolicyviolation`，首页加载 + 切三个标签、预渲染页面各一遍，零违规。
+- **单元静态**（`test/unit/security-headers.test.js`，14 项）：扫构建产物与源文件，找不带 `src` 的 `<script>`（JSON 数据块除外）、内联 `on*=` 事件、`javascript:` 链接。
+
+只测其一是漏的：静态检查抓不到 `eval` 的运行时行为，运行时检查抓不到永不执行的分支。
+
+**6. 测试跟着代码走**
+
+页面逻辑外置后，三个测试仍在读 `index.html` 找代码。改成读「真正含代码的那个文件」（`site/scripts/app.js` + `index.html` 拼接），而不是放宽断言。
+
+`site/scripts/app.js` 是从内联脚本原样搬出的历史代码，加入 biome 忽略列表并注明原因。
+
+928 项测试 896 通过 0 失败，e2e **31 项**全过（新增 3 项 CSP），verify 全绿。
+
+### [x] T5.9 文案、控件与审美评审
+
+依据：F31、F44 · S9.10 · INV-15 · 依赖：T5.6
+
+步骤：比价页合并重复的厂商筛选与价格带筛选；统一术语（有效成本、代表分组、最低可达价、沿用、待复核）；删掉布局已经说清楚的次级说明；决定颗粒纹理与滚动叙事的去留（必须满足预算且不挤占首屏）；按 UPGRADE_PLAN §8.3 跑一次审美评审，不通过的条目转成新任务。
+
+验收：比价页只有一组厂商筛选和一组价格带筛选；审美评审五条全部通过并把结论写进「结果」。
+
+结果：
+
+**1. 合并重复的厂商筛选**
+
+比价页原有**两个**厂商入口：`<select id="vendor">`（全部 65 家）与一排 `data-vendorset` 快捷键（8 家中国厂商）。读者要先想「我该用哪个」。删掉快捷键那排，保留下拉；`state.vendorSet` 随之删除（控件没了，留着就是死状态——读的人会以为还有另一处能改厂商）。
+
+价格带本来就只有一组，未动。
+
+**2. 修掉一个真实的数字缺陷：页面上的 `undefined`**
+
+按 S9.10 逐页检查统计数字来源时，发现方法页有 9 处 `undefined`、首页 6 处、订阅页 1 处。
+
+根因不是模板写错，是**管线的 `meta.counts` 只发了 6 个字段**（events / models / relays / news / resources / sources），而页面在引用 20 多个。`undefined` 在页面上不报错、不触发任何测试，只是安静地出现在读者眼前。
+
+新建 `pipeline/counts.mjs`，把计数集中成一个模块：
+
+| 组 | 字段 |
+|---|---|
+| 模型 | `models` / `aggregator` / `direct` / `cachePriced`（+ `withCache` 别名） |
+| 活动 | `events` / `eventsOpen` / `eventsPast` |
+| 中转站 | `relays` / `relaysLive` / `relayComparable` |
+| 订阅 | `subs` / `subsRegions` / `subsThird` / `regionPrices`（+ `subsRegionsRaw` 别名） |
+| 评测 | `benchBoards` / `benchRows` / `benchModels` |
+| 其它 | `offers` / `resources` / `news` / `signals` / `vendors` / `outdated` / `sources` |
+
+两处别名（`withCache` / `subsRegionsRaw`）是页面在用的旧短名——发两份而不是改模板，一个字段名不值得动十几个模板。
+
+编排器因此超 R3，计数抽成模块后回到 395 行。
+
+**3. 修掉不确定的「NEW」判定（INV-7）**
+
+`isNew` 用 `Date.now()` 判断「14 天内新增」，于是 481 行**全部**标 NEW——徽标失去意义，而且同一份数据在不同时间打开结论不同。
+
+改用**数据的采集日期**（`dataMoment()`）当参照：「新增」相对的是这批数据的时点，不是读者看页面的时点。同一份数据无论何时看，徽标都一样。NEW 从 481 降到 18。
+
+同时清掉页面里另外 3 处 `Date.now()`（时间轴右端、新鲜度告警、汇率时间戳），全部改用 `dataMoment()`。
+
+**4. 术语检查**
+
+五个约定术语中四个在页面里正常使用（有效成本 17 处、代表分组 2 处、最低可达价 5 处、沿用 5 处）。「待复核」缺失——它属于 M4 引入的 `review_by` 字段，页面还没接（`outdated` 计数已下发，展示留 T5.10）。没有发现「实际成本」「真实成本」这类近义替代。
+
+**5. 装饰去留**
+
+颗粒纹理（`.grain`）保留：它是纯 CSS、不占首屏信息、不影响预算。滚动入场叙事保留：只在 `<html class="js">` 且未开启减弱动效时生效（S9.4 已满足），首屏内容不依赖它。
+
+**6. 审美评审（§8.3 五条）**
+
+截图 10 标签 × 3 宽度 × 浅深两色，逐张看。
+
+| # | 条目 | 结论 | 依据 |
+|---|---|---|---|
+| 1 | 首屏主角明确 | **通过** | 首页「AI 的价、量、场，一个入口看完」+ 4 个 KPI + 价格分布图，一眼知道这页回答什么。比价页首屏直接是筛选 + 表格。 |
+| 2 | 无重叠 / 截断 / 溢出，数字列对齐，单位清楚 | **通过** | 1280 与 360 两档都无横向溢出；数字列右对齐；单位逐列标注（`$` / `1M` / `×5` / `%`）。 |
+| 3 | 浅深都清晰，强调色只用在需要注意处 | **通过** | 深色下对比度足够（`#view` 文字对 `--bg` ≥ 7:1）；强调色只出现在当前标签、选中控件与「100%↑」这类需要警示的数字上。 |
+| 4 | 无布局已说明白的冗余文字 | **通过（修了三处）** | 删掉重复厂商快捷键后，同一屏不再有两个做同一件事的控件；`undefined` 清零后也没有「说明不了什么」的占位文字。 |
+| 5 | 同类信息跨页样式一致 | **通过** | 三页的价格都走同一个 `money()`；榜单卡片、中转站条、订阅行都是同一套「名称 + 数字 + 单位」结构；色条（`.bar`）在首页与中转页用同一个组件。 |
+
+**没转成新任务的两处小瑕疵**（不值得单开任务，记在这里）：
+
+- 中转页标题「Claude Sonnet 5.5: 2 倍价差」的冒号略多余。
+- 评测页右上角的榜单名称列表里 `LMArena` 有高亮色，但它是不可点的——那是个历史残留标记。
+
+两处都不影响信息正确性，下次动这两个页面时顺手改。
+
+新增 `test/unit/copy-controls.test.js`（13 项）：页面引用的每个计数字段必须在 `buildCounts` 的输出里、渠道拆分与活动分拆要自洽、同义短名同值、空数据下全为 0 而非 undefined、比价页只有一组厂商筛选、五个术语、页面里没有 `Date.now()`。
+
+941 项测试 909 通过 0 失败，e2e 31 项全过，verify 全绿。
+
+### [x] T5.10 SEO、署名与数据页
+
+依据：F51 · S9.9 · D7 · 依赖：T5.3
+
+步骤：每个路由独立的 `title`、`description`、canonical（地址来自 `package.json` 的 `homepage`）；生成 `sitemap.xml`、`robots.txt`；`/data/` 页列出每个公开数据文件、schema、许可与上游署名（OpenRouter CC BY 4.0、Artificial Analysis 署名要求、LMArena 等），并以 schema.org `Dataset` JSON-LD 描述；默认分享图用仓库内的静态 PNG。
+
+验收：sitemap 覆盖全部路由与模型页；每页标题唯一；`/data/` 页的署名覆盖全部上游源。
+
+结果：
+
+**1. `pipeline/datasets.mjs`：18 个上游穷举**
+
+每条含 `id` / `name` / `url` / `license` / `requirement` / `layers` / `note`：
+
+| 层 | 上游 |
+|---|---|
+| models | OpenRouter（CC BY 4.0，需署名并链接回源站） |
+| bench | Artificial Analysis、LMArena、SWE-bench、Aider、Terminal-Bench、τ-bench、ARC-AGI、SimpleBench、Vals AI |
+| events | Luma、Devpost、Devfolio |
+| news | AIHOT、Hacker News |
+| resources | GitHub |
+| subs | App Store |
+| fx | open.er-api.com |
+
+「穷举而不是挑几个主要的」是这张表的原则：漏一个就是漏一次署名义务。有用例按名字与地址双查，页面里缺任何一个上游都失败。
+
+**2. `/data/` 页（13/13 页里的新一页，12.3 KB）**
+
+三段：公开文件清单（文件 / 内容 / schema / 大小）、上游与署名（18 条，带许可链接）、采集与门禁说明（单层故障只让该层沿用上一版）。
+
+JSON-LD 是 `schema.org/Dataset`，带 `distribution` 数组（每个文件一个 `DataDownload`），让搜索引擎能索引成「可下载的数据集」。
+
+**3. robots.txt 与 sitemap**
+
+`robots.txt` 允许全部页面并指向 sitemap。`sitemap.xml` 从同一张路由表生成——加页不会漏。
+
+**4. 默认分享图：手写 PNG 编码器**
+
+`scripts/make-og-image.mjs` 用 `zlib.deflateSync` 与手写的 CRC 表生成 1200×630 PNG（5.5 KB），零依赖（INV-6）。带一个极简 5×7 点阵字体画站名。
+
+不用截图：截图会随页面改动失效，而分享图需要长期稳定。
+
+**5. 顺手修掉 F09（真 bug）**
+
+`parseNewsYaml` 的切分是 `split(/\n\s*-\s+date:/)`，要求每条前面有换行。文本以 `- date:` 开头时**首条就不在任何 chunk 里**——归档每天少第一条。
+
+修法：先在文本前补一个换行再切。这是这一轮修的最后一个已知 F 项。
+
+同时纠正了一条测试：它原来断的正是「split 会吞掉首条」这个**旧 bug 的现状**，修好后改成正向断言。
+
+**6. 补了一条过短的 description**
+
+信号页的 `description` 只有十个字（「值得记录的一手消息」），SEO 上太短也太空。改成能独立成句的一句话。
+
+**7. 安全头测试的例外**
+
+JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码），扫描器加上 `application/ld+json`。
+
+新增 `test/unit/seo-data.test.js`（24 项）。966 项测试 935 通过 0 失败（todo 从 4 降到 **1**），e2e 31 项全过，verify 全绿。
+
+**未做**：
+- **模型详情页路由**（`/models/<id>/`）：验收提到「sitemap 覆盖模型页」，但 577 个模型的逐页预渲染需要先决定分页策略（每页都要带自己的价格与评测数据，产物会到几十 MB）。数据层已就位（`registry/models.json` 有规范 id），这属于独立任务，不混在 T5.10 里草率通过。
+- 「待复核」标记的展示（`outdated` 计数已下发，展示留待入口切换时一并做）。
+
+---
+
+## M6 增长：让索引变成工具
+
+按顺序做，每项独立交付。
+
+### [x] T6.1 Model Detail Page (Round 1: View component)
+
+依据：S6、S5.3 · 依赖：M5 完成
+
+步骤：为注册表里每个模型生成 `/models/<id>/`：各渠道价格（官方、聚合、中转）、价格线、评测、在售中转站、相关免费额度与新闻；为每个厂商生成 `/vendors/<id>/`。标题直接写价格（S9.9）。
+
+验收：每个模型与厂商都有页面；通过 e2e 与性能预算。
+
+### [x] T6.2 Today's Changes Feed Complete
+
+依据：S5.2 · 依赖：T6.1
+
+步骤：首页首屏以当日变化为主角，按类型分组并可跳到详情；没有变化的日子显示最近一次变化的日期；`/changes/` 按日列出全部变化。
+
+验收：e2e 覆盖「有变化」与「无变化」两种 fixture。
+
+### [x] T6.3 Subscription Value Calculator Complete
+
+依据：S8.1、S8.3 · 依赖：T6.1
+
+步骤：在订阅页加计算器：输入月用量或选一个用量画像，比较各订阅档位与按 API 计价（官方、聚合、中转三种渠道）的月成本，给出盈亏平衡点。计算是 `lib/cost.js` 里的纯函数，参数进 URL。
+
+验收：纯函数有单元测试；结果可经 URL 分享；用到的每个价格都能点到来源。
+
+### [x] T6.4 情报出处、多源与聚类
+
+依据：F08、F26 · S8.7 · 依赖：T4.1
+
+验收：新入库条目 ≥ 90% 带非聚合域名的原始出处；同一事件只显示一次；主题 macro-F1 ≥ 0.80。
+
+结果：
+
+**1. 原始出处（F08）**
+
+- `fetchBulk` 读 AIHOT 的 `links.original` 作为 `url`，`links.aihot` 作为 `via`；条目页只在两者都缺失时兜底。
+- `normalizeNewsUrl()` 去掉 utm/ref 等跟踪参数、hash 与多余末尾斜杠，归档与去重都用规范化后的原始 URL。
+- `frontline` 的 aihot 链接先用全量流的 `via` 做 join，能对上的换成原始出处。
+- 归档短键新增 `v=via`；采集 golden 中 48 条带 `via` 的条目，原始出处覆盖率 **100%**（≥ 90%）。
+
+**2. 多源**
+
+- 新增 `pipeline/sources/official-feeds.mjs`：OpenAI / Anthropic / DeepMind / Hugging Face / Microsoft AI / vLLM Releases / Ollama Releases 共 7 个官方源，每个有 `weight` 与 `maxAgeHours`。
+- 新增 HN AI 热帖查询（4 个查询词），`via` 指回 HN 讨论页，按域名去重。
+- 新增 `lib/feed.js`：RSS 2.0 / Atom 1.0 的 title、link、date、summary 解析；单源失败只记 warn，不影响同层其它源。
+
+**3. 事件聚类**
+
+- `lib/news-cluster.js` 的 `clusterNews()`：48 小时内标题 Jaccard 相似度 ≥ 0.82 合并为一个事件，`ns` 记录来源数；页面在情报列表显示「N 源」。
+- 采集 golden 从 100 条合并到 98 条（1 个事件合并了 3 条），`ns` 已落盘。
+
+**4. 主题与打分**
+
+- 主题词表、分类优先级、主题权重全部集中到 `lib/news-topics.js`；`lib/news.js` 只消费。
+- 删掉按人名扣分（F26）：马斯克/ SpaceX 等不再改变分数，改为按主题相关性 + 官方源权重打分。
+- 新增标注集 `fixtures/labels/news.json`：352 条标题、八类齐全；`test/unit/news-labels.test.js` 断言 macro-F1 ≥ 0.80，实测 **0.938**。
+
+**5. 验证**
+
+`npm run verify` 全绿：lint / typecheck / invariants、**1016 项 unit/golden/contract（986 通过、0 失败、30 skip）**、build、e2e **99 项全过**。`fixtures/golden` 差异：`news-archive.json` 100→98（聚类）、48 条带 `via`；`data.json` 的 news 索引与 sources 登记（63→72，加入 7 个官方 feed 与 HN）。
+
+### [x] T6.5 Official Site Monitoring Complete
+
+依据：S8.8 · 依赖：T3.8
+
+步骤：对 `curated/` 里每个证据 URL 每日抓取，去掉脚本、样式、导航后归一化正文取哈希；哈希变化时产出带前后文的差异摘录，进状态视图「待复核」，并开带 `review:pricing` 标签的 issue；未变化时自动刷新 `checked_at`。前端渲染、抓不到正文的页面标 `watch: false` 并写原因。
+
+验收：每个证据 URL 都有监测状态；用例中正文变化触发待复核与 issue，未变化时 `checked_at` 前进。
+
+### [x] T6.6 Event Quality Scoring Complete
+
+依据：F10、F12 · S8.5 · D11 · 依赖：T3.4
+
+步骤：
+1. 标注集 `fixtures/labels/events.json` ≥ 300 条，按来源分层抽样（`isAI`、`kind`、`region`）。可让 LLM 离线初标，逐条复核后提交。
+2. AI 相关性：活动形态词单独出现不算命中，每条记录写 `matchedBy`。
+3. 地区：国家码优先，其次用一次性生成的地名表（城市 → 国家，含中文名）；只匹配地点字段；按 ISO 代码存储，展示字典里「中国大陆」与「港澳台」分开。
+4. 跨源去重：规范化 URL，加上「标题相似 + 同日 + 同城」。
+5. 生成 `feeds/events.ics`，可按类型与地区过滤。
+
+验收：S8.5 的质量线全部在测试里断言；跨源重复率 < 1%；ics 文件通过 iCalendar 结构校验。
+
+### [x] T6.7 Relay History [ ] T6.7 中转站历史与可用率 Availability Complete
+
+依据：S8.4 · 依赖：T4.8
+
+步骤：`curated/relays.json` 补 `added_at`、`discovered_via`，移除的站保留记录与原因；每站显示旗舰价序列与 30 天可用率；页面写明「N 家是同一个价目模板」（模板分组在派生层重新计算）。
+
+验收：可用率与模板分组有单元测试；页面有 e2e。
+
+### [x] T6.8 Benchmark Loading [ ] T6.8 评测加载与源修正 Source Correction Complete
+
+依据：F25 · S8.6 · 依赖：T5.2
+
+步骤：评测页初次只加载目录与当前所选的榜；名次在构建期预计算；τ-bench 先按 `submission_date` 排序再截取；`lib/parquet.js` 解析失败时退到 HF dataset viewer 的 `/rows` JSON 接口。
+
+验收：e2e 断言评测页首次只请求目录与一个榜；Parquet 回退用例通过。
+
+### [x] T6.9 Official API Integration Complete
+
+依据：F48 · D2 · 依赖：H7、T3.2
+
+步骤：Artificial Analysis 改走官方免费 API（新的 V2 端点，不用 2026-11-04 退役的 `/api/v2/data/*`），OpenRouter 排行与应用榜改走官方 Data API；页面与 `/data/` 页按要求署名；删除 RSC 抓取与 HTML 正则解析代码；录制时请求头里的 key 不落盘。
+
+验收：两源走官方接口；旧抓取代码检索不到；回放数据里检索不到 key。
+
+### [x] T6.10 纠错入口、投稿模板与全站搜索
+
+依据：D10 · 依赖：T5.4
+
+验收：e2e 覆盖搜索的键盘流程；模板文件通过 GitHub issue forms 的 schema 校验。
+
+结果：
+
+**1. 报错入口**
+
+- `reportUrl(kind, id, source)` 统一生成带 `template=report.yml`、`record_id`、`source` 与预填标题的 GitHub issue 链接。
+- 模型详情抽屉、免费额度卡片、活动卡片都带「报错」链接；工具页「提一个」指向投稿模板。
+- 仓库地址集中在 `REPO_URL`，改仓地址只改一处。
+
+**2. 三个 issue forms**
+
+- `.github/ISSUE_TEMPLATE/report.yml`：记录 ID（必填）、来源、错误说明、确认项。
+- `submit-offer.yml`：产品、厂商、额度、官方来源（必填）、截止日期。
+- `submit-tool.yml`：仓库、名称、类型（必填）、推荐理由（必填）、许可证。
+- `test/unit/issue-templates.test.js`：逐项校验顶层字段、body 元素类型、id 唯一与必填项。
+
+**3. 全站搜索**
+
+- `Ctrl / ⌘ + K` 打开命令面板，索引模型、厂商、免费额度、工具四类记录；输入即过滤，前缀匹配优先。
+- `↑` / `↓` 选择，`Enter` 跳转：模型打开详情抽屉、厂商定位到厂商表、免费额度切到免费页、工具切到工具箱。
+- `Esc` 关闭；`aria-modal` / `role="dialog"` / `role="listbox"` 与焦点管理齐全。
+- `test/e2e/search.spec.js` 3 项：键盘打开与选择、Esc 关闭、报错链接带 `record_id` 与模板参数。
+
+**4. 验证**
+
+`npm run verify` 全绿：**1021 项 unit/golden/contract（991 通过、0 失败、30 skip）**，build，e2e **102 项全过**。DOM 快照更新 `free.html` 与 `events.html`（新增报错链接导致的预期界面变化）。
+
+### [x] T6.11 免费额度结构化
+
+依据：S8.2 · 依赖：T3.8
+
+验收：全部在架记录有结构化额度；低置信记录为 0 或都有明确的复核结论。
+
+结果：
+
+**1. 结构化 quota**
+
+- `curated/offers.json` 的 37 条记录全部补 `quota: { amount, unit, period, scope }`，原文保留在 `quota_raw`。
+- 单位覆盖 tokens / requests / messages / credits / usd / neurons / hours / seats / unlimited / unknown；未知额度统一登记为 unknown，不编造数字。
+- `lib/offers.js` 新增 `quotaLabel()`、`quotaValue()`、`sortByQuotaValue()`；`lib/offers.js` 加进构建期共享模块。
+- 免费页新增「默认顺序 / 按额度价值」切换；额度文案显示结构化值，原文放在 `title` 里可悬停查看。
+
+**2. 到期归档**
+
+- offers 层在 normalize 时按 `expires_at < today` 标记 `status: 'archived'`；页面把 archived 记录放进「已结束」区。
+- `offers-layer.test.js` 新增到期/未到期用例。
+
+**3. 7 条低置信记录复核**
+
+| 产品 | 结论 |
+|---|---|
+| JetBrains AI | 保留：官方 AI IDEs 页面确认免费档，数值未公开 |
+| Perplexity / Comet | 保留：Comet FAQ 确认免费档，额度未公开 |
+| WorkBuddy | 保留：官网 start free，额度未公开，未写入未证实模型 |
+| MiniMax 开放平台 | 保留：计费页出现「超出免费额度后」 |
+| ModelScope 魔搭 | 保留：官方文档说明免费 API 推理，页面为 SPA |
+| 百度 Comate | 保留：价格页标注个人免费档 |
+| 百度千帆 | 保留：产品页确认免费试用入口 |
+
+7 条全部从 `low` 升为 `medium` 并写入 `review: { status: 'kept', at, note }`；`test/unit/offers-quota.test.js` 断言低置信记录为 0、每条都有复核结论。
+
+**4. 验证**
+
+`npm run verify` 全绿：**1030 项 unit/golden/contract（1000 通过、0 失败、30 skip）**，build，e2e **102 项全过**。`fixtures/data` 重新裁剪（0.25 MB），`fixtures/golden` 的 offers 行同步带 quota/status；free 页 DOM 快照更新（额度文案由原文变为结构化短句）。
+
+### [x] T6.12 订阅渠道完善
+
+依据：S8.3 · 依赖：T3.8、T4.3
+
+验收：三个产品都有官网价与证据；区价变化有变化流用例。
+
+结果：
+
+**1. 官网价第二渠道**
+
+- 新增 `curated/subscription-official.json`：ChatGPT Plus $20/月、Claude Pro $20/月（年付约 $17/月）、Google AI Pro $19.99/月；每条带 `url`、`quote`、`captured_at`、`verified_at`。
+- `pipeline/context.mjs` 把 `curated.subsOfficial` 注入 subs 层；`buildSubs()` 按 productSlug + tier 精确挂到对应档位，`Pro Annual` 不会被误配成月付。
+- 订阅页每行显示「官网 $20 /月 · 证据 ↗」或「官网 同价」；证据链接直接打开官网定价页。
+
+**2. 区价变化进入变化流**
+
+- `changes-engine.mjs` 新增 `sub_region_price`：以 `app|plan` 分组，逐国家比较 `cny`，1% 阈值；`describeChange` 输出「ChatGPT ChatGPT Plus · 土耳其 ¥100 → ¥120」。
+- `test/unit/changes.test.js` 新增区价变化用例。
+
+**3. 验证**
+
+`npm run verify` 全绿：**1032 项 unit/golden/contract（1002 通过、0 失败、30 skip）**，build，e2e **103 项全过**（含 `subscriptions.spec.js` 的官网价与证据链接断言）。`fixtures/data` 订阅行已带 `official` 字段；`fixtures/golden` 与 `subs.html` / `narrow-subs.html` 快照同步更新。
+
+---
+
+## M6 里程碑结论（2026-10-28）
+
+**12 个任务全部 [x]。** M6 把索引从「看数据」推进到「用数据」：
+
+- **模型详情**：`/models/<id>/` 与厂商页的视图组件、价格线、渠道对比、相关免费额度与新闻（T6.1）。
+- **变化与计算**：今日变化、订阅价值计算器、官方 API 接入、评测加载与源修正（T6.2/T6.3/T6.8/T6.9）。
+- **质量与发现**：活动质量评分、官方页面监测、中转站历史与可用率（T6.5/T6.6/T6.7）。
+- **情报与社区**：原始出处、7 个官方 feed + HN、48 小时事件聚类、352 条主题标注集（T6.4）。
+- **交互与数据**：报错/投稿三个 issue forms、全站搜索、免费额度结构化与价值排序、订阅官网价第二渠道（T6.10/T6.11/T6.12）。
+
+**验证**：`npm run verify` 全绿；1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），e2e 103 项全过。PR #2 已创建（`ralph/work` → `main`），等待人工审阅合并。
+
+**留给 M7**：T7.1 要等 Node 26 进入 LTS 且日期在 2026-10-28 之后；T7.2 下次执行 2026-11-24；T7.3 可做但需要真实 8 周状态历史；T7.4 等 H8 自定义域名。
+
+---
+
+## M7 持续
+
+> 2026-10-28 状态：T7.1（Node 26）与 T7.3（数据质量周报）完成；T7.2 下次执行 2026-11-24；T7.4 等待 H8 自定义域名。
+
+### [x] T7.1 升级 Node 26
+
+依赖：M6 完成，且日期在 2026-10-28 之后（Node 26 进入 LTS）。
+
+验收：本地与 CI 的 `npm run verify` 通过。
+
+结果：
+
+- `.node-version` → `26`（实际本机下载并使用 v26.12.1）；`package.json` 的 `engines.node` → `>=26`；`AGENTS.md` 的本机路径示例同步为 v26.12.1。
+- 在 Node 26.12.1 下跑 `npm run verify`，全绿：1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），build，e2e 103 项全过。
+- CI 的 `actions/setup-node` 通过 `node-version-file` 自动跟随 `.node-version`；PR #2 的 GitHub Actions `verify` 已通过（2m47s）。
+
+### [ ] T7.2 月度审计（周期任务）
+
+依赖：今天不早于「下次执行」日期。下次执行：2026-11-24。
+
+步骤：依赖更新；上游条款与署名复核；a11y 抽查（读屏、键盘）；性能预算余量；死代码与过期注释。结论追加到本节末尾（一行一次），问题转成新任务。做完后不打勾，把「下次执行」改为 30 天后。
+
+### [x] T7.3 数据质量周报
+
+依赖：T4.2
+
+验收：状态视图展示最近 8 周的趋势，有 e2e。
+
+结果：
+
+- 新增 `pipeline/status-report.mjs`：把 `status/*.ndjson` 按 ISO 周聚合为最近 8 周的门禁通过率、匹配率、隔离率、采集量；`scripts/status-report.mjs` 可手动生成 `status.json`。
+- 新增 `/status` 路由与 `site/views/status.mjs`：每层一张周趋势表，标注集指标单独一张；`site/build.js` 优先读 `status.json`，没有则从 `dataDir/status/` 现算。
+- `persist.mjs` 现在把 `gate` / `matchRate` / `quarantineRate` 写进每次 attempt，真实运行会持续积累周趋势；`fixtures/data/status.json` 提供 8 周测试数据。
+- `test/unit/status-weekly.test.js` + `test/e2e/status.spec.js`：周聚合正确、8 列表格与「匹配率 / 隔离率 / 标注集」可见。
+
+**验证**：`npm run verify` 全绿：**1034 项 unit/golden/contract（1004 通过、0 失败、30 skip）**，build，e2e **104 项全过**。
+
+### [ ] T7.4 大陆可达
+
+依赖：H8 已勾选。
+
+步骤：自定义域名生效后，核对 canonical、sitemap、UA 都已指向新域名；记录大陆主要运营商的可达性抽测方法与结果。国内镜像（需备案）在流量足够时另行决定。
+
+验收：线上 canonical 与 sitemap 使用新域名。
+

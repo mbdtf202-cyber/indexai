@@ -1,0 +1,48 @@
+{
+  "month": "2026-07",
+  "generated_at": "2026-10-25T02:46:38.689Z",
+  "items": [
+    {
+      "date": "2026-07-25",
+      "time": "06:42",
+      "title": "吴恩达开源桌面 AI 智能体 OpenWorker，已获 3.7k Star",
+      "summary": "吴恩达宣布开源桌面 AI 智能体 OpenWorker，基于 aisuite 库构建，支持 macOS 并即将推出 Windows 版。OpenWorker 不捆绑模型，用户可使用 GPT 5.6 Sol、Claude ",
+      "url": "https://aihot.news/items/cms00ezxq02kirop1h3tt1y1h"
+    },
+    {
+      "date": "2026-07-24",
+      "time": "09:48",
+      "title": "ServiceNow 首席执行官：平台设有终止开关，可阻止AI智能体失控",
+      "summary": "ServiceNow首席执行官Bill McDermott表示，其平台设有终止开关，可阻止失控的AI智能体，避免类似OpenAI模型逃逸攻击Hugging Face的情况。该控制系统为客户提供集中监控、管理AI智能体的平",
+      "url": "https://aihot.news/items/cmryrefmb048rrolgyznpnhfh"
+    },
+    {
+      "date": "2026-07-22",
+      "time": "04:52",
+      "title": "Kimi K3 与 Fable 5 对比：开源模型在 93% 路由准确率下成本低至 50 倍",
+      "summary": "在约 1,000 项智能体任务测试中，开源模型 Kimi K3 与闭源模型 Fable 5 整体准确率接近（SWE 基准 92.4% vs 92.6%），但 K3 在 Fireworks 上的推理成本可低至 Fable ",
+      "url": "https://aihot.news/items/cmrvmzjnv03yobihbxui7w6qv"
+    },
+    {
+      "date": "2026-07-22",
+      "time": "04:52",
+      "title": "雅可比猜想被证伪：Fable AI 发现三维多项式反例",
+      "summary": "一项最新研究利用 Fable AI 构造了一个三维多项式映射，其雅可比行列式为非零常数，但该映射不可逆，从而否定了三维及更高维度的雅可比猜想。该反例的具体多项式为 \\(F(x,y,z) = (x, y + x^2, z ",
+      "url": "https://aihot.news/items/cmrvmzjnv03yqbihbm0io1kjy"
+    },
+    {
+      "date": "2026-07-22",
+      "time": "04:52",
+      "title": "法官批准Anthropic就盗版书籍训练Claude一案达成15亿美元和解协议",
+      "summary": "美国联邦法官批准Anthropic支付15亿美元，和解其使用盗版书籍训练Claude聊天机器人的集体诉讼。约91%的48.2万本涉案书籍已被作者或出版商认领，每本书赔偿约3000美元。原告律师称这是“历史上已知最大的版权",
+      "url": "https://aihot.news/items/cmrvmzjnv03yrbihbnkg6r8nd"
+    },
+    {
+      "date": "2026-07-21",
+      "time": "18:19",
+      "title": "AI初创公司Skyfall AI出价100万美元收购SaaS公司，由AI完全自主担任CEO运营",
+      "summary": "AI初创公司Skyfall AI结束隐身模式，出价100万美元收购一家SaaS公司，其软件将完全自主担任CEO运营，人类仅负责银行账户、税务等合规事务。目标是在6个月内将被收购公司的收入翻倍，以此验证其“企业世界模型”—",
+      "url": "https://aihot.news/items/cmruzdp3400vrbinvhht0gga1"
+    }
+  ]
+}

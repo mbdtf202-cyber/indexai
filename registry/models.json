@@ -1,0 +1,4803 @@
+{
+  "schema": "registry.models/v1",
+  "note": "模型实体表（T4.5 · S6.2）。规范 id 形如 vendor/model。别名只收精确写法（S6.3 禁止前缀与模糊匹配）；推理档位挂在父模型的 variants 下。初稿由 scripts/gen-models-registry.mjs 生成，人工核对后提交（D6）。",
+  "models": [
+    {
+      "id": "aion-labs/aion-2-0",
+      "name": "AionLabs: Aion-2.0",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-2.0"]
+      }
+    },
+    {
+      "id": "aion-labs/aion-3-0",
+      "name": "AionLabs: Aion-3.0",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-3.0"]
+      }
+    },
+    {
+      "id": "aion-labs/aion-3-0-mini",
+      "name": "AionLabs: Aion-3.0-Mini",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-3.0-mini"]
+      }
+    },
+    {
+      "id": "aion-labs/aion-3-5",
+      "name": "AionLabs: Aion 3.5",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-3.5"]
+      }
+    },
+    {
+      "id": "aion-labs/aion-3-5-mini",
+      "name": "AionLabs: Aion 3.5 Mini",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-3.5-mini"]
+      }
+    },
+    {
+      "id": "aion-labs/aion-rp-llama-3-1-8b",
+      "name": "AionLabs: Aion-RP 1.0 (8B)",
+      "vendor": "Aion Labs",
+      "aliases": {
+        "openrouter": ["aion-labs/aion-rp-llama-3.1-8b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-2-5-72b-instruct",
+      "name": "Qwen2.5 72B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen-2.5-72b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-2-5-7b-instruct",
+      "name": "Qwen: Qwen2.5 7B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen-2.5-7b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-2-5-coder-32b-instruct",
+      "name": "Qwen2.5 Coder 32B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen-2.5-coder-32b-instruct"],
+        "bench": ["Qwen2.5-Coder 32B Instruct", "Qwen2.5-Coder-32B-Instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-3-6-max-preview",
+      "name": "Qwen 3.6 Max Preview",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen 3.6 Max Preview"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-3-7-max",
+      "name": "Qwen 3.7 Max",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen 3.7 Max"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-3-8-2-4t-a95b",
+      "name": "Qwen 3.8 2.4T A95B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen 3.8 2.4T A95B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-3-8-max-0902",
+      "name": "Qwen 3.8 Max 0902",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen 3.8 Max 0902"]
+      }
+    },
+    {
+      "id": "alibaba/qwen-plus",
+      "name": "Qwen: Qwen-Plus",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen-plus"]
+      }
+    },
+    {
+      "id": "alibaba/qwen2-5-7b-72b",
+      "name": "Qwen2.5 (7B + 72B)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen2.5 (7B + 72B)"],
+        "display": ["Qwen2.5 (7B + 72B)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen2-5-vl-72b-instruct",
+      "name": "Qwen: Qwen2.5 VL 72B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen2.5-vl-72b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-14b",
+      "name": "Qwen: Qwen3 14B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-14b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-235b-a22b-2507",
+      "name": "Qwen: Qwen3 235B A22B Instruct 2507",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-235b-a22b-2507"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-235b-a22b-diff-no-think-alibaba-api",
+      "name": "Qwen3 235B A22B diff, no think, Alibaba API",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3 235B A22B diff, no think, Alibaba API"],
+        "display": ["Qwen3 235B A22B diff, no think, Alibaba API"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-235b-a22b-thinking-2507",
+      "name": "Qwen: Qwen3 235B A22B Thinking 2507",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-235b-a22b-thinking-2507"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-30b-a3b",
+      "name": "Qwen: Qwen3 30B A3B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-30b-a3b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-30b-a3b-instruct-2507",
+      "name": "Qwen: Qwen3 30B A3B Instruct 2507",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-30b-a3b-instruct-2507"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-32b",
+      "name": "Qwen: Qwen3 32B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-32b"],
+        "bench": ["Qwen3 32B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-122b-a10b",
+      "name": "Qwen: Qwen3.5-122B-A10B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-122b-a10b"],
+        "bench": ["Qwen3.5 122B A10B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-122b-a10b-non-reasoning",
+      "name": "Qwen3.5 122B A10B (non-reasoning)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 122B A10B (non-reasoning)"],
+        "display": ["Qwen3.5 122B A10B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-27b",
+      "name": "Qwen: Qwen3.5-27B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-27b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-35b-a3b",
+      "name": "Qwen: Qwen3.5-35B-A3B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-35b-a3b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-397b-a17b",
+      "name": "Qwen: Qwen3.5 397B A17B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-397b-a17b"],
+        "bench": ["Qwen3.5 397B A17B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-397b-a17b-non-reasoning",
+      "name": "Qwen3.5 397B A17B (non-reasoning)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 397B A17B (non-reasoning)"],
+        "display": ["Qwen3.5 397B A17B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-4b",
+      "name": "Qwen3.5 4B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 4B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-4b-non-reasoning",
+      "name": "Qwen3.5 4B (non-reasoning)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 4B (non-reasoning)"],
+        "display": ["Qwen3.5 4B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-9b",
+      "name": "Qwen: Qwen3.5-9B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-9b"],
+        "bench": ["Qwen3.5 9B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-9b-non-reasoning",
+      "name": "Qwen3.5 9B (non-reasoning)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 9B (non-reasoning)"],
+        "display": ["Qwen3.5 9B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-flash-02-23",
+      "name": "Qwen: Qwen3.5-Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-flash-02-23"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-omni-flash",
+      "name": "Qwen3.5 Omni Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 Omni Flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-omni-plus",
+      "name": "Qwen3.5 Omni Plus",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.5 Omni Plus"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-plus-02-15",
+      "name": "Qwen: Qwen3.5 Plus 2026-02-15",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-plus-02-15"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-5-plus-20260420",
+      "name": "Qwen: Qwen3.5 Plus 2026-04-20",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.5-plus-20260420"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-6-27b",
+      "name": "Qwen: Qwen3.6 27B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.6-27b"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-6-35b-a3b",
+      "name": "Qwen: Qwen3.6 35B A3B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.6-35b-a3b"],
+        "bench": ["Qwen3.6 35B A3B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-6-35b-a3b-non-reasoning",
+      "name": "Qwen3.6 35B A3B (non-reasoning)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.6 35B A3B (non-reasoning)"],
+        "display": ["Qwen3.6 35B A3B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-6-flash",
+      "name": "Qwen: Qwen3.6 Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.6-flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-6-plus",
+      "name": "Qwen: Qwen3.6 Plus",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.6-plus"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-7-flash",
+      "name": "Qwen: Qwen3.7 Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.7-flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-7-max",
+      "name": "Qwen: Qwen3.7 Max",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.7-max"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-7-plus",
+      "name": "Qwen: Qwen3.7 Plus",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.7-plus"],
+        "bench": ["Qwen3.7 Plus"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-7-plus:batch",
+      "name": "Qwen: Qwen3.7 Plus (batch)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.7-plus:batch"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-2-4t-a95b",
+      "name": "Qwen: Qwen3.8 2.4T A95B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.8-2.4t-a95b"],
+        "bench": ["Qwen3.8 2.4T A95B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-27b",
+      "name": "Qwen: Qwen3.8 27B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.8-27b"],
+        "bench": ["Qwen3.8 27B", "Qwen3.8-27B"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-flash",
+      "name": "Qwen: Qwen3.8 Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.8-flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-flash-next",
+      "name": "Qwen3.8-Flash-Next",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.8-Flash-Next"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-max-0902",
+      "name": "Qwen3.8 Max (0902)",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3.8 Max (0902)"],
+        "display": ["Qwen3.8 Max (0902)"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-max-prime",
+      "name": "Qwen: Qwen3.8 Max Prime",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.8-max-prime"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-8-omni-flash",
+      "name": "Qwen: Qwen3.8 Omni Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3.8-omni-flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-coder",
+      "name": "Qwen: Qwen3 Coder 480B A35B",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-coder"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-coder-30b-a3b-instruct",
+      "name": "Qwen: Qwen3 Coder 30B A3B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-coder-30b-a3b-instruct"],
+        "bench": ["Qwen3-Coder-30B-A3B-Instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-coder-480b-a35b-instruct",
+      "name": "Qwen3-Coder-480B-A35B-Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "bench": ["Qwen3-Coder-480B-A35B-Instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-coder-flash",
+      "name": "Qwen: Qwen3 Coder Flash",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-coder-flash"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-coder-next",
+      "name": "Qwen: Qwen3 Coder Next",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-coder-next"],
+        "bench": ["Qwen3 Coder Next"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-next-80b-a3b-instruct",
+      "name": "Qwen: Qwen3 Next 80B A3B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-next-80b-a3b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-vl-235b-a22b-instruct",
+      "name": "Qwen: Qwen3 VL 235B A22B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-vl-235b-a22b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-vl-30b-a3b-instruct",
+      "name": "Qwen: Qwen3 VL 30B A3B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-vl-30b-a3b-instruct"]
+      }
+    },
+    {
+      "id": "alibaba/qwen3-vl-8b-instruct",
+      "name": "Qwen: Qwen3 VL 8B Instruct",
+      "vendor": "Alibaba Qwen",
+      "aliases": {
+        "openrouter": ["qwen/qwen3-vl-8b-instruct"]
+      }
+    },
+    {
+      "id": "amazon/hypernova-60b-2605",
+      "name": "HyperNova 60B 2605",
+      "vendor": "Amazon",
+      "aliases": {
+        "bench": ["HyperNova 60B 2605"]
+      }
+    },
+    {
+      "id": "amazon/nova-2-0-lite",
+      "name": "Nova 2.0 Lite",
+      "vendor": "Amazon",
+      "aliases": {
+        "bench": ["Nova 2.0 Lite"]
+      }
+    },
+    {
+      "id": "amazon/nova-2-0-omni",
+      "name": "Nova 2.0 Omni",
+      "vendor": "Amazon",
+      "aliases": {
+        "bench": ["Nova 2.0 Omni"]
+      }
+    },
+    {
+      "id": "amazon/nova-2-0-pro-preview",
+      "name": "Nova 2.0 Pro Preview",
+      "vendor": "Amazon",
+      "aliases": {
+        "bench": ["Nova 2.0 Pro Preview"]
+      }
+    },
+    {
+      "id": "amazon/nova-2-lite-v1",
+      "name": "Amazon: Nova 2 Lite",
+      "vendor": "Amazon",
+      "aliases": {
+        "openrouter": ["amazon/nova-2-lite-v1"]
+      }
+    },
+    {
+      "id": "amazon/nova-lite-v1",
+      "name": "Amazon: Nova Lite 1.0",
+      "vendor": "Amazon",
+      "aliases": {
+        "openrouter": ["amazon/nova-lite-v1"]
+      }
+    },
+    {
+      "id": "amazon/nova-micro-v1",
+      "name": "Amazon: Nova Micro 1.0",
+      "vendor": "Amazon",
+      "aliases": {
+        "openrouter": ["amazon/nova-micro-v1"]
+      }
+    },
+    {
+      "id": "amazon/nova-premier-v1",
+      "name": "Amazon: Nova Premier 1.0",
+      "vendor": "Amazon",
+      "aliases": {
+        "openrouter": ["amazon/nova-premier-v1"]
+      }
+    },
+    {
+      "id": "amazon/nova-pro-v1",
+      "name": "Amazon: Nova Pro 1.0",
+      "vendor": "Amazon",
+      "aliases": {
+        "openrouter": ["amazon/nova-pro-v1"]
+      }
+    },
+    {
+      "id": "anthracite-org/magnum-v4-72b",
+      "name": "Magnum v4 72B",
+      "vendor": "Anthracite",
+      "aliases": {
+        "openrouter": ["anthracite-org/magnum-v4-72b"]
+      }
+    },
+    {
+      "id": "anthropic/claude-2",
+      "name": "Claude 2",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 2"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-5-sonnet",
+      "name": "Claude 3.5 Sonnet",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 3.5 Sonnet"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-5-sonnet-20241022",
+      "name": "Claude 3.5-Sonnet-20241022",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 3.5-Sonnet-20241022"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-7-sonnet",
+      "name": "Claude 3.7 Sonnet",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 3.7 Sonnet"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-7-sonnet-20250219",
+      "name": "claude-3-7-sonnet-20250219",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-3-7-sonnet-20250219"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-7-sonnet-20250219-no-thinking",
+      "name": "claude-3-7-sonnet-20250219 (no thinking)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-3-7-sonnet-20250219 (no thinking)"],
+        "display": ["claude-3-7-sonnet-20250219 (no thinking)"]
+      }
+    },
+    {
+      "id": "anthropic/claude-3-opus",
+      "name": "Claude 3 Opus",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 3 Opus"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-5-haiku",
+      "name": "Claude 4.5 Haiku",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4.5 Haiku"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-5-opus",
+      "name": "Claude 4.5 Opus",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4.5 Opus"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-5-sonnet",
+      "name": "Claude 4.5 Sonnet",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4.5 Sonnet"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-6-opus",
+      "name": "Claude 4.6 Opus",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4.6 Opus"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-7",
+      "name": "Claude 4.7",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4.7"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-opus",
+      "name": "Claude 4 Opus",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4 Opus"]
+      }
+    },
+    {
+      "id": "anthropic/claude-4-sonnet",
+      "name": "Claude 4 Sonnet",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude 4 Sonnet"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable",
+      "name": "Claude Fable",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude Fable"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5",
+      "name": "Anthropic: Claude Fable 5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-fable-5"],
+        "bench": ["Claude Fable 5", "Fable 5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5-1",
+      "name": "Anthropic: Claude Fable 5.1",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-fable-5.1"],
+        "official": ["Claude Fable 5.1", "claude-fable-5.1"],
+        "bench": ["Fable 5.1"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5-1:batch",
+      "name": "Anthropic: Claude Fable 5.1 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-fable-5.1:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-5:batch",
+      "name": "Anthropic: Claude Fable 5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-fable-5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-fable-latest",
+      "name": "Anthropic: Claude Fable Latest",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["~anthropic/claude-fable-latest"]
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-4-5",
+      "name": "Anthropic: Claude Haiku 4.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-haiku-4.5"],
+        "bench": ["Claude Haiku 4.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-4-5:batch",
+      "name": "Anthropic: Claude Haiku 4.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-haiku-4.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-5-5",
+      "name": "Anthropic: Claude Haiku 5.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-haiku-5.5"],
+        "official": ["Claude Haiku 5.5 (≤100K)", "claude-haiku-5.5"],
+        "bench": ["Claude Haiku 5.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-5-5:batch",
+      "name": "Anthropic: Claude Haiku 5.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-haiku-5.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-haiku-latest",
+      "name": "Anthropic: Claude Haiku Latest",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["~anthropic/claude-haiku-latest"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-1",
+      "name": "Anthropic: Claude Opus 4.1",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.1"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-1:batch",
+      "name": "Anthropic: Claude Opus 4.1 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.1:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-20250514",
+      "name": "claude-opus-4-20250514",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-opus-4-20250514"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-20250514-no-think",
+      "name": "claude-opus-4-20250514 (no think)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-opus-4-20250514 (no think)"],
+        "display": ["claude-opus-4-20250514 (no think)"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-5",
+      "name": "Anthropic: Claude Opus 4.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.5"],
+        "bench": ["Claude Opus 4.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-5:batch",
+      "name": "Anthropic: Claude Opus 4.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-6",
+      "name": "Anthropic: Claude Opus 4.6",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.6"],
+        "bench": ["Claude Opus 4.6"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-6-120k-high",
+      "name": "Claude Opus 4.6 (120K, High)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude Opus 4.6 (120K, High)"],
+        "display": ["Claude Opus 4.6 (120K, High)"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-6-120k-max",
+      "name": "Claude Opus 4.6 (120K, Max)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude Opus 4.6 (120K, Max)"],
+        "display": ["Claude Opus 4.6 (120K, Max)"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-6:batch",
+      "name": "Anthropic: Claude Opus 4.6 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.6:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-7",
+      "name": "Anthropic: Claude Opus 4.7",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.7"],
+        "bench": ["Claude Opus 4.7"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-7:batch",
+      "name": "Anthropic: Claude Opus 4.7 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.7:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-8",
+      "name": "Anthropic: Claude Opus 4.8",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.8"],
+        "bench": ["Claude Opus 4.8", "Opus 4.8"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-4-8:batch",
+      "name": "Anthropic: Claude Opus 4.8 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-4.8:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-5",
+      "name": "Anthropic: Claude Opus 5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-5"],
+        "bench": ["Claude Opus 5", "Opus 5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-5-5",
+      "name": "Anthropic: Claude Opus 5.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-5.5"],
+        "official": ["Claude Opus 5.5", "claude-opus-5.5"],
+        "bench": ["Opus 5.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-5-5:batch",
+      "name": "Anthropic: Claude Opus 5.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-5.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-5:batch",
+      "name": "Anthropic: Claude Opus 5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-opus-5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-opus-latest",
+      "name": "Anthropic: Claude Opus Latest",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["~anthropic/claude-opus-latest"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-3-5",
+      "name": "Claude Sonnet 3.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude Sonnet 3.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4",
+      "name": "Claude Sonnet 4",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["Claude Sonnet 4"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-20250514",
+      "name": "claude-sonnet-4-20250514",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-sonnet-4-20250514"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-20250514-no-thinking",
+      "name": "claude-sonnet-4-20250514 (no thinking)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["claude-sonnet-4-20250514 (no thinking)"],
+        "display": ["claude-sonnet-4-20250514 (no thinking)"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-5",
+      "name": "Anthropic: Claude Sonnet 4.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-4.5"],
+        "bench": ["Claude Sonnet 4.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-5:batch",
+      "name": "Anthropic: Claude Sonnet 4.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-4.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-6",
+      "name": "Anthropic: Claude Sonnet 4.6",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-4.6"],
+        "bench": ["Claude Sonnet 4.6"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-6:batch",
+      "name": "Anthropic: Claude Sonnet 4.6 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-4.6:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5",
+      "name": "Anthropic: Claude Sonnet 5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-5"],
+        "bench": ["Claude Sonnet 5", "Sonnet 5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5-5",
+      "name": "Anthropic: Claude Sonnet 5.5",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-5.5"],
+        "official": ["Claude Sonnet 5.5", "claude-sonnet-5.5"],
+        "bench": ["Sonnet 5.5"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5-5:batch",
+      "name": "Anthropic: Claude Sonnet 5.5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-5.5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-5:batch",
+      "name": "Anthropic: Claude Sonnet 5 (batch)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["anthropic/claude-sonnet-5:batch"]
+      }
+    },
+    {
+      "id": "anthropic/claude-sonnet-latest",
+      "name": "Anthropic: Claude Sonnet Latest",
+      "vendor": "Anthropic",
+      "aliases": {
+        "openrouter": ["~anthropic/claude-sonnet-latest"]
+      }
+    },
+    {
+      "id": "anthropic/codeact-v2-1-claude-3-5-sonnet-20241022",
+      "name": "CodeAct v2.1 (claude-3-5-sonnet-20241022)",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["CodeAct v2.1 (claude-3-5-sonnet-20241022)"],
+        "display": ["CodeAct v2.1 (claude-3-5-sonnet-20241022)"]
+      }
+    },
+    {
+      "id": "anthropic/deepseek-r1-claude-3-5-sonnet-20241022",
+      "name": "DeepSeek R1 + claude-3-5-sonnet-20241022",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["DeepSeek R1 + claude-3-5-sonnet-20241022"],
+        "display": ["DeepSeek R1 + claude-3-5-sonnet-20241022"]
+      }
+    },
+    {
+      "id": "anthropic/gpt-4o-claude-3-opus",
+      "name": "GPT-4o & Claude 3 Opus",
+      "vendor": "Anthropic",
+      "aliases": {
+        "bench": ["GPT-4o & Claude 3 Opus"],
+        "display": ["GPT-4o & Claude 3 Opus"]
+      }
+    },
+    {
+      "id": "arcee/trinity-large-thinking",
+      "name": "Trinity Large Thinking",
+      "vendor": "Arcee AI",
+      "aliases": {
+        "bench": ["Trinity Large Thinking"]
+      }
+    },
+    {
+      "id": "baidu/ernie-5-0-thinking-preview",
+      "name": "ERNIE 5.0 Thinking Preview",
+      "vendor": "Baidu",
+      "aliases": {
+        "bench": ["ERNIE 5.0 Thinking Preview"]
+      }
+    },
+    {
+      "id": "bytedance/doubao-seed-code",
+      "name": "Doubao-Seed-Code",
+      "vendor": "ByteDance",
+      "aliases": {
+        "bench": ["Doubao-Seed-Code"]
+      }
+    },
+    {
+      "id": "bytedance/hyperclova-x-seed-think-32b",
+      "name": "HyperCLOVA X SEED Think (32B)",
+      "vendor": "ByteDance",
+      "aliases": {
+        "bench": ["HyperCLOVA X SEED Think (32B)"],
+        "display": ["HyperCLOVA X SEED Think (32B)"]
+      }
+    },
+    {
+      "id": "bytedance/seed-1-6",
+      "name": "ByteDance Seed: Seed 1.6",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-1.6"]
+      }
+    },
+    {
+      "id": "bytedance/seed-1-6-flash",
+      "name": "ByteDance Seed: Seed 1.6 Flash",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-1.6-flash"]
+      }
+    },
+    {
+      "id": "bytedance/seed-2-0-code",
+      "name": "ByteDance Seed: Seed-2.0-Code",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-2.0-code"]
+      }
+    },
+    {
+      "id": "bytedance/seed-2-0-lite",
+      "name": "ByteDance Seed: Seed-2.0-Lite",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-2.0-lite"]
+      }
+    },
+    {
+      "id": "bytedance/seed-2-0-mini",
+      "name": "ByteDance Seed: Seed-2.0-Mini",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-2.0-mini"]
+      }
+    },
+    {
+      "id": "bytedance/seed-2-1-turbo",
+      "name": "ByteDance Seed: Seed 2.1 Turbo",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance-seed/seed-2-1-turbo"]
+      }
+    },
+    {
+      "id": "bytedance/ui-tars-1-5-7b",
+      "name": "ByteDance: UI-TARS 7B ",
+      "vendor": "ByteDance",
+      "aliases": {
+        "openrouter": ["bytedance/ui-tars-1.5-7b"]
+      }
+    },
+    {
+      "id": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+      "name": "Venice: Uncensored",
+      "vendor": "Cognitive Computations",
+      "aliases": {
+        "openrouter": ["cognitivecomputations/dolphin-mistral-24b-venice-edition"]
+      }
+    },
+    {
+      "id": "cohere/command-a",
+      "name": "Cohere: Command A",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/command-a"],
+        "bench": ["Command A"]
+      }
+    },
+    {
+      "id": "cohere/command-a-plus",
+      "name": "Cohere: Command A+",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/command-a-plus"]
+      }
+    },
+    {
+      "id": "cohere/command-r-08-2024",
+      "name": "Cohere: Command R (08-2024)",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/command-r-08-2024"]
+      }
+    },
+    {
+      "id": "cohere/command-r-plus-08-2024",
+      "name": "Cohere: Command R+ (08-2024)",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/command-r-plus-08-2024"]
+      }
+    },
+    {
+      "id": "cohere/command-r7b-12-2024",
+      "name": "Cohere: Command R7B (12-2024)",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/command-r7b-12-2024"]
+      }
+    },
+    {
+      "id": "cohere/north-mini-code:free",
+      "name": "Cohere: North Mini Code (free)",
+      "vendor": "Cohere",
+      "aliases": {
+        "openrouter": ["cohere/north-mini-code:free"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-chat",
+      "name": "DeepSeek: DeepSeek V3",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-chat"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-chat-v3-0324",
+      "name": "DeepSeek: DeepSeek V3 0324",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-chat-v3-0324"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-chat-v3-1",
+      "name": "DeepSeek: DeepSeek V3.1",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-chat-v3.1"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-flash-latest",
+      "name": "DeepSeek: DeepSeek Flash Latest",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["~deepseek/deepseek-flash-latest"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-r1",
+      "name": "DeepSeek R1",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek R1"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-r1-0528",
+      "name": "DeepSeek R1 (0528)",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek R1 (0528)"],
+        "display": ["DeepSeek R1 (0528)"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3",
+      "name": "DeepSeek V3",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek V3"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-0324",
+      "name": "DeepSeek V3 (0324)",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek V3 (0324)"],
+        "display": ["DeepSeek V3 (0324)"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-1-terminus",
+      "name": "DeepSeek: DeepSeek V3.1 Terminus",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v3.1-terminus"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-2",
+      "name": "DeepSeek: DeepSeek V3.2",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v3.2"],
+        "bench": ["DeepSeek V3.2", "Deepseek V3.2"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-2-exp",
+      "name": "DeepSeek: DeepSeek V3.2 Exp",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v3.2-exp"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-2-exp-chat",
+      "name": "DeepSeek-V3.2-Exp (Chat)",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek-V3.2-Exp (Chat)"],
+        "display": ["DeepSeek-V3.2-Exp (Chat)"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v3-2-exp-reasoner",
+      "name": "DeepSeek-V3.2-Exp (Reasoner)",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek-V3.2-Exp (Reasoner)"],
+        "display": ["DeepSeek-V3.2-Exp (Reasoner)"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-1-flash",
+      "name": "DeepSeek: DeepSeek V4.1 Flash",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4.1-flash"],
+        "official": ["DeepSeek V4.1 Flash", "deepseek-v4.1-flash"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-1-flash-1017",
+      "name": "DeepSeek: DeepSeek V4.1 Flash 1017",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4.1-flash-1017"],
+        "bench": ["DeepSeek V4.1 Flash 1017"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-1-flash:batch",
+      "name": "DeepSeek: DeepSeek V4.1 Flash (batch)",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4.1-flash:batch"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash",
+      "name": "DeepSeek: DeepSeek V4 Flash 0423",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4-flash"],
+        "bench": ["DeepSeek V4 Flash"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-0731",
+      "name": "DeepSeek: DeepSeek V4 Flash 0731",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4-flash-0731"],
+        "bench": ["DeepSeek V4 Flash 0731"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-latest",
+      "name": "DeepSeek: DeepSeek V4 Flash Latest",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["~deepseek/deepseek-v4-flash-latest"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-vision",
+      "name": "DeepSeek V4 Flash Vision",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "bench": ["DeepSeek V4 Flash Vision"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-flash-vision-exp",
+      "name": "DeepSeek: DeepSeek V4 Flash Vision Exp",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4-flash-vision-exp"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro",
+      "name": "DeepSeek: DeepSeek V4 Pro 0423",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4-pro"],
+        "official": ["DeepSeek V4 Pro", "deepseek-v4-pro"]
+      }
+    },
+    {
+      "id": "deepseek/deepseek-v4-pro-0813",
+      "name": "DeepSeek: DeepSeek V4 Pro 0813",
+      "vendor": "DeepSeek",
+      "aliases": {
+        "openrouter": ["deepseek/deepseek-v4-pro-0813"],
+        "bench": ["DeepSeek V4 Pro 0813"]
+      }
+    },
+    {
+      "id": "dots-studio/dots-3-note-preview:free",
+      "name": "Dots Studio: Dots3-Note Preview (free)",
+      "vendor": "Dots Studio",
+      "aliases": {
+        "openrouter": ["dots-studio/dots-3-note-preview:free"]
+      }
+    },
+    {
+      "id": "dots-studio/dots3-note-preview",
+      "name": "Dots3-Note Preview",
+      "vendor": "Dots Studio",
+      "aliases": {
+        "bench": ["Dots3-Note Preview"]
+      }
+    },
+    {
+      "id": "elorian/glimpse",
+      "name": "Elorian: Glimpse",
+      "vendor": "Elorian",
+      "aliases": {
+        "openrouter": ["elorian/glimpse"]
+      }
+    },
+    {
+      "id": "fireworks/ember-1",
+      "name": "Fireworks: Ember-1",
+      "vendor": "Fireworks",
+      "aliases": {
+        "openrouter": ["fireworks/ember-1"]
+      }
+    },
+    {
+      "id": "google/26",
+      "name": "Gemini 3 Deep Think (2/26)",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3 Deep Think (2/26)"],
+        "display": ["Gemini 3 Deep Think (2/26)"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-flash",
+      "name": "Google: Gemini 2.5 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-2.5-flash"],
+        "bench": ["Gemini 2.5 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-flash-image",
+      "name": "Google: Nano Banana (Gemini 2.5 Flash Image)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-2.5-flash-image"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-flash-lite",
+      "name": "Google: Gemini 2.5 Flash Lite",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-2.5-flash-lite"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-flash-preview-05-20-24k-think",
+      "name": "gemini-2.5-flash-preview-05-20 (24k think)",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["gemini-2.5-flash-preview-05-20 (24k think)"],
+        "display": ["gemini-2.5-flash-preview-05-20 (24k think)"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-pro",
+      "name": "Google: Gemini 2.5 Pro",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-2.5-pro"],
+        "bench": ["Gemini 2.5 Pro"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-pro-preview",
+      "name": "Google: Gemini 2.5 Pro Preview 06-05",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-2.5-pro-preview"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-pro-preview-03-25",
+      "name": "Gemini 2.5 Pro Preview 03-25",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 2.5 Pro Preview 03-25"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-pro-preview-05-06",
+      "name": "Gemini 2.5 Pro Preview 05-06",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 2.5 Pro Preview 05-06"]
+      }
+    },
+    {
+      "id": "google/gemini-2-5-pro-preview-06-05",
+      "name": "gemini-2.5-pro-preview-06-05",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["gemini-2.5-pro-preview-06-05"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-image",
+      "name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-image"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-image-preview",
+      "name": "Google: Nano Banana 2 (Gemini 3.1 Flash Image Preview)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-image-preview"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-lite",
+      "name": "Google: Gemini 3.1 Flash Lite",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-lite"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-lite-image",
+      "name": "Google: Nano Banana 2 Lite (Gemini 3.1 Flash Lite Image)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-lite-image"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-lite-preview",
+      "name": "Google: Gemini 3.1 Flash Lite Preview",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-lite-preview"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-flash-lite:batch",
+      "name": "Google: Gemini 3.1 Flash Lite (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-flash-lite:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-pro-preview",
+      "name": "Gemini 3.1 Pro (Preview)",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3.1 Pro (Preview)"],
+        "display": ["Gemini 3.1 Pro (Preview)"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-pro-preview-customtools",
+      "name": "Google: Gemini 3.1 Pro Preview Custom Tools",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-pro-preview-customtools"]
+      }
+    },
+    {
+      "id": "google/gemini-3-1-pro-preview:batch",
+      "name": "Google: Gemini 3.1 Pro Preview (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.1-pro-preview:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-5-flash",
+      "name": "Google: Gemini 3.5 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.5-flash"],
+        "bench": ["Gemini 3.5 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-3-5-flash-lite",
+      "name": "Google: Gemini 3.5 Flash Lite",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.5-flash-lite"],
+        "bench": ["Gemini 3.5 Flash-Lite"]
+      }
+    },
+    {
+      "id": "google/gemini-3-5-flash-lite:batch",
+      "name": "Google: Gemini 3.5 Flash Lite (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.5-flash-lite:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-5-flash:batch",
+      "name": "Google: Gemini 3.5 Flash (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.5-flash:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-6-flash",
+      "name": "Google: Gemini 3.6 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.6-flash"],
+        "bench": ["Gemini 3.6 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-3-6-flash:batch",
+      "name": "Google: Gemini 3.6 Flash (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.6-flash:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-7-flash",
+      "name": "Google: Gemini 3.7 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.7-flash"],
+        "bench": ["Gemini 3.7 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-3-7-flash:batch",
+      "name": "Google: Gemini 3.7 Flash (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.7-flash:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-8-flash",
+      "name": "Google: Gemini 3.8 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.8-flash"],
+        "bench": ["Gemini 3.8 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-3-8-flash:batch",
+      "name": "Google: Gemini 3.8 Flash (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3.8-flash:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-deep-think",
+      "name": "Gemini 3 Deep Think",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3 Deep Think"]
+      }
+    },
+    {
+      "id": "google/gemini-3-flash",
+      "name": "Gemini 3 Flash",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3 Flash"]
+      }
+    },
+    {
+      "id": "google/gemini-3-flash-preview",
+      "name": "Google: Gemini 3 Flash Preview",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3-flash-preview"],
+        "bench": ["Gemini 3 Flash Preview"]
+      }
+    },
+    {
+      "id": "google/gemini-3-flash-preview:batch",
+      "name": "Google: Gemini 3 Flash Preview (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3-flash-preview:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-3-pro",
+      "name": "Gemini 3 Pro",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3 Pro"]
+      }
+    },
+    {
+      "id": "google/gemini-3-pro-image",
+      "name": "Google: Nano Banana Pro (Gemini 3 Pro Image)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3-pro-image"]
+      }
+    },
+    {
+      "id": "google/gemini-3-pro-image-preview",
+      "name": "Google: Nano Banana Pro (Gemini 3 Pro Image Preview)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-3-pro-image-preview"]
+      }
+    },
+    {
+      "id": "google/gemini-3-pro-preview",
+      "name": "Gemini 3 Pro Preview",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemini 3 Pro Preview"]
+      }
+    },
+    {
+      "id": "google/gemini-4-argon",
+      "name": "Google: Gemini 4 Argon",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-4-argon"],
+        "official": ["Gemini 4 Argon", "gemini-4-argon"]
+      }
+    },
+    {
+      "id": "google/gemini-4-argon:batch",
+      "name": "Google: Gemini 4 Argon (batch)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-4-argon:batch"]
+      }
+    },
+    {
+      "id": "google/gemini-flash-latest",
+      "name": "Google: Gemini Flash Latest",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["~google/gemini-flash-latest"]
+      }
+    },
+    {
+      "id": "google/gemini-nano-banana-2-1",
+      "name": "Google: Nano Banana 2.1",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemini-nano-banana-2.1"]
+      }
+    },
+    {
+      "id": "google/gemini-pro-latest",
+      "name": "Google: Gemini Pro Latest",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["~google/gemini-pro-latest"]
+      }
+    },
+    {
+      "id": "google/gemma-2-27b-it",
+      "name": "Google: Gemma 2 27B",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-2-27b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-3-12b-it",
+      "name": "Google: Gemma 3 12B",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-3-12b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-3-27b-it",
+      "name": "Google: Gemma 3 27B",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-3-27b-it"],
+        "bench": ["gemma-3-27b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-3-4b-it",
+      "name": "Google: Gemma 3 4B",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-3-4b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-4-12b",
+      "name": "Gemma 4 12B",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemma 4 12B"]
+      }
+    },
+    {
+      "id": "google/gemma-4-26b-a4b",
+      "name": "Gemma 4 26B A4B",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemma 4 26B A4B"]
+      }
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-it",
+      "name": "Google: Gemma 4 26B A4B ",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-4-26b-a4b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-it:free",
+      "name": "Google: Gemma 4 26B A4B  (free)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-4-26b-a4b-it:free"]
+      }
+    },
+    {
+      "id": "google/gemma-4-26b-a4b-non-reasoning",
+      "name": "Gemma 4 26B A4B (non-reasoning)",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemma 4 26B A4B (non-reasoning)"],
+        "display": ["Gemma 4 26B A4B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "google/gemma-4-31b",
+      "name": "Gemma 4 31B",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemma 4 31B"]
+      }
+    },
+    {
+      "id": "google/gemma-4-31b-it",
+      "name": "Google: Gemma 4 31B",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-4-31b-it"]
+      }
+    },
+    {
+      "id": "google/gemma-4-31b-it:free",
+      "name": "Google: Gemma 4 31B (free)",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/gemma-4-31b-it:free"]
+      }
+    },
+    {
+      "id": "google/gemma-4-31b-non-reasoning",
+      "name": "Gemma 4 31B (non-reasoning)",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Gemma 4 31B (non-reasoning)"],
+        "display": ["Gemma 4 31B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "google/lyria-3-clip-preview",
+      "name": "Google: Lyria 3 Clip Preview",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/lyria-3-clip-preview"]
+      }
+    },
+    {
+      "id": "google/lyria-3-pro-preview",
+      "name": "Google: Lyria 3 Pro Preview",
+      "vendor": "Google",
+      "aliases": {
+        "openrouter": ["google/lyria-3-pro-preview"]
+      }
+    },
+    {
+      "id": "google/muse-glimmer",
+      "name": "Muse Glimmer",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Muse Glimmer"]
+      }
+    },
+    {
+      "id": "google/optimus-alpha",
+      "name": "Optimus Alpha",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Optimus Alpha"]
+      }
+    },
+    {
+      "id": "google/quasar-438b",
+      "name": "Quasar 438B",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Quasar 438B"]
+      }
+    },
+    {
+      "id": "google/quasar-alpha",
+      "name": "Quasar Alpha",
+      "vendor": "Google",
+      "aliases": {
+        "bench": ["Quasar Alpha"]
+      }
+    },
+    {
+      "id": "gryphe/mythomax-l2-13b",
+      "name": "MythoMax 13B",
+      "vendor": "Gryphe",
+      "aliases": {
+        "openrouter": ["gryphe/mythomax-l2-13b"]
+      }
+    },
+    {
+      "id": "ibm/granite-4-0-h-micro",
+      "name": "IBM: Granite 4.0 Micro",
+      "vendor": "IBM",
+      "aliases": {
+        "openrouter": ["ibm-granite/granite-4.0-h-micro"]
+      }
+    },
+    {
+      "id": "ibm/granite-4-2-8b",
+      "name": "IBM: Granite 4.2 8B",
+      "vendor": "IBM",
+      "aliases": {
+        "openrouter": ["ibm-granite/granite-4.2-8b"],
+        "bench": ["Granite 4.2 8B"]
+      }
+    },
+    {
+      "id": "inception/mercury-2",
+      "name": "Inception: Mercury 2",
+      "vendor": "Inception",
+      "aliases": {
+        "openrouter": ["inception/mercury-2"]
+      }
+    },
+    {
+      "id": "inception/mercury-2-5",
+      "name": "Inception: Mercury 2.5",
+      "vendor": "Inception",
+      "aliases": {
+        "openrouter": ["inception/mercury-2.5"],
+        "bench": ["Mercury 2.5"]
+      }
+    },
+    {
+      "id": "inception/mercury-3",
+      "name": "Inception: Mercury 3",
+      "vendor": "Inception",
+      "aliases": {
+        "openrouter": ["inception/mercury-3"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-0-flash",
+      "name": "inclusionAI: Ling 3.0 Flash",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "openrouter": ["inclusionai/ling-3.0-flash"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-0-flash-fin",
+      "name": "Ling-3.0-flash-Fin",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "bench": ["Ling-3.0-flash-Fin"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-0-flash-vl",
+      "name": "inclusionAI: Ling 3.0 Flash VL",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "openrouter": ["inclusionai/ling-3.0-flash-vl"],
+        "bench": ["Ling-3.0-flash-VL"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-0-tiny",
+      "name": "Ling 3.0 Tiny",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "bench": ["Ling 3.0 Tiny"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-1-flash",
+      "name": "inclusionAI: Ling 3.1 Flash",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "openrouter": ["inclusionai/ling-3.1-flash"],
+        "bench": ["Ling 3.1 Flash"]
+      }
+    },
+    {
+      "id": "inclusionai/ling-3-1-flash-1019",
+      "name": "Ling 3.1 Flash 1019",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "bench": ["Ling 3.1 Flash 1019"]
+      }
+    },
+    {
+      "id": "inclusionai/ring-2-6-1t",
+      "name": "Ring-2.6-1T",
+      "vendor": "InclusionAI",
+      "aliases": {
+        "bench": ["Ring-2.6-1T"]
+      }
+    },
+    {
+      "id": "inference-net/schematron-v2-small",
+      "name": "Inference.net: Schematron V2 Small",
+      "vendor": "Inference.net",
+      "aliases": {
+        "openrouter": ["inference-net/schematron-v2-small"]
+      }
+    },
+    {
+      "id": "inference-net/schematron-v2-turbo",
+      "name": "Inference.net: Schematron V2 Turbo",
+      "vendor": "Inference.net",
+      "aliases": {
+        "openrouter": ["inference-net/schematron-v2-turbo"]
+      }
+    },
+    {
+      "id": "liquid/lfm-2-5-2-6b:free",
+      "name": "LiquidAI: LFM2.5-2.6B (free)",
+      "vendor": "Liquid AI",
+      "aliases": {
+        "openrouter": ["liquid/lfm-2.5-2.6b:free"]
+      }
+    },
+    {
+      "id": "liquid/lfm-2-5-24b-a2b",
+      "name": "LiquidAI: LFM2.5-24B-A2B",
+      "vendor": "Liquid AI",
+      "aliases": {
+        "openrouter": ["liquid/lfm-2.5-24b-a2b"]
+      }
+    },
+    {
+      "id": "mancer/weaver",
+      "name": "Mancer: Weaver (alpha)",
+      "vendor": "Mancer",
+      "aliases": {
+        "openrouter": ["mancer/weaver"]
+      }
+    },
+    {
+      "id": "meituan/longcat-2-0",
+      "name": "Meituan: LongCat 2.0",
+      "vendor": "Meituan",
+      "aliases": {
+        "openrouter": ["meituan/longcat-2.0"],
+        "bench": ["LongCat 2.0"]
+      }
+    },
+    {
+      "id": "meta/llama-3-1-70b-instruct",
+      "name": "Meta: Llama 3.1 70B Instruct",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-3.1-70b-instruct"]
+      }
+    },
+    {
+      "id": "meta/llama-3-1-8b-instruct",
+      "name": "Meta: Llama 3.1 8B Instruct",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-3.1-8b-instruct"]
+      }
+    },
+    {
+      "id": "meta/llama-3-2-1b-instruct",
+      "name": "Meta: Llama 3.2 1B Instruct",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-3.2-1b-instruct"]
+      }
+    },
+    {
+      "id": "meta/llama-3-2-3b-instruct",
+      "name": "Meta: Llama 3.2 3B Instruct",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-3.2-3b-instruct"]
+      }
+    },
+    {
+      "id": "meta/llama-3-3-70b-instruct",
+      "name": "Meta: Llama 3.3 70B Instruct",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-3.3-70b-instruct"],
+        "bench": ["Llama 3.3 70b instruct"]
+      }
+    },
+    {
+      "id": "meta/llama-4-maverick",
+      "name": "Meta: Llama 4 Maverick",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-4-maverick"],
+        "bench": ["Llama 4 Maverick"]
+      }
+    },
+    {
+      "id": "meta/llama-4-scout",
+      "name": "Meta: Llama 4 Scout",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-4-scout"],
+        "bench": ["Llama 4 Scout"]
+      }
+    },
+    {
+      "id": "meta/llama-guard-4-12b",
+      "name": "Meta: Llama Guard 4 12B",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta-llama/llama-guard-4-12b"]
+      }
+    },
+    {
+      "id": "meta/muse-glimmer-30b",
+      "name": "Meta: Muse Glimmer 30B",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-glimmer-30b"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-1-1",
+      "name": "Meta: Muse Spark 1.1",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-1.1"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-1-2",
+      "name": "Meta: Muse Spark 1.2",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-1.2"],
+        "bench": ["Muse Spark 1.2"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-1-2-contributor",
+      "name": "Meta: Muse Spark 1.2 Contributor",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-1.2-contributor"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-1-3",
+      "name": "Meta: Muse Spark 1.3",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-1.3"],
+        "bench": ["Muse Spark 1.3"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-1-3-contributor",
+      "name": "Meta: Muse Spark 1.3 Contributor",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-1.3-contributor"]
+      }
+    },
+    {
+      "id": "meta/muse-spark-open",
+      "name": "Meta: Muse Spark Open",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-spark-open"],
+        "bench": ["Muse Spark Open"]
+      }
+    },
+    {
+      "id": "meta/muse-wonder",
+      "name": "Meta: Muse Wonder",
+      "vendor": "Meta",
+      "aliases": {
+        "openrouter": ["meta/muse-wonder"],
+        "bench": ["Muse Wonder"]
+      }
+    },
+    {
+      "id": "meta/swe-llama-13b",
+      "name": "SWE-Llama 13B",
+      "vendor": "Meta",
+      "aliases": {
+        "bench": ["SWE-Llama 13B"]
+      }
+    },
+    {
+      "id": "meta/swe-llama-7b",
+      "name": "SWE-Llama 7B",
+      "vendor": "Meta",
+      "aliases": {
+        "bench": ["SWE-Llama 7B"]
+      }
+    },
+    {
+      "id": "microsoft/phi-4",
+      "name": "Microsoft: Phi 4",
+      "vendor": "Microsoft",
+      "aliases": {
+        "openrouter": ["microsoft/phi-4"],
+        "bench": ["Phi-4"]
+      }
+    },
+    {
+      "id": "minimax/minimax-01",
+      "name": "MiniMax: MiniMax-01",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-01"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m1",
+      "name": "MiniMax: MiniMax M1",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m1"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m2",
+      "name": "MiniMax: MiniMax M2",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m2"],
+        "bench": ["MiniMax M2"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m2-1",
+      "name": "MiniMax: MiniMax M2.1",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m2.1"],
+        "bench": ["MiniMax M2.1"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m2-5",
+      "name": "MiniMax: MiniMax M2.5",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m2.5"],
+        "bench": ["MiniMax M2.5", "Minimax M2.5"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m2-7",
+      "name": "MiniMax: MiniMax M2.7",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m2.7"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m2-her",
+      "name": "MiniMax: MiniMax M2-her",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m2-her"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m3",
+      "name": "MiniMax: MiniMax M3",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m3"],
+        "official": ["MiniMax M3 (≤512K)", "minimax-m3"],
+        "bench": ["MiniMax M3"]
+      }
+    },
+    {
+      "id": "minimax/minimax-m3-1-flash",
+      "name": "MiniMax: MiniMax M3.1 Flash",
+      "vendor": "MiniMax",
+      "aliases": {
+        "openrouter": ["minimax/minimax-m3.1-flash"],
+        "official": ["MiniMax M3.1 Flash", "minimax-m3.1-flash"]
+      }
+    },
+    {
+      "id": "mistral/codestral-2508",
+      "name": "Mistral: Codestral 2508",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/codestral-2508"]
+      }
+    },
+    {
+      "id": "mistral/codestral-2508:batch",
+      "name": "Mistral: Codestral 2508 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/codestral-2508:batch"]
+      }
+    },
+    {
+      "id": "mistral/devstral-2512",
+      "name": "Mistral: Devstral 2 2512",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/devstral-2512"]
+      }
+    },
+    {
+      "id": "mistral/ministral-14b-2512",
+      "name": "Mistral: Ministral 3 14B 2512",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/ministral-14b-2512"]
+      }
+    },
+    {
+      "id": "mistral/ministral-3b-2512",
+      "name": "Mistral: Ministral 3 3B 2512",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/ministral-3b-2512"]
+      }
+    },
+    {
+      "id": "mistral/ministral-8b-2512",
+      "name": "Mistral: Ministral 3 8B 2512",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/ministral-8b-2512"]
+      }
+    },
+    {
+      "id": "mistral/ministral-8b-2512:batch",
+      "name": "Mistral: Ministral 3 8B 2512 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/ministral-8b-2512:batch"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large",
+      "name": "Mistral Large",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-large"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large-2407",
+      "name": "Mistral Large 2407",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-large-2407"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large-2512",
+      "name": "Mistral: Mistral Large 3 2512",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-large-2512"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large-2512:batch",
+      "name": "Mistral: Mistral Large 3 2512 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-large-2512:batch"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large-4-0",
+      "name": "Mistral: Mistral Large 4",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-large-4-0"]
+      }
+    },
+    {
+      "id": "mistral/mistral-large-4-preview",
+      "name": "Mistral Large 4 Preview",
+      "vendor": "Mistral",
+      "aliases": {
+        "bench": ["Mistral Large 4 Preview"]
+      }
+    },
+    {
+      "id": "mistral/mistral-medium-3",
+      "name": "Mistral: Mistral Medium 3",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-medium-3"]
+      }
+    },
+    {
+      "id": "mistral/mistral-medium-3-1",
+      "name": "Mistral: Mistral Medium 3.1",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-medium-3.1"]
+      }
+    },
+    {
+      "id": "mistral/mistral-medium-3-1:batch",
+      "name": "Mistral: Mistral Medium 3.1 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-medium-3.1:batch"]
+      }
+    },
+    {
+      "id": "mistral/mistral-medium-3-5",
+      "name": "Mistral: Mistral Medium 3.5",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-medium-3-5"],
+        "bench": ["Mistral Medium 3.5"]
+      }
+    },
+    {
+      "id": "mistral/mistral-medium-3-5:batch",
+      "name": "Mistral: Mistral Medium 3.5 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-medium-3-5:batch"]
+      }
+    },
+    {
+      "id": "mistral/mistral-nemo",
+      "name": "Mistral: Mistral Nemo",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-nemo"]
+      }
+    },
+    {
+      "id": "mistral/mistral-saba",
+      "name": "Mistral: Saba",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-saba"]
+      }
+    },
+    {
+      "id": "mistral/mistral-small-24b-instruct-2501",
+      "name": "Mistral: Mistral Small 3",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-small-24b-instruct-2501"]
+      }
+    },
+    {
+      "id": "mistral/mistral-small-2603",
+      "name": "Mistral: Mistral Small 4",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-small-2603"]
+      }
+    },
+    {
+      "id": "mistral/mistral-small-2603:batch",
+      "name": "Mistral: Mistral Small 4 (batch)",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-small-2603:batch"]
+      }
+    },
+    {
+      "id": "mistral/mistral-small-3-1-24b-instruct",
+      "name": "Mistral: Mistral Small 3.1 24B",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-small-3.1-24b-instruct"]
+      }
+    },
+    {
+      "id": "mistral/mistral-small-3-2-24b-instruct",
+      "name": "Mistral: Mistral Small 3.2 24B",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mistral-small-3.2-24b-instruct"]
+      }
+    },
+    {
+      "id": "mistral/mixtral-8x22b-instruct",
+      "name": "Mistral: Mixtral 8x22B Instruct",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/mixtral-8x22b-instruct"]
+      }
+    },
+    {
+      "id": "mistral/voxtral-small-24b-2507",
+      "name": "Mistral: Voxtral Small 24B 2507",
+      "vendor": "Mistral",
+      "aliases": {
+        "openrouter": ["mistralai/voxtral-small-24b-2507"]
+      }
+    },
+    {
+      "id": "moondream/moondream3-1-9b-a2b",
+      "name": "Moondream: Moondream 3.1",
+      "vendor": "Moondream",
+      "aliases": {
+        "openrouter": ["moondream/moondream3.1-9b-a2b"]
+      }
+    },
+    {
+      "id": "moondream/moondream3-preview",
+      "name": "Moondream: Moondream 3 Preview",
+      "vendor": "Moondream",
+      "aliases": {
+        "openrouter": ["moondream/moondream3-preview"]
+      }
+    },
+    {
+      "id": "moonshot/k2-horizon-375b-a23b",
+      "name": "K2 Horizon 375B A23B",
+      "vendor": "Moonshot",
+      "aliases": {
+        "bench": ["K2 Horizon 375B A23B"]
+      }
+    },
+    {
+      "id": "moonshot/k2-horizon-7b",
+      "name": "K2 Horizon 7B",
+      "vendor": "Moonshot",
+      "aliases": {
+        "bench": ["K2 Horizon 7B"]
+      }
+    },
+    {
+      "id": "moonshot/k2-horizon-mova-36b-a4b",
+      "name": "K2 Horizon MoVA 36B A4B",
+      "vendor": "Moonshot",
+      "aliases": {
+        "bench": ["K2 Horizon MoVA 36B A4B"]
+      }
+    },
+    {
+      "id": "moonshot/k2-think-v2",
+      "name": "K2 Think V2",
+      "vendor": "Moonshot",
+      "aliases": {
+        "bench": ["K2 Think V2"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k2",
+      "name": "MoonshotAI: Kimi K2 0711",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k2", "moonshotai/kimi-k2-thinking"],
+        "bench": ["Kimi K2", "Kimi K2 Thinking"]
+      },
+      "variants": ["thinking"]
+    },
+    {
+      "id": "moonshot/kimi-k2-0905",
+      "name": "MoonshotAI: Kimi K2 0905",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k2-0905"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k2-5",
+      "name": "MoonshotAI: Kimi K2.5",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k2.5"],
+        "bench": ["Kimi K2.5"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k2-6",
+      "name": "MoonshotAI: Kimi K2.6",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k2.6"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k2-7-code",
+      "name": "MoonshotAI: Kimi K2.7 Code",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k2.7-code"],
+        "bench": ["Kimi K2.7 Code"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k3",
+      "name": "MoonshotAI: Kimi K3",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k3"],
+        "bench": ["Kimi K3"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k3-1-pro",
+      "name": "MoonshotAI: Kimi K3.1 Pro",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k3.1-pro"],
+        "bench": ["Kimi K3.1 Pro"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-k3:batch",
+      "name": "MoonshotAI: Kimi K3 (batch)",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["moonshotai/kimi-k3:batch"]
+      }
+    },
+    {
+      "id": "moonshot/kimi-latest",
+      "name": "MoonshotAI: Kimi Latest",
+      "vendor": "Moonshot",
+      "aliases": {
+        "openrouter": ["~moonshotai/kimi-latest"]
+      }
+    },
+    {
+      "id": "morph/morph-v3-fast",
+      "name": "Morph: Morph V3 Fast",
+      "vendor": "Morph",
+      "aliases": {
+        "openrouter": ["morph/morph-v3-fast"]
+      }
+    },
+    {
+      "id": "morph/morph-v3-large",
+      "name": "Morph: Morph V3 Large",
+      "vendor": "Morph",
+      "aliases": {
+        "openrouter": ["morph/morph-v3-large"]
+      }
+    },
+    {
+      "id": "nex-agi/nex-n2-5-mini",
+      "name": "Nex AGI: Nex-N2.5-Mini",
+      "vendor": "Nex AGI",
+      "aliases": {
+        "openrouter": ["nex-agi/nex-n2.5-mini"]
+      }
+    },
+    {
+      "id": "nex-agi/nex-n2-5-pro",
+      "name": "Nex AGI: Nex-N2.5-Pro",
+      "vendor": "Nex AGI",
+      "aliases": {
+        "openrouter": ["nex-agi/nex-n2.5-pro"]
+      }
+    },
+    {
+      "id": "nex-agi/nex-n2-pro",
+      "name": "Nex-N2-Pro",
+      "vendor": "Nex AGI",
+      "aliases": {
+        "bench": ["Nex-N2-Pro"]
+      }
+    },
+    {
+      "id": "nousresearch/hermes-3-llama-3-1-405b",
+      "name": "Nous: Hermes 3 405B Instruct",
+      "vendor": "NousResearch",
+      "aliases": {
+        "openrouter": ["nousresearch/hermes-3-llama-3.1-405b"]
+      }
+    },
+    {
+      "id": "nousresearch/hermes-3-llama-3-1-70b",
+      "name": "Nous: Hermes 3 70B Instruct",
+      "vendor": "NousResearch",
+      "aliases": {
+        "openrouter": ["nousresearch/hermes-3-llama-3.1-70b"]
+      }
+    },
+    {
+      "id": "nousresearch/hermes-4-405b",
+      "name": "Nous: Hermes 4 405B",
+      "vendor": "NousResearch",
+      "aliases": {
+        "openrouter": ["nousresearch/hermes-4-405b"],
+        "bench": ["Hermes 4 405B"]
+      }
+    },
+    {
+      "id": "null/minicpm-v-4-6-1-3b",
+      "name": "MiniCPM-V 4.6 1.3B",
+      "vendor": "OpenBMB",
+      "aliases": {
+        "bench": ["MiniCPM-V 4.6 1.3B"]
+      }
+    },
+    {
+      "id": "null/minicpm5-1b-non-reasoning",
+      "name": "MiniCPM5-1B (non-reasoning)",
+      "vendor": "OpenBMB",
+      "aliases": {
+        "bench": ["MiniCPM5-1B (non-reasoning)"],
+        "display": ["MiniCPM5-1B (non-reasoning)"]
+      }
+    },
+    {
+      "id": "null/minicpm5-2b",
+      "name": "MiniCPM5-2B",
+      "vendor": "OpenBMB",
+      "aliases": {
+        "bench": ["MiniCPM5-2B"]
+      }
+    },
+    {
+      "id": "null/olmo-3-1-32b-think",
+      "name": "Olmo 3.1 32B Think",
+      "vendor": "AI2",
+      "aliases": {
+        "bench": ["Olmo 3.1 32B Think"]
+      }
+    },
+    {
+      "id": "nvidia/jt-35b-flash",
+      "name": "JT-35B-Flash",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["JT-35B-Flash"]
+      }
+    },
+    {
+      "id": "nvidia/jt-4-1-flash-236b-a21b",
+      "name": "JT-4.1 Flash 236B A21B",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["JT-4.1 Flash 236B A21B"]
+      }
+    },
+    {
+      "id": "nvidia/jt-mini",
+      "name": "JT-MINI",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["JT-MINI"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-content-safety",
+      "name": "NVIDIA: Nemotron 3.5 Content Safety",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-content-safety"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-content-safety:free",
+      "name": "NVIDIA: Nemotron 3.5 Content Safety (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-content-safety:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-lightning",
+      "name": "NVIDIA: Nemotron 3.5 Lightning",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-lightning"],
+        "bench": ["Nemotron 3.5 Lightning"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-lightning:free",
+      "name": "NVIDIA: Nemotron 3.5 Lightning (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-lightning:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-super-vl",
+      "name": "NVIDIA: Nemotron 3.5 Super VL",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-super-vl"],
+        "bench": ["Nemotron 3.5 Super VL"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-5-super-vl:free",
+      "name": "NVIDIA: Nemotron 3.5 Super VL (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3.5-super-vl:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-nano",
+      "name": "Nemotron 3 Nano",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["Nemotron 3 Nano"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-nano-30b-a3b",
+      "name": "NVIDIA: Nemotron 3 Nano 30B A3B",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-nano-30b-a3b"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-nano-omni-30b-a3b",
+      "name": "Nemotron 3 Nano Omni 30B A3B",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["Nemotron 3 Nano Omni 30B A3B"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+      "name": "NVIDIA: Nemotron 3 Nano Omni (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-super-120b-a12b",
+      "name": "NVIDIA: Nemotron 3 Super",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-super-120b-a12b"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-super-120b-a12b:free",
+      "name": "NVIDIA: Nemotron 3 Super (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-super-120b-a12b:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra",
+      "name": "Nemotron 3 Ultra",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["Nemotron 3 Ultra"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b",
+      "name": "NVIDIA: Nemotron 3 Ultra",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "name": "NVIDIA: Nemotron 3 Ultra (free)",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "openrouter": ["nvidia/nemotron-3-ultra-550b-a55b:free"]
+      }
+    },
+    {
+      "id": "nvidia/nemotron-cascade-2-30b-a3b",
+      "name": "Nemotron Cascade 2 30B A3B",
+      "vendor": "NVIDIA",
+      "aliases": {
+        "bench": ["Nemotron Cascade 2 30B A3B"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5",
+      "name": "GPT-3.5",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-3.5"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5-turbo",
+      "name": "OpenAI: GPT-3.5 Turbo",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-3.5-turbo"],
+        "bench": ["GPT-3.5 Turbo"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5-turbo-0613",
+      "name": "OpenAI: GPT-3.5 Turbo (older v0613)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-3.5-turbo-0613"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5-turbo-16k",
+      "name": "OpenAI: GPT-3.5 Turbo 16k",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-3.5-turbo-16k"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5-turbo-instruct",
+      "name": "OpenAI: GPT-3.5 Turbo Instruct",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-3.5-turbo-instruct"]
+      }
+    },
+    {
+      "id": "openai/gpt-3-5-turbo:batch",
+      "name": "OpenAI: GPT-3.5 Turbo (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-3.5-turbo:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4",
+      "name": "OpenAI: GPT-4",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-0125",
+      "name": "GPT-4 (0125)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-4 (0125)"],
+        "display": ["GPT-4 (0125)"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-0613",
+      "name": "GPT-4 (0613)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-4 (0613)"],
+        "display": ["GPT-4 (0613)"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-0806",
+      "name": "GPT-4 (0806)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-4 (0806)"],
+        "display": ["GPT-4 (0806)"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1",
+      "name": "OpenAI: GPT-4.1",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1"],
+        "bench": ["GPT 4.1", "GPT-4.1", "gpt-4.1"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1-mini",
+      "name": "OpenAI: GPT-4.1 Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1-mini"],
+        "bench": ["GPT 4.1 mini", "GPT-4.1-Mini", "gpt-4.1-mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1-mini:batch",
+      "name": "OpenAI: GPT-4.1 Mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1-mini:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1-nano",
+      "name": "OpenAI: GPT-4.1 Nano",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1-nano"],
+        "bench": ["GPT-4.1-Nano", "gpt-4.1-nano"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1-nano:batch",
+      "name": "OpenAI: GPT-4.1 Nano (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1-nano:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1:batch",
+      "name": "OpenAI: GPT-4.1 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4.1:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-1106",
+      "name": "GPT-4 (1106)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-4 (1106)"],
+        "display": ["GPT-4 (1106)"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-turbo",
+      "name": "OpenAI: GPT-4 Turbo",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4-turbo"],
+        "bench": ["GPT-4 Turbo"]
+      }
+    },
+    {
+      "id": "openai/gpt-4-turbo:batch",
+      "name": "OpenAI: GPT-4 Turbo (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4-turbo:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o",
+      "name": "OpenAI: GPT-4o",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o"],
+        "bench": ["GPT 4o", "GPT-4o"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-2024-05-13",
+      "name": "OpenAI: GPT-4o (2024-05-13)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-2024-05-13"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-2024-08-06",
+      "name": "OpenAI: GPT-4o (2024-08-06)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-2024-08-06"],
+        "bench": ["gpt-4o-2024-08-06"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-2024-11-20",
+      "name": "OpenAI: GPT-4o (2024-11-20)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-2024-11-20"],
+        "bench": ["gpt-4o-2024-11-20"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-mini",
+      "name": "OpenAI: GPT-4o-mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-mini"],
+        "bench": ["GPT-4o mini", "GPT-4o-mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-mini-2024-07-18",
+      "name": "OpenAI: GPT-4o-mini (2024-07-18)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-mini-2024-07-18"],
+        "bench": ["gpt-4o-mini-2024-07-18"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o-mini:batch",
+      "name": "OpenAI: GPT-4o-mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o-mini:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-4o:batch",
+      "name": "OpenAI: GPT-4o (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-4o:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5",
+      "name": "OpenAI: GPT-5",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5"],
+        "bench": ["GPT 5", "GPT-5", "gpt-5"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-1",
+      "name": "OpenAI: GPT-5.1",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.1"],
+        "bench": ["GPT 5.1", "GPT-5.1"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-1-codex",
+      "name": "OpenAI: GPT-5.1-Codex",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.1-codex"],
+        "bench": ["GPT 5.1 Codex"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-1-codex-max",
+      "name": "OpenAI: GPT-5.1-Codex-Max",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.1-codex-max"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-1-codex-mini",
+      "name": "OpenAI: GPT-5.1-Codex-Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.1-codex-mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-1:batch",
+      "name": "OpenAI: GPT-5.1 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.1:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2",
+      "name": "OpenAI: GPT-5.2",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2"],
+        "bench": ["GPT 5.2", "GPT-5.2"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2-chat",
+      "name": "OpenAI: GPT-5.2 Chat",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2-chat"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2-codex",
+      "name": "OpenAI: GPT-5.2-Codex",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2-codex"],
+        "bench": ["GPT 5.2 Codex"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2-pro",
+      "name": "OpenAI: GPT-5.2 Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2-pro"],
+        "bench": ["GPT-5.2 Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2-pro:batch",
+      "name": "OpenAI: GPT-5.2 Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2-refine",
+      "name": "GPT-5.2 (Refine.)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-5.2 (Refine.)"],
+        "display": ["GPT-5.2 (Refine.)"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-2:batch",
+      "name": "OpenAI: GPT-5.2 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.2:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-3-codex",
+      "name": "OpenAI: GPT-5.3-Codex",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.3-codex"],
+        "bench": ["GPT-5.3 Codex"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4",
+      "name": "OpenAI: GPT-5.4",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4"],
+        "bench": ["GPT-5.4"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-image-2",
+      "name": "OpenAI: GPT-5.4 Image 2",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-image-2"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-mini",
+      "name": "OpenAI: GPT-5.4 Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-mini"],
+        "bench": ["GPT-5.4 Mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-mini:batch",
+      "name": "OpenAI: GPT-5.4 Mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-mini:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-nano",
+      "name": "OpenAI: GPT-5.4 Nano",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-nano"],
+        "bench": ["GPT-5.4 Nano"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-nano:batch",
+      "name": "OpenAI: GPT-5.4 Nano (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-nano:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-pro",
+      "name": "OpenAI: GPT-5.4 Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-pro"],
+        "bench": ["GPT-5.4 Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4-pro:batch",
+      "name": "OpenAI: GPT-5.4 Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-4:batch",
+      "name": "OpenAI: GPT-5.4 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.4:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-5",
+      "name": "OpenAI: GPT-5.5",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.5"],
+        "bench": ["GPT-5.5"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-5-instant-june-2026",
+      "name": "GPT-5.5 Instant (June 2026)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["GPT-5.5 Instant (June 2026)"],
+        "display": ["GPT-5.5 Instant (June 2026)"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-5-pro",
+      "name": "OpenAI: GPT-5.5 Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.5-pro"],
+        "bench": ["GPT-5.5 Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-5-pro:batch",
+      "name": "OpenAI: GPT-5.5 Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.5-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-5:batch",
+      "name": "OpenAI: GPT-5.5 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.5:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-luna",
+      "name": "OpenAI: GPT-5.6 Luna",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-luna"],
+        "bench": ["GPT-5.6 Luna"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-luna-pro",
+      "name": "OpenAI: GPT-5.6 Luna Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-luna-pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-luna-pro:batch",
+      "name": "OpenAI: GPT-5.6 Luna Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-luna-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-luna:batch",
+      "name": "OpenAI: GPT-5.6 Luna (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-luna:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-sol",
+      "name": "OpenAI: GPT-5.6 Sol",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-sol"],
+        "bench": ["GPT-5.6 Sol"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-sol-pro",
+      "name": "OpenAI: GPT-5.6 Sol Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-sol-pro"],
+        "bench": ["GPT-5.6 Sol Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-sol-pro:batch",
+      "name": "OpenAI: GPT-5.6 Sol Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-sol-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-sol:batch",
+      "name": "OpenAI: GPT-5.6 Sol (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-sol:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-terra",
+      "name": "OpenAI: GPT-5.6 Terra",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-terra"],
+        "bench": ["GPT-5.6 Terra"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-terra-pro",
+      "name": "OpenAI: GPT-5.6 Terra Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-terra-pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-terra-pro:batch",
+      "name": "OpenAI: GPT-5.6 Terra Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-terra-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-6-terra:batch",
+      "name": "OpenAI: GPT-5.6 Terra (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5.6-terra:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-image",
+      "name": "OpenAI: GPT-5 Image",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-image"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-image-mini",
+      "name": "OpenAI: GPT-5 Image Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-image-mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-mini",
+      "name": "OpenAI: GPT-5 Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-mini"],
+        "bench": ["GPT 5 mini", "GPT-5 Mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-mini:batch",
+      "name": "OpenAI: GPT-5 Mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-mini:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-nano",
+      "name": "OpenAI: GPT-5 Nano",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-nano"],
+        "bench": ["GPT 5 nano", "GPT-5 Nano"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-nano:batch",
+      "name": "OpenAI: GPT-5 Nano (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-nano:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-pro",
+      "name": "OpenAI: GPT-5 Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-pro"],
+        "bench": ["GPT-5 Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-5-pro:batch",
+      "name": "OpenAI: GPT-5 Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-5:batch",
+      "name": "OpenAI: GPT-5 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-5:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-1-sol",
+      "name": "OpenAI: GPT-6.1 Sol",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6.1-sol"],
+        "official": ["GPT-6.1 Sol", "gpt-6.1-sol"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-1-sol-pro",
+      "name": "OpenAI: GPT-6.1 Sol Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6.1-sol-pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-1-sol-pro:batch",
+      "name": "OpenAI: GPT-6.1 Sol Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6.1-sol-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-1-sol:batch",
+      "name": "OpenAI: GPT-6.1 Sol (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6.1-sol:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra",
+      "name": "OpenAI: GPT-6 Astra",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-astra"],
+        "official": ["GPT-6 Astra", "gpt-6-astra"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra-pro",
+      "name": "OpenAI: GPT-6 Astra Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-astra-pro"],
+        "bench": ["GPT-6 Astra Pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra-pro:batch",
+      "name": "OpenAI: GPT-6 Astra Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-astra-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-astra:batch",
+      "name": "OpenAI: GPT-6 Astra (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-astra:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-luna",
+      "name": "OpenAI: GPT-6 Luna",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-luna"],
+        "official": ["GPT-6 Luna", "gpt-6-luna"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-luna-pro",
+      "name": "OpenAI: GPT-6 Luna Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-luna-pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-luna-pro:batch",
+      "name": "OpenAI: GPT-6 Luna Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-luna-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-luna:batch",
+      "name": "OpenAI: GPT-6 Luna (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-luna:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-sol",
+      "name": "OpenAI: GPT-6 Sol",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-sol"],
+        "bench": ["GPT-6 Sol"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-sol-pro",
+      "name": "OpenAI: GPT-6 Sol Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-sol-pro"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-sol-pro:batch",
+      "name": "OpenAI: GPT-6 Sol Pro (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-sol-pro:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-6-sol:batch",
+      "name": "OpenAI: GPT-6 Sol (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-6-sol:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-astra-latest",
+      "name": "OpenAI: GPT Astra Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["~openai/gpt-astra-latest"]
+      }
+    },
+    {
+      "id": "openai/gpt-audio",
+      "name": "OpenAI: GPT Audio",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-audio"]
+      }
+    },
+    {
+      "id": "openai/gpt-audio-mini",
+      "name": "OpenAI: GPT Audio Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-audio-mini"]
+      }
+    },
+    {
+      "id": "openai/gpt-chat-latest",
+      "name": "OpenAI: GPT Chat Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-chat-latest"]
+      }
+    },
+    {
+      "id": "openai/gpt-luna-latest",
+      "name": "OpenAI: GPT Luna Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["~openai/gpt-luna-latest"]
+      }
+    },
+    {
+      "id": "openai/gpt-mini-latest",
+      "name": "OpenAI: GPT Mini Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["~openai/gpt-mini-latest"]
+      }
+    },
+    {
+      "id": "openai/gpt-oss-120b",
+      "name": "OpenAI: gpt-oss-120b",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-oss-120b"],
+        "bench": ["GPT-OSS 120B", "gpt-oss-120b"]
+      }
+    },
+    {
+      "id": "openai/gpt-oss-120b:batch",
+      "name": "OpenAI: gpt-oss-120b (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-oss-120b:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-oss-20b",
+      "name": "OpenAI: gpt-oss-20b",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-oss-20b"],
+        "bench": ["gpt-oss-20b"]
+      }
+    },
+    {
+      "id": "openai/gpt-oss-20b:batch",
+      "name": "OpenAI: gpt-oss-20b (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-oss-20b:batch"]
+      }
+    },
+    {
+      "id": "openai/gpt-oss-safeguard-20b",
+      "name": "OpenAI: gpt-oss-safeguard-20b",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/gpt-oss-safeguard-20b"]
+      }
+    },
+    {
+      "id": "openai/gpt-sol-latest",
+      "name": "OpenAI: GPT Sol Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["~openai/gpt-sol-latest"]
+      }
+    },
+    {
+      "id": "openai/gpt-terra-latest",
+      "name": "OpenAI: GPT Terra Latest",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["~openai/gpt-terra-latest"]
+      }
+    },
+    {
+      "id": "openai/o1",
+      "name": "OpenAI: o1",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o1"]
+      }
+    },
+    {
+      "id": "openai/o1-2024-12-17",
+      "name": "o1-2024-12-17",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["o1-2024-12-17"]
+      }
+    },
+    {
+      "id": "openai/o1-preview",
+      "name": "o1-preview",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["o1-preview"]
+      }
+    },
+    {
+      "id": "openai/o1-pro",
+      "name": "OpenAI: o1-pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o1-pro"]
+      }
+    },
+    {
+      "id": "openai/o3",
+      "name": "OpenAI: o3",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3"],
+        "bench": ["o3"]
+      }
+    },
+    {
+      "id": "openai/o3-high-gpt-4-1",
+      "name": "o3 (high) + gpt-4.1",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["o3 (high) + gpt-4.1"],
+        "display": ["o3 (high) + gpt-4.1"]
+      }
+    },
+    {
+      "id": "openai/o3-mini",
+      "name": "OpenAI: o3 Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3-mini"],
+        "bench": ["O3 Mini", "o3-mini"]
+      }
+    },
+    {
+      "id": "openai/o3-mini-1-0",
+      "name": "o3-mini_1.0",
+      "vendor": "OpenAI",
+      "aliases": {
+        "bench": ["o3-mini_1.0"]
+      }
+    },
+    {
+      "id": "openai/o3-mini-high",
+      "name": "OpenAI: o3 Mini High",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3-mini-high"]
+      }
+    },
+    {
+      "id": "openai/o3-mini:batch",
+      "name": "OpenAI: o3 Mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3-mini:batch"]
+      }
+    },
+    {
+      "id": "openai/o3-pro",
+      "name": "OpenAI: o3 Pro",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3-pro"],
+        "bench": ["o3-Pro", "o3-pro"]
+      }
+    },
+    {
+      "id": "openai/o3:batch",
+      "name": "OpenAI: o3 (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o3:batch"]
+      }
+    },
+    {
+      "id": "openai/o4-mini",
+      "name": "OpenAI: o4 Mini",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o4-mini"],
+        "bench": ["o4-mini"]
+      }
+    },
+    {
+      "id": "openai/o4-mini-high",
+      "name": "OpenAI: o4 Mini High",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o4-mini-high"]
+      }
+    },
+    {
+      "id": "openai/o4-mini:batch",
+      "name": "OpenAI: o4 Mini (batch)",
+      "vendor": "OpenAI",
+      "aliases": {
+        "openrouter": ["openai/o4-mini:batch"]
+      }
+    },
+    {
+      "id": "openrouter/free",
+      "name": "Free Models Router",
+      "vendor": "OpenRouter",
+      "aliases": {
+        "openrouter": ["openrouter/free"]
+      }
+    },
+    {
+      "id": "perceptron/perceptron-mk1",
+      "name": "Perceptron: Perceptron Mk1",
+      "vendor": "Perceptron",
+      "aliases": {
+        "openrouter": ["perceptron/perceptron-mk1"]
+      }
+    },
+    {
+      "id": "perceptron/perceptron-mk1-5",
+      "name": "Perceptron: Perceptron Mk1.5",
+      "vendor": "Perceptron",
+      "aliases": {
+        "openrouter": ["perceptron/perceptron-mk1.5"]
+      }
+    },
+    {
+      "id": "perplexity/sonar",
+      "name": "Perplexity: Sonar",
+      "vendor": "Perplexity",
+      "aliases": {
+        "openrouter": ["perplexity/sonar"]
+      }
+    },
+    {
+      "id": "perplexity/sonar-deep-research",
+      "name": "Perplexity: Sonar Deep Research",
+      "vendor": "Perplexity",
+      "aliases": {
+        "openrouter": ["perplexity/sonar-deep-research"]
+      }
+    },
+    {
+      "id": "perplexity/sonar-pro",
+      "name": "Perplexity: Sonar Pro",
+      "vendor": "Perplexity",
+      "aliases": {
+        "openrouter": ["perplexity/sonar-pro"]
+      }
+    },
+    {
+      "id": "perplexity/sonar-pro-search",
+      "name": "Perplexity: Sonar Pro Search",
+      "vendor": "Perplexity",
+      "aliases": {
+        "openrouter": ["perplexity/sonar-pro-search"]
+      }
+    },
+    {
+      "id": "perplexity/sonar-reasoning-pro",
+      "name": "Perplexity: Sonar Reasoning Pro",
+      "vendor": "Perplexity",
+      "aliases": {
+        "openrouter": ["perplexity/sonar-reasoning-pro"]
+      }
+    },
+    {
+      "id": "poolside/laguna-s-2-1",
+      "name": "Poolside: Laguna S 2.1",
+      "vendor": "Poolside",
+      "aliases": {
+        "openrouter": ["poolside/laguna-s-2.1"]
+      }
+    },
+    {
+      "id": "poolside/laguna-s-2-1:free",
+      "name": "Poolside: Laguna S 2.1 (free)",
+      "vendor": "Poolside",
+      "aliases": {
+        "openrouter": ["poolside/laguna-s-2.1:free"]
+      }
+    },
+    {
+      "id": "poolside/laguna-xs-2-1",
+      "name": "Poolside: Laguna XS 2.1",
+      "vendor": "Poolside",
+      "aliases": {
+        "openrouter": ["poolside/laguna-xs-2.1"]
+      }
+    },
+    {
+      "id": "poolside/laguna-xs-2-1:free",
+      "name": "Poolside: Laguna XS 2.1 (free)",
+      "vendor": "Poolside",
+      "aliases": {
+        "openrouter": ["poolside/laguna-xs-2.1:free"]
+      }
+    },
+    {
+      "id": "prism-ml/ternary-bonsai-2-27b",
+      "name": "PrismML: Ternary Bonsai 2 27B",
+      "vendor": "Prism ML",
+      "aliases": {
+        "openrouter": ["prism-ml/ternary-bonsai-2-27b"]
+      }
+    },
+    {
+      "id": "recursive/flint-v1-0:free",
+      "name": "Recursive: Flint (free)",
+      "vendor": "Recursive",
+      "aliases": {
+        "openrouter": ["recursive/flint-v1.0:free"]
+      }
+    },
+    {
+      "id": "reflection/beam-1-0",
+      "name": "Beam 1.0",
+      "vendor": "Reflection",
+      "aliases": {
+        "bench": ["Beam 1.0"]
+      }
+    },
+    {
+      "id": "reflection/beam-1-0-501b-a23b",
+      "name": "Reflection: Beam 1.0 501B A23B",
+      "vendor": "Reflection",
+      "aliases": {
+        "openrouter": ["reflection/beam-1.0-501b-a23b"]
+      }
+    },
+    {
+      "id": "reka/reka-edge",
+      "name": "Reka Edge",
+      "vendor": "Reka",
+      "aliases": {
+        "openrouter": ["rekaai/reka-edge"]
+      }
+    },
+    {
+      "id": "reka/reka-flash-3",
+      "name": "Reka Flash 3",
+      "vendor": "Reka",
+      "aliases": {
+        "openrouter": ["rekaai/reka-flash-3"]
+      }
+    },
+    {
+      "id": "relace/relace-apply-3",
+      "name": "Relace: Relace Apply 3",
+      "vendor": "Relace",
+      "aliases": {
+        "openrouter": ["relace/relace-apply-3"]
+      }
+    },
+    {
+      "id": "relace/relace-search",
+      "name": "Relace: Relace Search",
+      "vendor": "Relace",
+      "aliases": {
+        "openrouter": ["relace/relace-search"]
+      }
+    },
+    {
+      "id": "sakana/fugu-max",
+      "name": "Sakana: Fugu Max",
+      "vendor": "Sakana",
+      "aliases": {
+        "openrouter": ["sakana/fugu-max"]
+      }
+    },
+    {
+      "id": "sakana/fugu-ultra",
+      "name": "Sakana: Fugu Ultra",
+      "vendor": "Sakana",
+      "aliases": {
+        "openrouter": ["sakana/fugu-ultra"]
+      }
+    },
+    {
+      "id": "sakana/fugu-ultra-v2",
+      "name": "Sakana: Fugu Ultra v2",
+      "vendor": "Sakana",
+      "aliases": {
+        "openrouter": ["sakana/fugu-ultra-v2"]
+      }
+    },
+    {
+      "id": "sakana/sakana-namazu",
+      "name": "Sakana: Sakana Namazu",
+      "vendor": "Sakana",
+      "aliases": {
+        "openrouter": ["sakana/sakana-namazu"]
+      }
+    },
+    {
+      "id": "sao10k/l3-1-euryale-70b",
+      "name": "Sao10K: Llama 3.1 Euryale 70B v2.2",
+      "vendor": "Sao10K",
+      "aliases": {
+        "openrouter": ["sao10k/l3.1-euryale-70b"]
+      }
+    },
+    {
+      "id": "sao10k/l3-lunaris-8b",
+      "name": "Sao10K: Llama 3 8B Lunaris",
+      "vendor": "Sao10K",
+      "aliases": {
+        "openrouter": ["sao10k/l3-lunaris-8b"]
+      }
+    },
+    {
+      "id": "scaledown/extract",
+      "name": "ScaleDown: Extract",
+      "vendor": "ScaleDown",
+      "aliases": {
+        "openrouter": ["scaledown/extract"]
+      }
+    },
+    {
+      "id": "scaledown/summarize",
+      "name": "ScaleDown: Summarize",
+      "vendor": "ScaleDown",
+      "aliases": {
+        "openrouter": ["scaledown/summarize"]
+      }
+    },
+    {
+      "id": "stepfun/step-3-5-flash",
+      "name": "StepFun: Step 3.5 Flash",
+      "vendor": "StepFun",
+      "aliases": {
+        "openrouter": ["stepfun/step-3.5-flash"]
+      }
+    },
+    {
+      "id": "stepfun/step-3-7-flash",
+      "name": "StepFun: Step 3.7 Flash",
+      "vendor": "StepFun",
+      "aliases": {
+        "openrouter": ["stepfun/step-3.7-flash"]
+      }
+    },
+    {
+      "id": "stepfun/step-5-preview",
+      "name": "StepFun: Step 5 Preview",
+      "vendor": "StepFun",
+      "aliases": {
+        "openrouter": ["stepfun/step-5-preview"],
+        "bench": ["Step 5 Preview"]
+      }
+    },
+    {
+      "id": "tencent/hunyuan-a13b-instruct",
+      "name": "Tencent: Hunyuan A13B Instruct",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hunyuan-a13b-instruct"]
+      }
+    },
+    {
+      "id": "tencent/hy-mt2-1-8b",
+      "name": "Tencent: Hy-MT2-1.8B",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy-mt2-1.8b"]
+      }
+    },
+    {
+      "id": "tencent/hy-mt2-30b-a3b",
+      "name": "Tencent: Hy-MT2-30B-A3B",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy-mt2-30b-a3b"]
+      }
+    },
+    {
+      "id": "tencent/hy-mt2-7b",
+      "name": "Tencent: Hy-MT2-7B",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy-mt2-7b"]
+      }
+    },
+    {
+      "id": "tencent/hy3",
+      "name": "Tencent: Hy3",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy3"],
+        "bench": ["Hy3"]
+      }
+    },
+    {
+      "id": "tencent/hy3-preview",
+      "name": "Tencent: Hy3 preview",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy3-preview"]
+      }
+    },
+    {
+      "id": "tencent/hy4-preview",
+      "name": "Tencent: Hy4 preview",
+      "vendor": "Tencent",
+      "aliases": {
+        "openrouter": ["tencent/hy4-preview"]
+      }
+    },
+    {
+      "id": "thedrummer/cydonia-24b-v4-1",
+      "name": "TheDrummer: Cydonia 24B V4.1",
+      "vendor": "TheDrummer",
+      "aliases": {
+        "openrouter": ["thedrummer/cydonia-24b-v4.1"]
+      }
+    },
+    {
+      "id": "thedrummer/skyfall-36b-v2",
+      "name": "TheDrummer: Skyfall 36B V2",
+      "vendor": "TheDrummer",
+      "aliases": {
+        "openrouter": ["thedrummer/skyfall-36b-v2"]
+      }
+    },
+    {
+      "id": "thedrummer/unslopnemo-12b",
+      "name": "TheDrummer: UnslopNemo 12B",
+      "vendor": "TheDrummer",
+      "aliases": {
+        "openrouter": ["thedrummer/unslopnemo-12b"]
+      }
+    },
+    {
+      "id": "thinkingmachines/inkling",
+      "name": "Thinking Machines: Inkling",
+      "vendor": "Thinking Machines",
+      "aliases": {
+        "openrouter": ["thinkingmachines/inkling"],
+        "bench": ["Inkling"]
+      }
+    },
+    {
+      "id": "thinkingmachines/inkling-small",
+      "name": "Thinking Machines: Inkling Small",
+      "vendor": "Thinking Machines",
+      "aliases": {
+        "openrouter": ["thinkingmachines/inkling-small"],
+        "bench": ["Inkling Small"]
+      }
+    },
+    {
+      "id": "thinkingmachines/inkling-small:free",
+      "name": "Thinking Machines: Inkling Small (free)",
+      "vendor": "Thinking Machines",
+      "aliases": {
+        "openrouter": ["thinkingmachines/inkling-small:free"]
+      }
+    },
+    {
+      "id": "thinkingmachines/inkling:free",
+      "name": "Thinking Machines: Inkling (free)",
+      "vendor": "Thinking Machines",
+      "aliases": {
+        "openrouter": ["thinkingmachines/inkling:free"]
+      }
+    },
+    {
+      "id": "unbiased/pareto-26-10",
+      "name": "Pareto 26.10",
+      "vendor": "Unbiased",
+      "aliases": {
+        "openrouter": ["unbiased/pareto-26.10"]
+      }
+    },
+    {
+      "id": "unbiased/pareto-26-9",
+      "name": "Pareto 26.9",
+      "vendor": "Unbiased",
+      "aliases": {
+        "openrouter": ["unbiased/pareto-26.9"]
+      }
+    },
+    {
+      "id": "unbiased/pareto-latest",
+      "name": "Pareto Latest",
+      "vendor": "Unbiased",
+      "aliases": {
+        "openrouter": ["~unbiased/pareto-latest"]
+      }
+    },
+    {
+      "id": "undi95/remm-slerp-l2-13b",
+      "name": "ReMM SLERP 13B",
+      "vendor": "Undi95",
+      "aliases": {
+        "openrouter": ["undi95/remm-slerp-l2-13b"]
+      }
+    },
+    {
+      "id": "unknown-research/agnes-2-5-pro-beta",
+      "name": "Agnes 2.5 Pro Beta",
+      "vendor": "Unknown",
+      "aliases": {
+        "bench": ["Agnes 2.5 Pro Beta"]
+      }
+    },
+    {
+      "id": "unknown-research/apodex-1-1",
+      "name": "Apodex 1.1",
+      "vendor": "Unknown",
+      "aliases": {
+        "bench": ["Apodex 1.1"]
+      }
+    },
+    {
+      "id": "unknown-research/g9v3-39a5b",
+      "name": "G9v3-39A5B",
+      "vendor": "Unknown",
+      "aliases": {
+        "bench": ["G9v3-39A5B"]
+      }
+    },
+    {
+      "id": "unknown-research/motif-3",
+      "name": "Motif 3",
+      "vendor": "Unknown",
+      "aliases": {
+        "bench": ["Motif 3"]
+      }
+    },
+    {
+      "id": "upstage/apriel-v1-6-15b-thinker",
+      "name": "Apriel-v1.6-15B-Thinker",
+      "vendor": "Upstage",
+      "aliases": {
+        "bench": ["Apriel-v1.6-15B-Thinker"]
+      }
+    },
+    {
+      "id": "upstage/solar-mini-4",
+      "name": "Solar Mini 4",
+      "vendor": "Upstage",
+      "aliases": {
+        "bench": ["Solar Mini 4"]
+      }
+    },
+    {
+      "id": "upstage/solar-mini4",
+      "name": "Upstage: Solar Mini 4",
+      "vendor": "Upstage",
+      "aliases": {
+        "openrouter": ["upstage/solar-mini4"]
+      }
+    },
+    {
+      "id": "upstage/solar-open2-250b",
+      "name": "Solar Open2 250B",
+      "vendor": "Upstage",
+      "aliases": {
+        "bench": ["Solar Open2 250B"]
+      }
+    },
+    {
+      "id": "upstage/solar-pro-3",
+      "name": "Upstage: Solar Pro 3",
+      "vendor": "Upstage",
+      "aliases": {
+        "openrouter": ["upstage/solar-pro-3"]
+      }
+    },
+    {
+      "id": "upstage/solar-pro-4",
+      "name": "Solar Pro 4",
+      "vendor": "Upstage",
+      "aliases": {
+        "bench": ["Solar Pro 4"]
+      }
+    },
+    {
+      "id": "upstage/solar-pro4",
+      "name": "Upstage: Solar Pro 4",
+      "vendor": "Upstage",
+      "aliases": {
+        "openrouter": ["upstage/solar-pro4"]
+      }
+    },
+    {
+      "id": "writer/palmyra-x5",
+      "name": "Writer: Palmyra X5",
+      "vendor": "Writer",
+      "aliases": {
+        "openrouter": ["writer/palmyra-x5"]
+      }
+    },
+    {
+      "id": "xai/grok-3-beta",
+      "name": "Grok 3 Beta",
+      "vendor": "xAI",
+      "aliases": {
+        "bench": ["Grok 3 Beta"]
+      }
+    },
+    {
+      "id": "xai/grok-4",
+      "name": "grok-4",
+      "vendor": "xAI",
+      "aliases": {
+        "bench": ["grok-4"]
+      }
+    },
+    {
+      "id": "xai/grok-4-20",
+      "name": "SpaceXAI: Grok 4.20",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.20"],
+        "bench": ["Grok 4.20"]
+      }
+    },
+    {
+      "id": "xai/grok-4-20-multi-agent",
+      "name": "SpaceXAI: Grok 4.20 Multi-Agent",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.20-multi-agent"]
+      }
+    },
+    {
+      "id": "xai/grok-4-3",
+      "name": "SpaceXAI: Grok 4.3",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.3"]
+      }
+    },
+    {
+      "id": "xai/grok-4-3:batch",
+      "name": "SpaceXAI: Grok 4.3 (batch)",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.3:batch"]
+      }
+    },
+    {
+      "id": "xai/grok-4-5",
+      "name": "SpaceXAI: Grok 4.5",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.5"],
+        "bench": ["Grok 4.5"]
+      }
+    },
+    {
+      "id": "xai/grok-4-6",
+      "name": "SpaceXAI: Grok 4.6",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.6"],
+        "bench": ["Grok 4.6"]
+      }
+    },
+    {
+      "id": "xai/grok-4-7",
+      "name": "SpaceXAI: Grok 4.7",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-4.7"],
+        "bench": ["Grok 4.7"]
+      }
+    },
+    {
+      "id": "xai/grok-build-0-1",
+      "name": "SpaceXAI: Grok Build 0.1",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["x-ai/grok-build-0.1"]
+      }
+    },
+    {
+      "id": "xai/grok-latest",
+      "name": "xAI: Grok Latest",
+      "vendor": "xAI",
+      "aliases": {
+        "openrouter": ["~x-ai/grok-latest"]
+      }
+    },
+    {
+      "id": "xiaomi/mimo-v2-5",
+      "name": "Xiaomi: MiMo-V2.5",
+      "vendor": "Xiaomi",
+      "aliases": {
+        "openrouter": ["xiaomi/mimo-v2.5"]
+      }
+    },
+    {
+      "id": "xiaomi/mimo-v2-5-pro",
+      "name": "Xiaomi: MiMo-V2.5-Pro",
+      "vendor": "Xiaomi",
+      "aliases": {
+        "openrouter": ["xiaomi/mimo-v2.5-pro"]
+      }
+    },
+    {
+      "id": "xiaomi/mimo-v2-6-flash",
+      "name": "Xiaomi: MiMo-V2.6-Flash",
+      "vendor": "Xiaomi",
+      "aliases": {
+        "openrouter": ["xiaomi/mimo-v2.6-flash"],
+        "bench": ["MiMo V2.6 Flash", "MiMo-V2.6-Flash"]
+      }
+    },
+    {
+      "id": "xiaomi/mimo-v2-6-pro",
+      "name": "Xiaomi: MiMo-V2.6-Pro",
+      "vendor": "Xiaomi",
+      "aliases": {
+        "openrouter": ["xiaomi/mimo-v2.6-pro"],
+        "bench": ["MiMo V2.6 Pro", "MiMo-V2.6-Pro"]
+      }
+    },
+    {
+      "id": "xiaomi/mimo-v2-6-pro-ultraspeed",
+      "name": "Xiaomi: MiMo-V2.6-Pro-UltraSpeed",
+      "vendor": "Xiaomi",
+      "aliases": {
+        "openrouter": ["xiaomi/mimo-v2.6-pro-ultraspeed"]
+      }
+    },
+    {
+      "id": "xingchen-agi/xing4-0-29b-a4b:free",
+      "name": "XingChen: Xing4.0 29B A4B (free)",
+      "vendor": "Xingchen AGI",
+      "aliases": {
+        "openrouter": ["xingchen-agi/xing4.0-29b-a4b:free"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-5",
+      "name": "Z.ai: GLM 4.5",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.5"],
+        "bench": ["GLM 4.5", "GLM-4.5"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-5-air",
+      "name": "Z.ai: GLM 4.5 Air",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.5-air"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-5v",
+      "name": "Z.ai: GLM 4.5V",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.5v"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-6",
+      "name": "Z.ai: GLM 4.6",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.6"],
+        "bench": ["GLM 4.6", "GLM-4.6"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-6v",
+      "name": "Z.ai: GLM 4.6V",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.6v"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-7",
+      "name": "Z.ai: GLM 4.7",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.7"],
+        "bench": ["GLM 4.7"]
+      }
+    },
+    {
+      "id": "zhipu/glm-4-7-flash",
+      "name": "Z.ai: GLM 4.7 Flash",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-4.7-flash"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5",
+      "name": "Z.ai: GLM 5",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5"],
+        "bench": ["GLM 5", "GLM-5"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-1",
+      "name": "Z.ai: GLM 5.1",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.1"],
+        "bench": ["GLM 5.1"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-2",
+      "name": "Z.ai: GLM 5.2",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.2"],
+        "bench": ["GLM 5.2", "GLM-5.2"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3",
+      "name": "Z.ai: GLM 5.3",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3"],
+        "bench": ["GLM 5.3", "GLM-5.3"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3-flash",
+      "name": "Z.ai: GLM 5.3 Flash",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3-flash"],
+        "bench": ["GLM-5.3-Flash"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3-flash:batch",
+      "name": "Z.ai: GLM 5.3 Flash (batch)",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3-flash:batch"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3-flashx",
+      "name": "Z.ai: GLM 5.3 FlashX",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3-flashx"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3-prime",
+      "name": "Z.ai: GLM 5.3 Prime",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3-prime"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-3:batch",
+      "name": "Z.ai: GLM 5.3 (batch)",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5.3:batch"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5-turbo",
+      "name": "Z.ai: GLM 5 Turbo",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5-turbo"]
+      }
+    },
+    {
+      "id": "zhipu/glm-5v-turbo",
+      "name": "Z.ai: GLM 5V Turbo",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["z-ai/glm-5v-turbo"]
+      }
+    },
+    {
+      "id": "zhipu/glm-flash-latest",
+      "name": "Z.ai: GLM Flash Latest",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["~z-ai/glm-flash-latest"]
+      }
+    },
+    {
+      "id": "zhipu/glm-latest",
+      "name": "Z.ai: GLM Latest",
+      "vendor": "Zhipu",
+      "aliases": {
+        "openrouter": ["~z-ai/glm-latest"]
+      }
+    }
+  ],
+  "excluded": [
+    "Highest Human Score",
+    "Human Baseline",
+    "Human Panel",
+    "Mixed Models",
+    "Multiple",
+    "Muse Wonder Full",
+    "Stem Grad",
+    "Undisclosed",
+    "Wonder",
+    "Wonder Full"
+  ]
+}

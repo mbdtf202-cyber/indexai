@@ -1,0 +1,461 @@
+{
+  "schema": "registry.vendors/v1",
+  "note": "厂商表（T4.4 · S6.1）。各层的厂商名经这里归一：aliases 负责「同一个厂的不同写法」，rank 决定页面排序（数字小的在前）。新增厂商必须同时改这里，不再允许在代码里写 VENDOR / VENDOR_RANK 常量。",
+  "vendors": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "rank": 1,
+      "aliases": ["openai", "open-ai", "gpt", "chatgpt", "o1", "o3", "o4"],
+      "homepage": "https://openai.com"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "rank": 2,
+      "aliases": ["anthropic", "claude"],
+      "homepage": "https://anthropic.com"
+    },
+    {
+      "id": "google",
+      "name": "Google",
+      "rank": 3,
+      "aliases": ["google", "gemini", "deepmind", "bard", "google-deepmind"],
+      "homepage": "https://ai.google.dev"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "rank": 4,
+      "aliases": ["deepseek", "deep-seek", "deepseek-ai"],
+      "homepage": "https://deepseek.com"
+    },
+    {
+      "id": "alibaba",
+      "name": "Alibaba Qwen",
+      "rank": 5,
+      "aliases": ["alibaba", "qwen", "alibaba-qwen", "tongyi", "alibaba_cloud"],
+      "homepage": "https://tongyi.aliyun.com"
+    },
+    {
+      "id": "moonshot",
+      "name": "Moonshot",
+      "rank": 6,
+      "aliases": ["moonshot", "moonshotai", "kimi", "moonshot-ai"],
+      "homepage": "https://moonshot.cn"
+    },
+    {
+      "id": "zhipu",
+      "name": "Zhipu",
+      "rank": 7,
+      "aliases": ["zhipu", "z-ai", "zai", "zhipu-ai", "glm", "chatglm"],
+      "homepage": "https://zhipuai.cn"
+    },
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "rank": 8,
+      "aliases": ["minimax", "mini-max", "hailuo"],
+      "homepage": "https://minimaxi.com"
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "rank": 9,
+      "aliases": ["xai", "x-ai", "grok", "spacexai", "spacex-ai"],
+      "homepage": "https://x.ai"
+    },
+    {
+      "id": "meta",
+      "name": "Meta",
+      "rank": 10,
+      "aliases": ["meta", "meta-llama", "llama", "meta_ai"],
+      "homepage": "https://ai.meta.com"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "rank": 11,
+      "aliases": ["mistral", "mistralai", "mistral-ai", "codestral"],
+      "homepage": "https://mistral.ai"
+    },
+    {
+      "id": "bytedance",
+      "name": "ByteDance",
+      "rank": 12,
+      "aliases": ["bytedance", "byte-dance", "doubao", "seed", "bytedance-seed"],
+      "homepage": "https://www.volcengine.com"
+    },
+    {
+      "id": "tencent",
+      "name": "Tencent",
+      "rank": 13,
+      "aliases": ["tencent", "hunyuan", "tencent-hunyuan"],
+      "homepage": "https://hunyuan.tencent.com"
+    },
+    {
+      "id": "xiaomi",
+      "name": "Xiaomi",
+      "rank": 14,
+      "aliases": ["xiaomi", "mimo"],
+      "homepage": "https://xiaomi.com"
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA",
+      "rank": 15,
+      "aliases": ["nvidia", "nemotron"],
+      "homepage": "https://build.nvidia.com"
+    },
+    {
+      "id": "amazon",
+      "name": "Amazon",
+      "rank": 16,
+      "aliases": ["amazon", "aws", "nova", "bedrock"],
+      "homepage": "https://aws.amazon.com/bedrock"
+    },
+    {
+      "id": "microsoft",
+      "name": "Microsoft",
+      "rank": 17,
+      "aliases": ["microsoft", "azure", "phi", "copilot"],
+      "homepage": "https://azure.microsoft.com"
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "rank": 18,
+      "aliases": ["cohere", "command"],
+      "homepage": "https://cohere.com"
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "rank": 19,
+      "aliases": ["perplexity", "sonar", "pplx"],
+      "homepage": "https://perplexity.ai"
+    },
+    {
+      "id": "ai21",
+      "name": "AI21",
+      "rank": 20,
+      "aliases": ["ai21", "ai21labs", "jamba"],
+      "homepage": "https://ai21.com"
+    },
+    {
+      "id": "databricks",
+      "name": "Databricks",
+      "rank": 21,
+      "aliases": ["databricks", "dbrx"],
+      "homepage": "https://databricks.com"
+    },
+    {
+      "id": "nousresearch",
+      "name": "NousResearch",
+      "rank": 22,
+      "aliases": ["nousresearch", "nous", "hermes"],
+      "homepage": "https://nousresearch.com"
+    },
+    {
+      "id": "inception",
+      "name": "Inception",
+      "rank": 23,
+      "aliases": ["inception", "mercury"],
+      "homepage": "https://inceptionai.ai"
+    },
+    {
+      "id": "writer",
+      "name": "Writer",
+      "rank": 24,
+      "aliases": ["writer", "palmyra"],
+      "homepage": "https://writer.com"
+    },
+    {
+      "id": "sakana",
+      "name": "Sakana",
+      "rank": 25,
+      "aliases": ["sakana", "sakana-ai", "namazu"],
+      "homepage": "https://sakana.ai"
+    },
+    {
+      "id": "liquid",
+      "name": "Liquid AI",
+      "rank": 26,
+      "aliases": ["liquid", "liquid-ai", "lfm"],
+      "homepage": "https://liquid.ai"
+    },
+    {
+      "id": "upstage",
+      "name": "Upstage",
+      "rank": 27,
+      "aliases": ["upstage", "solar"],
+      "homepage": "https://upstage.ai"
+    },
+    {
+      "id": "reka",
+      "name": "Reka",
+      "rank": 28,
+      "aliases": ["reka", "reka-ai", "rekaai"],
+      "homepage": "https://reka.ai"
+    },
+    {
+      "id": "stepfun",
+      "name": "StepFun",
+      "rank": 29,
+      "aliases": ["stepfun", "step-ai", "step"],
+      "homepage": "https://stepfun.com"
+    },
+    {
+      "id": "01ai",
+      "name": "01.AI",
+      "rank": 30,
+      "aliases": ["01ai", "01-ai", "lingyiwanwu", "yi"],
+      "homepage": "https://01.ai"
+    },
+    {
+      "id": "baidu",
+      "name": "Baidu",
+      "rank": 31,
+      "aliases": ["baidu", "ernie", "wenxin"],
+      "homepage": "https://cloud.baidu.com"
+    },
+    {
+      "id": "inclusionai",
+      "name": "InclusionAI",
+      "rank": 32,
+      "aliases": ["inclusionai", "inclusion-ai", "ling"],
+      "homepage": null
+    },
+    {
+      "id": "ibm",
+      "name": "IBM",
+      "rank": 33,
+      "aliases": ["ibm", "granite", "ibm-granite"],
+      "homepage": "https://ibm.com/watsonx"
+    },
+    {
+      "id": "arcee",
+      "name": "Arcee AI",
+      "rank": 34,
+      "aliases": ["arcee", "arcee-ai", "trinity"],
+      "homepage": "https://arcee.ai"
+    },
+    {
+      "id": "deepinfra",
+      "name": "DeepInfra",
+      "rank": 35,
+      "aliases": ["deepinfra"],
+      "homepage": "https://deepinfra.com"
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks",
+      "rank": 36,
+      "aliases": ["fireworks", "fireworks-ai"],
+      "homepage": "https://fireworks.ai"
+    },
+    {
+      "id": "together",
+      "name": "Together",
+      "rank": 37,
+      "aliases": ["together", "togetherai", "together-ai"],
+      "homepage": "https://together.ai"
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "rank": 38,
+      "aliases": ["groq"],
+      "homepage": "https://groq.com"
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "rank": 39,
+      "aliases": ["cerebras"],
+      "homepage": "https://cerebras.ai"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "rank": 40,
+      "aliases": ["openrouter", "open-router"],
+      "homepage": "https://openrouter.ai"
+    },
+    {
+      "id": "aion-labs",
+      "name": "Aion Labs",
+      "rank": 41,
+      "aliases": ["aion-labs", "aion"],
+      "homepage": null
+    },
+    {
+      "id": "poolside",
+      "name": "Poolside",
+      "rank": 42,
+      "aliases": ["poolside"],
+      "homepage": null
+    },
+    {
+      "id": "thinkingmachines",
+      "name": "Thinking Machines",
+      "rank": 43,
+      "aliases": ["thinkingmachines", "thinking-machines"],
+      "homepage": null
+    },
+    {
+      "id": "thedrummer",
+      "name": "TheDrummer",
+      "rank": 44,
+      "aliases": ["thedrummer"],
+      "homepage": null
+    },
+    {
+      "id": "inference-net",
+      "name": "Inference.net",
+      "rank": 45,
+      "aliases": ["inference-net", "inferencenet"],
+      "homepage": null
+    },
+    {
+      "id": "moondream",
+      "name": "Moondream",
+      "rank": 46,
+      "aliases": ["moondream"],
+      "homepage": null
+    },
+    {
+      "id": "morph",
+      "name": "Morph",
+      "rank": 47,
+      "aliases": ["morph"],
+      "homepage": null
+    },
+    {
+      "id": "nex-agi",
+      "name": "Nex AGI",
+      "rank": 48,
+      "aliases": ["nex-agi", "nex"],
+      "homepage": null
+    },
+    {
+      "id": "perceptron",
+      "name": "Perceptron",
+      "rank": 49,
+      "aliases": ["perceptron"],
+      "homepage": null
+    },
+    {
+      "id": "relace",
+      "name": "Relace",
+      "rank": 50,
+      "aliases": ["relace"],
+      "homepage": null
+    },
+    {
+      "id": "sao10k",
+      "name": "Sao10K",
+      "rank": 51,
+      "aliases": ["sao10k"],
+      "homepage": null
+    },
+    {
+      "id": "scaledown",
+      "name": "ScaleDown",
+      "rank": 52,
+      "aliases": ["scaledown"],
+      "homepage": null
+    },
+    {
+      "id": "unbiased",
+      "name": "Unbiased",
+      "rank": 53,
+      "aliases": ["unbiased"],
+      "homepage": null
+    },
+    {
+      "id": "anthracite-org",
+      "name": "Anthracite",
+      "rank": 54,
+      "aliases": ["anthracite-org", "anthracite"],
+      "homepage": null
+    },
+    {
+      "id": "cognitivecomputations",
+      "name": "Cognitive Computations",
+      "rank": 55,
+      "aliases": ["cognitivecomputations"],
+      "homepage": null
+    },
+    {
+      "id": "dots-studio",
+      "name": "Dots Studio",
+      "rank": 56,
+      "aliases": ["dots-studio"],
+      "homepage": null
+    },
+    {
+      "id": "elorian",
+      "name": "Elorian",
+      "rank": 57,
+      "aliases": ["elorian"],
+      "homepage": null
+    },
+    {
+      "id": "gryphe",
+      "name": "Gryphe",
+      "rank": 58,
+      "aliases": ["gryphe"],
+      "homepage": null
+    },
+    {
+      "id": "mancer",
+      "name": "Mancer",
+      "rank": 59,
+      "aliases": ["mancer"],
+      "homepage": null
+    },
+    {
+      "id": "meituan",
+      "name": "Meituan",
+      "rank": 60,
+      "aliases": ["meituan", "longcat"],
+      "homepage": null
+    },
+    {
+      "id": "prism-ml",
+      "name": "Prism ML",
+      "rank": 61,
+      "aliases": ["prism-ml"],
+      "homepage": null
+    },
+    {
+      "id": "recursive",
+      "name": "Recursive",
+      "rank": 62,
+      "aliases": ["recursive"],
+      "homepage": null
+    },
+    {
+      "id": "reflection",
+      "name": "Reflection",
+      "rank": 63,
+      "aliases": ["reflection"],
+      "homepage": null
+    },
+    {
+      "id": "undi95",
+      "name": "Undi95",
+      "rank": 64,
+      "aliases": ["undi95"],
+      "homepage": null
+    },
+    {
+      "id": "xingchen-agi",
+      "name": "Xingchen AGI",
+      "rank": 65,
+      "aliases": ["xingchen-agi", "xingchen"],
+      "homepage": null
+    }
+  ]
+}

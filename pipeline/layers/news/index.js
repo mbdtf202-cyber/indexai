@@ -1,0 +1,305 @@
+/**
+ * news 层：三路情报源 + 只增不删的归档（T3.1c4）。
+ *
+ * 这是第一个**读写仓库文件**的层，也是最容易把边界弄糊的一个：
+ * 归档（news-archive.json）要读上一版、合并、再写回去。按契约层不碰文件系统，
+ * 所以归档的读写由编排器经 `ctx.archive.read()` / `ctx.archive.write()` 注入。
+ * 层只负责「三路抓什么、怎么并、怎么算新鲜度」。
+ *
+ * 三路源的分工（与既有实现一致）：
+ * - frontline：官方精选，每天约 50 条，摘要最全 → 合并时优先级最高
+ * - aihot：全量流，按分类逐个翻页 → 分类用源站标签兜底
+ * - seed：存档补回的早期条目（可选文件）
+ */
+
+import { OFFICIAL_FEEDS, HN_QUERIES, feedCutoff } from '../../sources/official-feeds.mjs';
+
+const AIHOT_CATEGORY = {
+  'ai-models': 'model',
+  'ai-products': 'product',
+  industry: 'funding',
+  paper: 'research',
+  tip: 'other',
+};
+
+/**
+ * 统一成一条记录。
+ * @param {{date?: string, time?: string, title?: string, summary?: string, url?: string}} x
+ */
+function toRow(x) {
+  return {
+    date: x.date,
+    time: x.time,
+    title: x.title,
+    summary: x.summary,
+    url: x.url,
+    via: x.via,
+    source: x.source,
+    weight: x.weight,
+  };
+}
+
+export default {
+  id: 'news',
+  sources: [
+    'data.aibijia.org/news-frontline.yaml',
+    'aihot.news/api/v1/items',
+    'openai.com/news/rss.xml',
+    'anthropic.com/news/rss.xml',
+    'deepmind.google/blog/rss.xml',
+    'huggingface.co/blog/feed.xml',
+    'blogs.microsoft.com/ai/feed/',
+    'github.com/vllm-project/vllm/releases.atom',
+    'github.com/ollama/ollama/releases.atom',
+    'hn.algolia.com/api/v1/search',
+  ],
+  /** 合并策略（T3.6 · S3.3）：归档型（S3.3）：只增不删。 */
+  mergeStrategy: 'archive',
+
+  budget: { ms: 300_000, requests: 250 },
+
+  /**
+   * 抓三路源。任一路失败**不拖累其它两路**——只有三路全空才算这一层失败。
+   *
+   * @param {object} ctx
+   * @returns {Promise<{frontline: object[], bulk: object[], seed: object[]}>}
+   */
+  async fetch(ctx) {
+    const [frontline, bulk, official, hn, seed] = await Promise.all([
+      this.fetchFrontline(ctx),
+      this.fetchBulk(ctx),
+      this.fetchOfficial(ctx),
+      this.fetchHN(ctx),
+      ctx.readSeed(),
+    ]);
+    return { frontline: this.resolveFrontline(frontline, bulk), bulk, official, hn, seed };
+  },
+
+  /** 官方精选：每天约 50 条，摘要最全，优先用它 */
+  async fetchFrontline(ctx) {
+    try {
+      const res = await ctx.http.text(ctx.urls.frontline, { label: 'news/frontline' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const rows = ctx.parseYaml(res.text);
+      ctx.log(`frontline ${rows.length} 条`);
+      return rows;
+    } catch (e) {
+      // 单路失败只记日志，交给上层看「有没有新条目」而不是「这一路成不成」
+      ctx.log(`frontline 失败：${e.message}`, { level: 'warn' });
+      return [];
+    }
+  },
+
+  /**
+   * 全量流：window 只接受 24h / 7d，游标翻页。
+   * mode=all 才给全部；selected 只给人工精选的 50 条。
+   * 分类之间不重叠，所以要逐个分类翻，不然会漏掉一大半。
+   */
+  async fetchBulk(ctx) {
+    const cats = [null, 'ai-models', 'ai-products', 'industry', 'paper', 'tip'];
+    const seen = new Map();
+    let requests = 0;
+
+    // 测试档位只翻主分类的第 1 页：够覆盖解析与去重，又不拉整个 7 天窗口
+    const catsToFetch = ctx.testProfile ? [null] : cats;
+    const maxPages = ctx.testProfile ? 1 : 40;
+
+    for (const cat of catsToFetch) {
+      let cursor = null;
+      for (let page = 0; page < maxPages; page += 1) {
+        const url = new URL(ctx.urls.aihot);
+        url.searchParams.set('window', '7d');
+        url.searchParams.set('mode', 'all');
+        if (cat) url.searchParams.set('category', cat);
+        if (cursor) url.searchParams.set('cursor', cursor);
+        let d;
+        try {
+          const res = await ctx.http.get(url, { label: `news/aihot${cat ? `/${cat}` : ''}` });
+          requests += 1;
+          if (!res.ok) break;
+          d = await res.json();
+        } catch {
+          break;
+        }
+        for (const it of d.items || []) {
+          if (!it.id || !it.title) continue;
+          const pub = it.publishedAt || it.discoveredAt || '';
+          seen.set(it.id, {
+            date: pub.slice(0, 10),
+            time: pub.slice(11, 16),
+            title: it.title,
+            summary: it.summary || '',
+            url:
+              ctx.keepSafeUrl(
+                it.links?.original || it.link || `https://aihot.news/items/${it.id}`,
+                'news:aihot',
+              ) ?? '',
+            via:
+              ctx.keepSafeUrl(
+                it.links?.aihot || `https://aihot.news/items/${it.id}`,
+                'news:aihot',
+              ) ?? '',
+            cat: it.category || null,
+          });
+        }
+        if (!d.page?.hasMore || !d.page.nextCursor) break;
+        cursor = d.page.nextCursor;
+      }
+    }
+    ctx.log(`aihot 全量 ${seen.size} 条 / ${requests} 次请求`);
+    return [...seen.values()];
+  },
+
+  /**
+   * frontline 的 url 常是 aihot 聚合页；全量流里已经有同一 id 的原始链接。
+   * 用 id 做一次 join：url 换成原始出处，聚合入口留在 via（F08）。
+   * 对不上的条目保持原样——宁可没有 via，也不编造原始地址。
+   */
+  resolveFrontline(frontline, bulk) {
+    const byItem = new Map();
+    for (const row of bulk || []) {
+      if (row.via) byItem.set(row.via, row);
+    }
+    return (frontline || []).map((row) => {
+      const url = String(row.url || '');
+      const hit = byItem.get(url);
+      return hit ? { ...row, url: hit.url, via: url } : row;
+    });
+  },
+
+  /**
+   * 官方博客 / GitHub releases：每个源独立权重与新鲜度门禁（S8.7）。
+   * 单源失败不影响其它源；测试档位不请求真实 feed（没有回放文件），
+   * 由单元测试用 mock 覆盖解析与门禁。
+   */
+  async fetchOfficial(ctx) {
+    if (ctx.testProfile) return [];
+    const out = [];
+    for (const src of OFFICIAL_FEEDS) {
+      try {
+        const res = await ctx.http.text(src.url, { label: `news/feed/${src.id}` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const cutoff = feedCutoff(ctx.now(), src.maxAgeHours);
+        const rows = ctx.parseFeed(res.text);
+        let kept = 0;
+        for (const row of rows) {
+          const t = Date.parse(row.date);
+          if (!Number.isFinite(t) || t < cutoff) continue;
+          out.push({ ...row, source: src.name, weight: src.weight });
+          kept += 1;
+        }
+        ctx.log(`feed ${src.id} ${kept}/${rows.length} 条`);
+      } catch (e) {
+        ctx.log(`feed ${src.id} 失败：${e.message}`, { level: 'warn' });
+      }
+    }
+    return out;
+  },
+
+  /**
+   * HN 的 AI 热帖（S8.7）：每个查询词只搜标题，按时间倒序取最近条目。
+   * `via` 指回 HN 讨论页，`url` 是原始文章地址。
+   */
+  async fetchHN(ctx) {
+    if (ctx.testProfile) return [];
+    const out = [];
+    const seen = new Set();
+    const cutoff = feedCutoff(ctx.now(), 24 * 30);
+    for (const q of HN_QUERIES) {
+      const url = new URL(ctx.urls.hn);
+      url.searchParams.set('query', q);
+      url.searchParams.set('tags', 'story');
+      url.searchParams.set('hitsPerPage', '30');
+      url.searchParams.set('restrictSearchableAttributes', 'title');
+      try {
+        const res = await ctx.http.get(url, { label: `news/hn/${q}` });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        for (const hit of d.hits || []) {
+          if (!hit.title) continue;
+          const key = hit.objectID || hit.url;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const t = Date.parse(hit.created_at || '');
+          if (!Number.isFinite(t) || t < cutoff) continue;
+          out.push({
+            title: hit.title,
+            url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            via: `https://news.ycombinator.com/item?id=${hit.objectID}`,
+            date: String(hit.created_at || '').slice(0, 10),
+            time: String(hit.created_at || '').slice(11, 16),
+            summary: hit.story_text || '',
+            source: 'Hacker News',
+            weight: 2,
+          });
+        }
+      } catch (e) {
+        ctx.log(`hn ${q} 失败：${e.message}`, { level: 'warn' });
+      }
+    }
+    return out;
+  },
+
+  /**
+   * 归一：三路合并成待并入归档的 fresh 列表。
+   * 精选在前，合并时它的摘要不会被全量流的短版覆盖。
+   * @param {{frontline: object[], bulk: object[], seed: object[]}} raw
+   */
+  normalize(raw) {
+    const fresh = [
+      ...(raw?.frontline || []).map(toRow),
+      ...(raw?.bulk || []).map((x) => ({
+        ...toRow(x),
+        topic: AIHOT_CATEGORY[x.cat] || undefined,
+      })),
+      ...(raw?.official || []).map(toRow),
+      ...(raw?.hn || []).map(toRow),
+      ...(raw?.seed || []).map(toRow),
+    ];
+    // 三路全空才算「没抓到」——单路失败不该让整层判定为空
+    const quarantined = fresh.length ? [] : [{ reason: '三路源都没有可用条目' }];
+    return { records: fresh, quarantined };
+  },
+
+  /**
+   * 并入归档。
+   *
+   * 返回的是**合并后的归档**（只增不删），以及本次真正新增的条数。
+   * `freshCount` 让上层能判断「情报层是否新鲜」——三路源全挂时归档照样很大，
+   * 只看归档大小会被骗（F09）。
+   *
+   * @param {object[]|null} prev 上一版归档
+   * @param {object[]} next 本次 fresh
+   * @param {object} ctx 需要 ctx.archive、ctx.mergeArchive、ctx.today
+   */
+  merge(prev, next, ctx) {
+    const archive = Array.isArray(prev) ? prev : [];
+    const before = archive.length;
+    const merged = ctx.mergeArchive(archive, next || [], { today: ctx.today() });
+    const freshCount = merged.length - before;
+
+    ctx.log(`news 归档 ${before} → ${merged.length} 条（新增 ${freshCount}）`);
+
+    // 不可枚举的元信息：不改 JSON 形态（golden 逐字节不受影响），
+    // 但让编排器能看见「本次到底抓到了没有」
+    Object.defineProperty(merged, '__freshCount', { value: freshCount, enumerable: false });
+    return merged;
+  },
+
+  /** 门禁：新鲜度与跨度由 health.mjs 的既有逻辑负责，这里只报 obvious 问题。 */
+  health: {
+    floor: null,
+    shrink: null,
+    freshness: null,
+    rules: [
+      {
+        id: 'news-not-empty',
+        check: (archive) => {
+          const list = Array.isArray(archive) ? archive : [];
+          if (!list.length) return { level: 'red', message: '归档为空' };
+          return { level: 'ok' };
+        },
+      },
+    ],
+  },
+};

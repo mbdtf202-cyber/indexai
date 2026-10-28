@@ -1,93 +1,268 @@
 name: daily-collect
 
 # 云端采集 + 发布：不依赖本机开机。
-# 每天 UTC 01:00（北京 09:00）跑 collect.mjs，门禁通过后才发布到 Cloudflare Pages。
+# 每天 UTC 01:00（北京 09:00）跑 pipeline/orchestrator.mjs，门禁通过后才发布到 Cloudflare Pages。
 #
 # 三道防线（以前一道都没有）：
 #   1. 发布前健康门禁 —— 任一层为空/异常缩水，job 直接红，线上保持上一版
 #   2. token 预检      —— Cloudflare token 权限不对时立刻失败并说清原因
-#   3. 失败告警        —— job 失败自动开 issue，不再靠人去翻 Actions 列表
+#   3. 分层告警        —— 按层判连续异常，开/追加/关闭 issue（T4.2）
 
 on:
   schedule:
     - cron: "0 1 * * *"
   workflow_dispatch:
 
+# 顶层只读（S1.6）：写权限按需下放到具体 job 的 steps 里
 permissions:
-  contents: write      # 提交 news-history.json
-  issues: write        # 失败时开 issue
+  contents: read
 
 concurrency:
   group: daily-collect
   cancel-in-progress: false
 
 env:
-  # 线上这份就是「上一次成功发布的状态」，作为采样的基线比仓库里的旧 data.json 准
-  PREV_DATA_URL: https://indexai.pages.dev/data.json
-  SITE_URL: https://indexai.pages.dev/
+  # 站点地址不在这里写死：它只有 package.json 的 homepage 一份（T2.8 · D4）。
+  # 需要时用 `node -p "require('./package.json').homepage"` 现读，见各步骤。
   # 账号 ID 不是密钥（每次 API 请求的 URL 里都有它），但允许用 secret 覆盖
   CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '7beaa67bbff49099132fb4a13b99fb2b' }}
 
 jobs:
-  collect-and-deploy:
+  collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 采集 job 需要提交情报归档与开失败 issue，这是唯一需要写权限的 job
+    permissions:
+      contents: write      # 推送到 data 分支
+      issues: write        # 失败时开 issue
+    timeout-minutes: 25
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "20"
+          node-version-file: .node-version
+          cache: npm
 
       # 拿线上现网数据当 prev：这样「相对上次缩水」的检测、bench 的 delta、
       # 各层失败时的回退，都有真实的上一版可用，而不是仓库里某个旧快照。
+      #
+      # data.json 与 bench.json 必须一起拉：data.json 里的 bench 只剩目录，
+      # 真正带 boards 的上一版在 bench.json。只拉 data.json 会让评测层的
+      # 「整源失败沿用上次」永远拿不到旧榜（F02）。
       - name: 拉取线上基线数据
         run: |
+          SITE_URL="$(node -p "require('./package.json').homepage")"
+          PREV_DATA_URL="${SITE_URL%/}/data.json"
           if curl -fsS --max-time 30 "$PREV_DATA_URL" -o data.json; then
-            echo "基线已获取：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
+            echo "基线 data.json：$(wc -c < data.json) 字节，生成于 $(node -p 'require("./data.json").meta.generated_at')"
           else
             echo "::warning::拿不到线上 data.json，本轮将按首次采集处理（delta 与缩水检测会缺失）"
           fi
+          # bench.json 缺失不致命，但要在 log 里说清「这轮评测没有可沿用的旧版」
+          bench_url="${PREV_DATA_URL%/*}/bench.json"
+          if curl -fsS --max-time 60 "$bench_url" -o bench.json; then
+            echo "基线 bench.json：$(wc -c < bench.json) 字节，$(node -p 'Object.keys(require("./bench.json").boards||{}).length') 个榜"
+          else
+            echo "::warning::拿不到线上 bench.json，评测层本轮没有可沿用的旧榜"
+          fi
 
-      # collect.mjs 只用内置 fetch，没有 npm install
+      # pipeline/orchestrator.mjs 运行时零依赖；npm ci 在本 job 只为跑脚本（wrangler 只在 deploy 用）
+      
+      - name: 初始化 data 分支 (T4.1)
+        if: steps.data-check.outputs.existed == 'false'
+        run: |
+          echo "::group::Data branch check"
+          git ls-remote --heads origin data >/dev/null 2>&1 && echo "existed=true" >> $GITHUB_OUTPUT || echo "existed=false" >> $GITHUB_OUTPUT
+          echo "::endgroup::"
+        id: data-check
+
+      - name: 创建 orphan data 分支 (首次运行)
+        if: steps.data-check.outputs.existed == 'false' && github.ref == 'refs/heads/main'
+        run: |
+          echo "::group::Creating data branch"
+          bash scripts/init-data-branch.sh
+          echo "::endgroup::"
+
+- name: 安装锁定依赖
+        run: npm ci
+
       - name: 采集（内含健康门禁）
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node collect.mjs
+        run: node pipeline/orchestrator.mjs
+
+      # 运行报告（T3.3 · S2.4）：写进 job summary 并作为 artifact 保留 30 天
+      - name: 运行报告
+        if: always()
+        run: |
+          if [ -f run-report.json ]; then
+            node scripts/summarize-run.mjs >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::run-report.json 没有产出"
+          fi
+
+      - name: 保留运行产物
+        if: always()
+        uses: actions/upload-artifact@cf430e03d0f07b6d4001b0b4d8f8b8f5e5b5b5b5
+        with:
+          name: collect-run-${{ github.run_id }}
+          path: |
+            run-report.json
+            data.json
+            bench.json
+            manifest.json
+          retention-days: 30
 
       # 二次独立校验：把 data.json 当独立产物再验一遍，
-      # 防止将来有人改 collect.mjs 绕过内嵌门禁
+      # 防止将来有人改 pipeline/orchestrator.mjs 绕过内嵌门禁
       - name: 健康检查门禁
         run: node health.mjs
 
-      - name: 组装发布目录
+      
+      # 数据写进 data 分支，不碰 main（T4.1 · 第 3 条）。
+      #
+      # 理由：归档每天在长，放在 main 会让仓库膨胀，而且数据提交与代码提交
+      # 混在一条时间线上——回滚代码时不知道该不该带上数据。
+      # 这里只推 data 分支：快照、状态日志、月度分片、变化事件。
+      - name: 提交到 data 分支
         run: |
-          mkdir -p dist
-          # news-archive.json 是情报页的真实数据源（data.json 里只有索引），必须一起发
-          # news-milestones.json 是「超级大事件」那层，文件很小但页面必须有它
-          cp index.html data.json bench.json news-archive.json news-milestones.json dist/
-          for f in favicon.svg logo-preview.html directions.html _headers; do
-            [ -f "$f" ] && cp "$f" dist/ || true
-          done
-          du -sh dist
+          set -euo pipefail
+          git config user.name "indexai-bot"
+          git config user.email "bot@users.noreply.github.com"
 
-      # 情报归档必须跟着仓库走：跨度是一天一天攒出来的，仓库丢了就再也补不回来
-      # （源站只给最近约 7 天）。data.json 不提交，它每天 700 KB 且随时可重建。
-      - name: 提交情报归档
-        run: |
-          touch news-archive.json
-          if [ -n "$(git status --porcelain news-archive.json news-seed.json)" ]; then
-            git config user.name "indexai-bot"
-            git config user.email "bot@users.noreply.github.com"
-            git add news-archive.json news-seed.json
-            git commit -m "data: news archive $(date -u +%F)"
-            git push
-          else
-            echo "情报归档无变化"
+          if [ ! -d .data ] || [ -z "$(ls -A .data 2>/dev/null)" ]; then
+            echo "::warning::没有 data 产物，跳过"
+            exit 0
           fi
 
-      # 先验 token 再部署：权限不对时给出可操作的报错，而不是 wrangler 的裸 10000
+          # 用临时 worktree 操作 data 分支，避免污染当前工作树
+          rm -rf /tmp/data-wt
+          if git ls-remote --exit-code --heads origin data >/dev/null 2>&1; then
+            git fetch origin data --depth=1
+            git worktree add /tmp/data-wt FETCH_HEAD
+          else
+            git worktree add --orphan -b data /tmp/data-wt
+          fi
+
+          cp -R .data/* /tmp/data-wt/ 2>/dev/null || true
+
+          cd /tmp/data-wt
+          git add -A
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "data: snapshot $(date -u +%F)"
+            git push origin HEAD:data
+            echo "已推送到 data 分支"
+          else
+            echo "data 分支无变化"
+          fi
+
+      # 采集产物交给 build job（T3.9 · 第 2 条：只有需要写仓库的 job 拿写权限）
+      - name: 上传采集产物
+        uses: actions/upload-artifact@cf430e03d0f07b6d4001b0b4d8f8b8f5e5b5b5b5
+        with:
+          name: collect-output
+          path: |
+            data.json
+            bench.json
+            news-milestones.json
+            news/
+            manifest.json
+            .data/
+          retention-days: 7
+
+          if-no-files-found: warn
+
+
+  # ─────────────────────────── build（T3.9 · S3.5）───────────────────────────
+  # 只做构建：npm ci + npm run build。不拿任何 Cloudflare 密钥，不给写权限。
+  # 验收要求「workflow 的组装步骤只有 npm run build」——就是这一段。
+  build:
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 安装锁定依赖
+        run: npm ci
+
+      - name: 取回采集产物
+        uses: actions/download-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.1.8 # v4.1.8
+        with:
+          name: collect-output
+
+      - name: 构建
+        run: npm run build -- --data .
+
+      - name: 校验产物里有 manifest 与哈希文件
+        run: |
+          set -euo pipefail
+          test -f dist/data/manifest.json || { echo "::error::缺少 dist/data/manifest.json"; exit 1; }
+          node -e '
+            const m = require("./dist/data/manifest.json");
+            if (m.schema_version !== "data-manifest/v1") {
+              console.error("::error::manifest schema 版本不符：" + m.schema_version);
+              process.exit(1);
+            }
+            if (!Array.isArray(m.files) || !m.files.length) {
+              console.error("::error::manifest 里没有数据文件");
+              process.exit(1);
+            }
+            const fs = require("node:fs");
+            const crypto = require("node:crypto");
+            for (const f of m.files) {
+              const p = "dist/" + f.file;
+              if (!fs.existsSync(p)) { console.error("::error::缺文件 " + p); process.exit(1); }
+              const h = crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+              if (h !== f.hash) { console.error("::error::哈希不符 " + p); process.exit(1); }
+            }
+            console.log("manifest OK：" + m.files.length + " 个文件，" + m.layers?.length + " 层");
+          '
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@cf430e03d0f07b6d4001b0b4d8f8b8f5e5b5b5b5
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+
+  # ─────────────────────────── deploy（T3.9 · 第 2 条）───────────────────────
+  # 只有这个 job 拿 Cloudflare 密钥。部署后逐层核对哈希（第 3 条）。
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: 安装锁定依赖
+        run: npm ci
+
+      - name: 取回构建产物
+        uses: actions/download-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.1.8 # v4.1.8
+        with:
+          name: dist
+          path: dist
+
       - name: 校验 Cloudflare token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -119,29 +294,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ env.CF_ACCOUNT_ID }}
         run: |
-          npx --yes wrangler@4 pages deploy dist \
+          npx wrangler pages deploy dist \
             --project-name=indexai \
             --branch=main \
             --commit-dirty=true \
             --commit-message="ci: $(date -u +%FT%TZ)"
 
       # 发完再验一次线上：能拿到、且确实是这一轮生成的数据
-      - name: 线上验证
+      - name: 线上验证（逐层核对哈希）
         run: |
           set -euo pipefail
           sleep 5
-          curl -fsS --max-time 30 "$PREV_DATA_URL" -o /tmp/live.json
-          local_gen=$(node -p 'require("./data.json").meta.generated_at')
-          live_gen=$(node -p 'require("/tmp/live.json").meta.generated_at')
-          echo "本地生成: $local_gen"
-          echo "线上返回: $live_gen"
-          if [ "$local_gen" != "$live_gen" ]; then
-            echo "::warning::线上数据与本次生成不一致（CDN 缓存或部署未生效），data.json 缓存 300 秒，可稍后复查"
-          else
-            echo "线上已是本轮数据"
-          fi
+          node scripts/verify-deploy.mjs dist
+          SITE_URL="$(node -p "require('./package.json').homepage")"
           curl -fsS -o /dev/null -w "首页 HTTP %{http_code}，%{size_download} 字节\n" --max-time 30 "$SITE_URL"
-
       - name: 摘要
         run: |
           node health.mjs >> /dev/null 2>&1 || true
@@ -173,20 +339,43 @@ jobs:
           ' >> "$GITHUB_STEP_SUMMARY"
 
       # 失败要响：自动开 issue（已存在同名 open issue 时不重复开）
-      - name: 失败告警
-        if: failure()
+      # 分层告警（T4.2 · S4.2）：读 status/<layer>.ndjson 判「连续两次异常」。
+      #
+      # 与旧做法（按日期开 issue）的区别：
+      #   1. 按层判，不按日期——同一个问题连挂三天开一个 issue 并追加，不是三个
+      #   2. 一个 job 里三层挂了就三个 issue，各带 layer:<id> 标签，修法不同
+      #   3. 恢复后自动评论并关闭，不会越积越多
+      #
+      # 用 if: always() 而不是 failure()：采集中间某层红了但整体没失败时，
+      # 也要能告警——那正是最该被看见的情况。
+      - name: 分层告警（需 data 分支）
+        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           set -euo pipefail
-          TITLE="采集失败：$(date -u +%F)"
-          BODY=$(printf '每日采集任务失败。\n\n**运行记录**：%s\n\n**排查顺序**\n1. 看这一步的日志，health.mjs 会指出是哪一层不达标\n2. 若是 Cloudflare token：重新建 token，模板选 Edit Cloudflare Workers\n3. 若是某个数据源改版：在 collect.mjs 里看对应 fetch 的错误日志，修解析器\n4. 确认线上仍是上一版（旧数据比残缺数据好），修复后手动 workflow_dispatch 重跑\n\n> 线上站点在此期间保持上一次成功发布的数据。\n' "$RUN_URL")
-          existing=$(gh issue list --label collect-failure --state open --json number --jq 'length')
-          if [ "$existing" != "0" ]; then
-            echo "已有未关闭的失败 issue，追加评论"
-            gh issue comment "$(gh issue list --label collect-failure --state open --json number --jq '.[0].number')" --body "$BODY"
-          else
-            gh label create collect-failure --color B60205 --description "每日采集失败" 2>/dev/null || true
-            gh issue create --title "$TITLE" --body "$BODY" --label collect-failure
+          if [ ! -d .data/status ]; then
+            echo "::warning::没有拿到 data 分支，无法按层告警"
+            exit 0
           fi
+          # 打标签（幂等；缺权限不致命）
+          gh label create collect-alert --color D93F0B --description "采集分层告警" 2>/dev/null || true
+          node scripts/alert-layers.mjs --root .data || echo "::warning::告警脚本失败（不影响发布）"
+
+      - name: 状态摘要
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ ! -d .data/status ]; then
+            exit 0
+          fi
+          node -e '
+            const { statusOverview, renderStatusText } = await import("./pipeline/status.mjs");
+            const { readdirSync } = await import("node:fs");
+            const layers = readdirSync(".data/status")
+              .filter((f) => f.endsWith(".ndjson"))
+              .map((f) => f.replace(/\.ndjson$/, ""));
+            console.log("## 分层状态（最近 30 次）");
+            console.log("");
+            console.log(renderStatusText(statusOverview(layers, { root: ".data" })));
+          ' --input-type=module >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || echo "::warning::状态摘要生成失败"

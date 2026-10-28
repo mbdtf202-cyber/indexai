@@ -1,0 +1,955 @@
+#!/usr/bin/env node
+/**
+ * 架构适应度检查（UPGRADE_PLAN S1.5）。
+ *
+ * 每条规则有 id、说明、启用开关与检查函数。检查函数返回违例数组，
+ * 每项形如 { file, line, message }。有违例即退出码 1。
+ *
+ * 规则随任务逐条启用，启用顺序见 IMPLEMENTATION_PLAN.md 的「适应度规则启用表」。
+ */
+
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, extname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+/** 各条规则的启用状态。到了任务就打开，之后永远开着。 */
+export const ENABLED = {
+  R1: true, // T0.1
+  R9: true, // T0.2 起包含 fixtures/http 与 fixtures/golden；T0.5 扩到 fixtures/data
+  R2a: true, // T1.4
+  R2b: true, // T3.3：采集端时间与睡眠只在 lib/clock.js
+  R13: true, // T3.6：每层声明合并策略，且名字在实现表里
+  R8: true, // T2.1（根目录部分）
+  R5: true, // T2.2
+  R10: true, // T2.5
+  R6: true, // T2.6
+  R3: ['pipeline', 'lib'], // T3.1c（site 部分留到 T5.2）
+  R12: true, // T0.6
+  R4: true, // T5.6：十六进制颜色只在 tokens.css
+  R11: true, // T5.6：每个 CSS 选择器只定义一次
+};
+
+/** 需要扫描的源码目录与根目录文件后缀。 */
+/** R3 的适用目录：随 ENABLED.R3 变化，两者必须一致。 */
+const R3_DIRS = ['pipeline', 'lib'];
+
+const SCAN_DIRS = ['lib', 'test', 'scripts', 'site', 'pipeline'];
+const ROOT_EXTS = ['.mjs', '.js', '.ts', '.json'];
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.wrangler',
+  '.ralph',
+  'dist',
+  'coverage',
+  'fixtures',
+]);
+
+/** 递归收集待检查文件。 */
+function collectFiles(dir, acc = []) {
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return acc;
+  }
+  for (const name of entries) {
+    if (SKIP_DIRS.has(name)) continue;
+    const full = join(dir, name);
+    const st = statSync(full);
+    if (st.isDirectory()) {
+      collectFiles(full, acc);
+    } else if (extname(name) === '.mjs' || extname(name) === '.js') {
+      acc.push(full);
+    }
+  }
+  return acc;
+}
+
+/** 读取文件为行数组；文件不存在返回空。 */
+function readLines(file) {
+  try {
+    return readFileSync(file, 'utf8').split('\n');
+  } catch {
+    return [];
+  }
+}
+
+/** 把绝对路径转成相对仓库根的路径，用于输出。 */
+function rel(file) {
+  return relative(ROOT, file) || file;
+}
+
+/**
+ * R1：package.json 没有 dependencies。
+ * 运行时零依赖（INV-6），依赖面越小供应链风险越低。
+ */
+function checkR1() {
+  const pkgPath = join(ROOT, 'package.json');
+  let pkg;
+  try {
+    pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+  } catch (error) {
+    return [{ file: 'package.json', line: 1, message: `无法读取 package.json：${error.message}` }];
+  }
+  if (pkg.dependencies && Object.keys(pkg.dependencies).length > 0) {
+    const names = Object.keys(pkg.dependencies).join(', ');
+    return [
+      {
+        file: 'package.json',
+        line: 1,
+        message: `R1 违反：不允许 dependencies，发现 ${names}`,
+      },
+    ];
+  }
+  return [];
+}
+
+/**
+ * fixtures 各目录的体积上限（S1.4，单位字节）：
+ *   http   ≤ 5 MB   回放数据必须小而真实
+ *   golden ≤ 3 MB   采集输出的逐字节基线
+ *   data   ≤ 1 MB   页面测试用的裁剪快照（T0.5）
+ */
+export const FIXTURE_LIMITS = {
+  http: 5 * 1024 * 1024,
+  golden: 3 * 1024 * 1024,
+  data: 1 * 1024 * 1024,
+};
+
+/** 统计目录总字节数；目录不存在返回 0。 */
+function dirSize(dir) {
+  let total = 0;
+  const walk = (d) => {
+    let entries;
+    try {
+      entries = readdirSync(d);
+    } catch {
+      return;
+    }
+    for (const name of entries) {
+      const full = join(d, name);
+      let st;
+      try {
+        st = statSync(full);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) walk(full);
+      else total += st.size;
+    }
+  };
+  walk(dir);
+  return total;
+}
+
+/**
+ * R9：fixtures 各目录不超过体积上限。
+ * 回放数据必须小到能随仓库走，否则本地与 CI 都会变慢。
+ */
+function checkR9() {
+  const violations = [];
+  for (const [name, limit] of Object.entries(FIXTURE_LIMITS)) {
+    const dir = join(ROOT, 'fixtures', name);
+    const size = dirSize(dir);
+    if (size > limit) {
+      const mb = (size / 1024 / 1024).toFixed(2);
+      const capMb = (limit / 1024 / 1024).toFixed(1);
+      violations.push({
+        file: `fixtures/${name}`,
+        line: 1,
+        message: `R9 违反：${mb} MB 超过上限 ${capMb} MB`,
+      });
+    }
+  }
+  return violations;
+}
+
+/**
+ * R3：单文件不超过 400 行（INV-10 · F56）。
+ *
+ * 理由：一个三千行的 collect.mjs 里，改一条价格要在两千行里定位、diff 里看不出
+ * 改了哪个数字。行数上限是「能不能一次装进脑子」的粗略代理——
+ * 它不完美，但比「感觉太大了」可执行得多。
+ *
+ * 当前只对 `pipeline/` 与 `lib/` 启用；`site/` 部分要等 T5.2 拆完路由再开。
+ */
+const R3_LIMIT = 400;
+
+function checkR3() {
+  const violations = [];
+  for (const dir of R3_DIRS) {
+    const full = join(ROOT, dir);
+    let files;
+    try {
+      files = collectFiles(full);
+    } catch {
+      continue;
+    }
+    for (const file of files) {
+      const rel = relative(ROOT, file);
+      const count = readLines(file).length;
+      if (count > R3_LIMIT) {
+        violations.push({
+          file: rel,
+          line: 1,
+          message: `R3 违反：${count} 行，超过上限 ${R3_LIMIT}`,
+        });
+      }
+    }
+  }
+  return violations;
+}
+
+/**
+ * R6：源码里不出现绝对用户路径（INV-11 · F50）。
+ *
+ * 理由：「`/Users/raki/Desktop/AIOS/...`」这种字符串只在写它那台机器上成立。
+ * 换机器必定静默失效，而且它把私人目录结构留在了公开仓库里。
+ * 需要本机路径时用环境变量（例如 `AIOS_OPPORTUNITIES`），并在文档里说明怎么设。
+ */
+function checkR6() {
+  const violations = [];
+  const files = [
+    'collect.mjs',
+    'bench.mjs',
+    'health.mjs',
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'scripts')).map((f) => relative(ROOT, f)),
+  ].filter((rel) => {
+    try {
+      statSync(join(ROOT, rel));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  // /Users/<名字>/ 与 C:\Users\<名字>\ 这类绝对用户路径
+  const USER_PATH = /(\/Users\/[A-Za-z0-9._-]+\/|[A-Za-z]:\\Users\\[A-Za-z0-9._-]+\\|~\/Desktop\/)/;
+
+  for (const rel of files) {
+    if (rel === join('scripts', 'check-invariants.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      if (!USER_PATH.test(line)) return;
+      violations.push({
+        file: rel,
+        line: i + 1,
+        message: 'R6 违反：出现绝对用户路径，改用环境变量或相对路径',
+      });
+    });
+  }
+  return violations;
+}
+
+/**
+ * R10：用量画像与有效成本公式只在 `lib/effective-cost.js`（INV-5 · F36）。
+ *
+ * 归属变更：拆分时 `lib/cost.js` 被重写为订阅套餐计算，成本公式搬到了
+ * `lib/effective-cost.js`。规则跟着真正的单一来源走，而不是跟着文件名走。
+ *
+ * 理由：同一个公式曾在四处各写一份、参数还不一样（采集端 s=0.3、比价页 s=0.2、
+ * 中转页 s=0.3、方法页两套都抄）。任何一处改动，另外三处就悄悄错，
+ * 而表现出来的只是「同一个模型在两张表里价格不同」——读者只会看到矛盾。
+ *
+ * 检查两件事：
+ * 1. 除 lib/effective-cost.js 外，任何文件里不该再出现 `(1 - h` 这类公式骨架；
+ * 2. 除 lib/effective-cost.js 与方法页文案渲染处，不该再出现写死的阶梯数字 0.7 / 0.2 / 0.3
+ *    与 `h`/`s` 成对赋值（画像只在这里定义）。
+ */
+function checkR10() {
+  const violations = [];
+  const files = [
+    'collect.mjs',
+    'bench.mjs',
+    'health.mjs',
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+  ];
+  try {
+    statSync(join(ROOT, 'index.html'));
+    files.push('index.html');
+  } catch {
+    // 站点入口已迁走时跳过
+  }
+
+  const ALLOWED = new Set(['lib/effective-cost.js', join('lib', 'effective-cost.js')]);
+
+  for (const rel of files) {
+    if (ALLOWED.has(rel)) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 公式骨架：(1 - h) / (1−h) 出现在别处 = 又复刻了一份
+      if (/\(\s*1\s*[-−]\s*h\s*\)/.test(line)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R10 违反：有效成本公式在别处复刻，应调用 lib/cost.js 的 effectiveCost()',
+        });
+      }
+      // 画像成对赋值（h: 0.7 / s: 0.3 这种）也是复刻
+      if (/\bh\s*[:=]\s*0\.\d+/.test(line) && /\bs\s*[:=]\s*0\.\d+/.test(line)) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R10 违反：用量画像在别处定义，应读 lib/effective-cost.js 的 PROFILES',
+        });
+      }
+    });
+  }
+  return violations;
+}
+
+/**
+ * R5：`TODO` / `FIXME` 必须带任务编号，例如 `TODO(T4.2)`。
+ *
+ * 理由（INV-4、INV-10）：没有编号的 TODO 等于一句遗言——没人知道它是谁留下的、
+ * 什么时候该处理、算不算「已完成」。带编号才能被计划表追踪，或者干脆删掉。
+ */
+function checkR5() {
+  const violations = [];
+  const files = [
+    ...['collect.mjs', 'bench.mjs', 'health.mjs'].map((f) => f),
+    ...collectFiles(join(ROOT, 'lib')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'site')).map((f) => relative(ROOT, f)),
+    ...collectFiles(join(ROOT, 'scripts')).map((f) => relative(ROOT, f)),
+  ];
+  try {
+    statSync(join(ROOT, 'index.html'));
+    files.push('index.html');
+  } catch {
+    // 文件可能已迁到 site/
+  }
+
+  for (const rel of files) {
+    // 规则自己的实现与文档里必然出现「TODO」这个词，跳过本文件
+    if (rel === join('scripts', 'check-invariants.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 只看真正的标记：TODO 后面必须紧跟 (T<数字>.<数字>) 才算合格
+      const m = line.match(/\b(TODO|FIXME)\b(?!\s*\()/);
+      if (!m) return;
+      violations.push({
+        file: rel,
+        line: i + 1,
+        message: `R5 违反：${m[1]} 没有任务编号（写成 ${m[1]}(T4.2) 或删掉）`,
+      });
+    });
+  }
+  return violations;
+}
+
+/**
+ * R8：仓库根目录只有白名单文件；dist/ 里只有构建该产出的东西。
+ *
+ * 理由（INV-10）：根目录每多一个文件，新人就要多猜一次「这是不是还在用」。
+ * 孤儿文件、草稿页、一次性脚本都是这么留下来的 —— F28、F30、F37 全是这个形态。
+ * 白名单是**穷举**：新增根目录文件必须同时改这张表，改动会出现在 diff 里。
+ */
+const ROOT_WHITELIST = new Set([
+  // 文档与协作
+  '.gitignore',
+  '.node-version',
+  'AGENTS.md',
+  'ARCHITECTURE.md', // 新架构规格 (T7.x)
+  'IMPLEMENTATION_PLAN.md',
+  'PROMPT_build.md',
+  'README.md',
+  'UPGRADE_PLAN.md',
+  'LICENSE',
+  // 工具链
+  'package.json',
+  'package-lock.json',
+  'biome.jsonc',
+  'tsconfig.json',
+  'playwright.config.js',
+  'playwright.visual.config.js', // T5.5：截图基线只在 CI Linux 容器里跑，单独一份配置
+  'loop.sh',
+  // 采集与体检（T3.1 起并入 pipeline/）
+  'collect.mjs',
+  'bench.mjs',
+  'health.mjs',
+  // 站点（M5 起拆进 site/）
+  'index.html',
+  'favicon.svg',
+  '_headers',
+  // 数据：只有人工维护的种子与归档进仓库
+  'news-archive.json',
+  'news-seed.json',
+  'news', // T4.1: monthly news snapshots directory (replaces news-archive.json)
+  // 本地预览（T3.1d 起迁到 scripts/serve.js）
+  'serve.mjs',
+  // 目录
+  'lib',
+  'test',
+  'scripts',
+  'site',
+  'pipeline',
+  'fixtures',
+  'assets',
+  'dist',
+  'curated',
+  'registry',
+  'types',
+  'node_modules',
+]);
+
+/** 读 .gitignore 的顶层模式，用来判断某个根目录项是否属于「生成物」。 */
+function ignoredRootNames() {
+  const names = new Set();
+  let raw;
+  try {
+    raw = readFileSync(join(ROOT, '.gitignore'), 'utf8');
+  } catch {
+    return names;
+  }
+  for (const line of raw.split('\n')) {
+    const t = line.trim();
+    if (!t || t.startsWith('#') || t.startsWith('!')) continue;
+    // 只认顶层条目（不含 / 的，或形如 name/ 的）
+    if (t.includes('/') && !/^\/?[^/]+\/$/.test(t)) continue;
+    names.add(t.replace(/^\//, '').replace(/\/$/, ''));
+  }
+  return names;
+}
+
+function checkR8() {
+  const violations = [];
+  const ignored = ignoredRootNames();
+  let entries;
+  try {
+    entries = readdirSync(ROOT, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  for (const e of entries) {
+    // 点开头的是工具与编辑器临时物（.git / .wrangler / .DS_Store / .ralph …）
+    if (e.name.startsWith('.')) continue;
+    if (ROOT_WHITELIST.has(e.name)) continue;
+    // 被 .gitignore 忽略的是生成物，不属于「仓库里有什么」
+    if (ignored.has(e.name)) continue;
+    violations.push({
+      file: e.name,
+      line: 1,
+      message: `R8 违反：根目录不该出现 ${e.name}（要么删掉，要么加进 ROOT_WHITELIST 并说明理由）`,
+    });
+  }
+  /* dist/ 部分（T3.9）：构建产物里只该有「构建能生成的东西」。
+   * 混进手写文件是 F37 的形态——它会被发布出去，却不在任何构建清单里，
+   * 下次谁都不知道它是哪来的、还敢不敢删。 */
+  /* dist/ 里允许的目录：构建会产出的那几个。 */
+  const DIST_ALLOWED_DIRS = new Set([
+    'assets',
+    'data',
+    'lib',
+    'news',
+    'feeds',
+    'styles',
+    'client',
+    'scripts',
+    'pages',
+  ]);
+  const DIST_ALLOWED_FILE =
+    /^(?:index\.html|favicon\.svg|_headers|sitemap\.xml|robots\.txt|data\.json|bench\.json|news-(?:archive|milestones)\.json|manifest\.json)$/;
+
+  /* 路由表声明的页面。从表里读而不是手写清单：手写清单每加一个页面就要改两处，
+   * 忘掉一处就会出现「构建正确但适应度检查报错」的假警报。 */
+  const routeFiles = new Set();
+  try {
+    const src = readFileSync(join(ROOT, 'site', 'routes', 'index.mjs'), 'utf8');
+    for (const m of src.matchAll(/file:\s*'([^']+\.html)'/g)) routeFiles.add(m[1]);
+  } catch {
+    /* 路由表还读不到：只允许固定那几份 */
+  }
+
+  let distEntries;
+  try {
+    distEntries = readdirSync(join(ROOT, 'dist'), { withFileTypes: true });
+  } catch {
+    return violations; // 还没构建过：不算违反
+  }
+
+  for (const e of distEntries) {
+    if (e.name.startsWith('.')) continue;
+    if (e.isDirectory()) {
+      if (!DIST_ALLOWED_DIRS.has(e.name)) {
+        violations.push({
+          file: join('dist', e.name),
+          line: 1,
+          message: `R8 违反：dist/ 里不该有目录 ${e.name}（构建不会产出它）`,
+        });
+      }
+      continue;
+    }
+    if (!DIST_ALLOWED_FILE.test(e.name) && !routeFiles.has(e.name)) {
+      violations.push({
+        file: join('dist', e.name),
+        line: 1,
+        message: `R8 违反：dist/ 里不该有 ${e.name}（构建不会产出它；手放的文件请挪进 assets/）`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * R4：十六进制颜色只出现在 site/styles/tokens.css（T5.6 · S9.5）。
+ *
+ * 理由：颜色写散在组件里，改主题时要翻遍所有文件找 `#fff`。
+ * 深色模式更是直接失控——每加一个写死的颜色，就多一处深色下看不见的角落。
+ *
+ * 允许的例外：tokens.css 本身（它就是定义颜色的地方），
+ * 以及 data: URL 里的内嵌 SVG（那是图形内容，不是主题色）。
+ */
+function checkR4() {
+  const violations = [];
+  const ALLOWED = join(ROOT, 'site', 'styles', 'tokens.css');
+
+  /* 明确登记的例外。每一条都要写清「为什么 CSS 变量解决不了」——
+   * 例外清单不写理由，就会变成「反正加进来就过了」。
+   *
+   * 形式：文件相对路径 → 允许的字面量集合（null 表示只允许该文件出现颜色）。 */
+  const EXCEPTIONS = new Map([
+    /* <meta name="theme-color"> 是浏览器读的，不吃 CSS 变量。 */
+    [join('site', 'routes', 'prerender.mjs'), new Set(['#0b0d10'])],
+    /* 色板兜底：某个分类没有配色时用中性灰。这个值要和 tokens.css 的
+     * --color-text-muted 一致；写法在 JS 里，CSS 变量取不到，只能重复一次。 */
+    [join('site', 'scripts', 'app.js'), new Set(['#b9b9b9'])],
+    /* <meta name="theme-color"> 是浏览器读的（地址栏配色），不吃 CSS 变量。 */
+    ['index.html', new Set(['#ffffff', '#0a0b0a'])],
+  ]);
+
+  const files = [];
+  const walk = (dir) => {
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (
+          ['node_modules', 'dist', '.git', '.data', 'fixtures', 'test-results'].includes(e.name)
+        ) {
+          continue;
+        }
+        walk(p);
+      } else if (/\.(css|js|mjs|html)$/.test(e.name)) {
+        files.push(p);
+      }
+    }
+  };
+  walk(join(ROOT, 'site'));
+  files.push(join(ROOT, 'index.html'));
+
+  for (const file of files) {
+    if (file === ALLOWED) continue;
+
+    let text;
+    try {
+      text = readFileSync(file, 'utf8');
+    } catch {
+      continue;
+    }
+
+    /* 去掉注释与 data: URL，再看还有没有 #rgb / #rrggbb。 */
+    const code = text
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/data:[^"')]+/g, '');
+
+    const hits = code.match(/#[0-9a-fA-F]{3,8}\b/g) || [];
+    /* 排除 CSS 选择器里的 id 与锚点链接：#view、#compare */
+    const allowedHere = EXCEPTIONS.get(relative(ROOT, file)) || new Set();
+    const real = hits
+      .filter((h) => /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(h))
+      .filter((h) => !allowedHere.has(h.toLowerCase()));
+
+    if (real.length) {
+      violations.push({
+        file: relative(ROOT, file),
+        line: 1,
+        message: `R4 违反：十六进制颜色 ${[...new Set(real)].join(' ')} 应当移到 tokens.css`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * R11：每个 CSS 选择器只定义一次（T5.6 · S9.5）。
+ *
+ * 理由：同一选择器在两处出现，后一处会静默覆盖前一处——改样式时改了没生效，
+ * 或者生效了但不知道是哪一条。这类问题在字体、间距上尤其难查。
+ *
+ * 例外：媒体查询里的同名选择器是合法的（那是不同条件）；
+ * 本规则只查**同一文件内、同一层嵌套深度**的重复。
+ */
+function checkR11() {
+  const violations = [];
+  const CSS_DIR = join(ROOT, 'site', 'styles');
+
+  let files = [];
+  try {
+    files = readdirSync(CSS_DIR).filter((f) => f.endsWith('.css'));
+  } catch {
+    return [];
+  }
+
+  for (const name of files) {
+    let text;
+    try {
+      text = readFileSync(join(CSS_DIR, name), 'utf8');
+    } catch {
+      continue;
+    }
+
+    /* 只取顶层规则的选择器（跳过 @media / @supports 内部）。 */
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, '');
+    const seen = new Map();
+    const dupes = [];
+
+    /* 逐字符扫，记录花括号深度；深度 0 处的选择器才算顶层。 */
+    let depth = 0;
+    let buf = '';
+    for (let i = 0; i < stripped.length; i += 1) {
+      const ch = stripped[i];
+      if (ch === '{') {
+        const sel = buf.trim().replace(/\s+/g, ' ');
+        if (depth === 0 && sel && !sel.startsWith('@')) {
+          if (seen.has(sel)) dupes.push(sel);
+          else seen.set(sel, true);
+        }
+        depth += 1;
+        buf = '';
+      } else if (ch === '}') {
+        depth = Math.max(0, depth - 1);
+        buf = '';
+      } else if (ch === ';' && depth === 0) {
+        buf = '';
+      } else {
+        buf += ch;
+      }
+    }
+
+    if (dupes.length) {
+      violations.push({
+        file: relative(ROOT, join(CSS_DIR, name)),
+        line: 1,
+        message: `R11 违反：选择器重复定义 ${[...new Set(dupes)].slice(0, 5).join(' / ')}`,
+      });
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * R13：每层必须声明合并策略，且策略名有实现（T3.6 · S3.3）。
+ *
+ * 为什么值得一条规则：拆层最容易丢的就是合并语义——层还在、`merge` 还叫这个名字，
+ * 但里面只剩「本次有就用本次」。那是整层回退不是合并，部分采集直接把数量打塌（F38）。
+ * 声明了策略名，至少能在代码评审时看出「这一层到底打算怎么合」。
+ */
+function checkR13() {
+  const violations = [];
+  const ALLOWED = new Set(['catalog', 'sessions', 'archive', 'curated']);
+
+  let dirs = [];
+  try {
+    dirs = readdirSync(join(ROOT, 'pipeline', 'layers'), { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
+  } catch {
+    return violations;
+  }
+
+  for (const id of dirs) {
+    const rel = join('pipeline', 'layers', id, 'index.js');
+    let text = '';
+    try {
+      text = readFileSync(join(ROOT, rel), 'utf8');
+    } catch {
+      continue;
+    }
+    const m = text.match(/mergeStrategy:\s*'([a-z]+)'/);
+    if (!m) {
+      violations.push({ file: rel, line: 1, message: `R13 违反：层 ${id} 没声明 mergeStrategy` });
+      continue;
+    }
+    if (!ALLOWED.has(m[1])) {
+      violations.push({
+        file: rel,
+        line: 1,
+        message: `R13 违反：层 ${id} 的策略 ${m[1]} 不在 ${[...ALLOWED].join('/')} 之内`,
+      });
+    }
+  }
+  return violations;
+}
+
+/**
+ * R2b：采集端的「取当前时间」与「睡眠」只出现在 lib/clock.js（T3.3 · INV-7）。
+ *
+ * 理由：没有注入的时钟就没有确定性。同一个输入跑两次结果不同，
+ * golden 就没法逐字节比较，回压体系从根上失效。
+ *
+ * 检查三件事（只看采集侧 pipeline/ 与 lib/，测试与站点不管）：
+ * 1. 无参 new Date() —— 要时间就调 now()
+ * 2. Date.now() —— 同上
+ * 3. setTimeout —— 睡眠只走 sleep()
+ *
+ * 允许的例外：
+ * - lib/clock.js 本身（它就是出口）
+ * - new Date(某个参数) —— 解析时间戳，不是取当前时间
+ * - 「测量耗时」也拦：耗时会让输出不确定，该用 clock 的 mark() / since()
+ */
+function checkR2b() {
+  const violations = [];
+  const dirs = ['pipeline', 'lib'];
+
+  for (const dir of dirs) {
+    let files = [];
+    try {
+      files = collectFiles(join(ROOT, dir));
+    } catch {
+      continue;
+    }
+    for (const abs of files) {
+      const rel = relative(ROOT, abs);
+      if (rel === join('lib', 'clock.js')) continue;
+      /* budget.mjs 的预算计时器必须真实走墙钟：超时判断若被固定时钟抹平，
+       * 「某层超预算」永远测不到。这是唯一一处豁免，且只在 setTimeout 上。 */
+      if (rel === join('pipeline', 'budget.mjs')) continue;
+      if (!/\.(m?js)$/.test(rel)) continue;
+
+      readLines(abs).forEach((line, i) => {
+        const code = line.replace(/\/\/.*$/, '').replace(/^\s*\*.*$/, '');
+        if (/new\s+Date\s*\(\s*\)/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：new Date() 只允许出现在 lib/clock.js，用 ctx 的 now()',
+          });
+        }
+        if (/\bDate\.now\s*\(/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：Date.now() 只允许出现在 lib/clock.js，用 mark() / since()',
+          });
+        }
+        if (/\bsetTimeout\s*\(/.test(code)) {
+          violations.push({
+            file: rel,
+            line: i + 1,
+            message: 'R2b 违反：setTimeout 只允许出现在 lib/clock.js，用 sleep()',
+          });
+        }
+      });
+    }
+  }
+  return violations;
+}
+
+/**
+ * R2a：采集端（collect.mjs / bench.mjs / health.mjs / lib/*.js）的 `fetch(`
+ * 只出现在 `lib/http.js`。
+ *
+ * 理由（S2.1、INV-8）：超时、重试、限速、记账都收在那一个出口里。
+ * 任何一处绕过它，就等于多一个「没有超时」的漏洞 —— F05 就是这么来的。
+ * 浏览器端另有 R2c，规则不同，不要混。
+ */
+function checkR2a() {
+  const targets = ['collect.mjs', 'bench.mjs', 'health.mjs'];
+  const dirs = ['lib', 'pipeline'];
+  const files = [];
+  for (const name of targets) {
+    try {
+      statSync(join(ROOT, name));
+      files.push(name);
+    } catch {
+      // 文件可能已迁移到 pipeline/，不存在就跳过
+    }
+  }
+  for (const dir of dirs) {
+    try {
+      for (const f of collectFiles(join(ROOT, dir))) files.push(relative(ROOT, f));
+    } catch {
+      // 目录还不存在
+    }
+  }
+
+  const violations = [];
+  for (const rel of files) {
+    // 回放/录制层是「替换 fetch」这件事本身，不是调用方
+    if (/^test\//.test(rel) || rel === join('lib', 'http.js')) continue;
+    readLines(join(ROOT, rel)).forEach((line, i) => {
+      // 去掉行注释与块注释的粗略处理：够用，误报比漏报便宜
+      const code = line.replace(/\/\/.*$/, '');
+      // 白名单：层契约里的 `layer.fetch(ctx)` 与 `.fetch(` 形式的属性调用
+      // 是协议调用，不发起网络。真正要拦的是裸 `fetch(` 与 `globalThis.fetch`。
+      const isMethodCall = /\.\s*fetch\s*\(/.test(code);
+      const isDefinition = /^\s*(async\s+)?fetch\s*\([^)]*\)\s*\{/.test(code);
+      if (/\bfetch\s*\(/.test(code) && !isMethodCall && !isDefinition) {
+        violations.push({
+          file: rel,
+          line: i + 1,
+          message: 'R2a 违反：采集端 fetch( 只能出现在 lib/http.js',
+        });
+      }
+    });
+  }
+  return violations;
+}
+
+/**
+ * R12：工作流里的 `uses:` 全部是 40 位 SHA；不出现 `npx --yes`、Node 20。
+ * 浮动的主版本标签会静默换实现，`npx --yes` 会从网络拉未锁定版本，
+ * Node 20 已于 2026-04-30 停止维护 —— 三者都是供应链与可复现的漏洞。
+ */
+function checkR12() {
+  const dir = join(ROOT, '.github', 'workflows');
+  let files;
+  try {
+    files = readdirSync(dir).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
+  } catch {
+    return [];
+  }
+
+  const violations = [];
+  for (const name of files) {
+    const rel = `.github/workflows/${name}`;
+    readLines(join(dir, name)).forEach((line, i) => {
+      const n = i + 1;
+      // uses: 必须带 40 位 SHA；注释里可写版本号
+      const uses = line.match(/^\s*(?:-\s*)?uses:\s*(\S+)/);
+      if (uses) {
+        const ref = uses[1];
+        const [, sha] = ref.split('@');
+        if (!sha || !/^[0-9a-f]{40}$/.test(sha)) {
+          violations.push({
+            file: rel,
+            line: n,
+            message: `R12 违反：uses 未固定到 40 位 SHA（${ref}）`,
+          });
+        }
+      }
+      if (/npx\s+--yes/.test(line)) {
+        violations.push({ file: rel, line: n, message: 'R12 违反：出现 npx --yes（未锁定版本）' });
+      }
+      if (/node-version:\s*["']?20["']?\b/.test(line)) {
+        violations.push({
+          file: rel,
+          line: n,
+          message: 'R12 违反：Node 20 已停止维护，改用 .node-version',
+        });
+      }
+    });
+  }
+  return violations;
+}
+
+/** 规则表。每条含 id、说明与检查函数。 */
+export const RULES = [
+  { id: 'R1', description: 'package.json 没有 dependencies', check: checkR1 },
+  {
+    id: 'R9',
+    description: 'fixtures 各目录不超过体积上限',
+    check: checkR9,
+  },
+  {
+    id: 'R13',
+    description: '每层声明合并策略',
+    check: checkR13,
+  },
+  {
+    id: 'R2b',
+    description: '采集端时间与睡眠只在 lib/clock.js',
+    check: checkR2b,
+  },
+  {
+    id: 'R3',
+    description: '单文件不超过 400 行',
+    check: checkR3,
+  },
+  {
+    id: 'R6',
+    description: '源码里无绝对用户路径',
+    check: checkR6,
+  },
+  {
+    id: 'R10',
+    description: '用量画像与有效成本公式只在 lib/cost.js',
+    check: checkR10,
+  },
+  {
+    id: 'R5',
+    description: 'TODO/FIXME 必须带任务编号',
+    check: checkR5,
+  },
+  {
+    id: 'R8',
+    description: '根目录只有白名单文件',
+    check: checkR8,
+  },
+  {
+    id: 'R2a',
+    description: '采集端 fetch( 只在 lib/http.js',
+    check: checkR2a,
+  },
+  {
+    id: 'R12',
+    description: 'workflow 的 uses 固定 SHA，无 npx --yes 与 Node 20',
+    check: checkR12,
+  },
+  {
+    id: 'R4',
+    description: '十六进制颜色只出现在 site/styles/tokens.css',
+    check: checkR4,
+  },
+  {
+    id: 'R11',
+    description: '每个 CSS 选择器只定义一次',
+    check: checkR11,
+  },
+];
+
+/**
+ * 运行启用的规则，返回全部违例。
+ */
+export function runRules() {
+  const violations = [];
+  for (const rule of RULES) {
+    if (!ENABLED[rule.id]) continue;
+    for (const v of rule.check()) {
+      violations.push({ rule: rule.id, ...v });
+    }
+  }
+  return violations;
+}
+
+/** 供未来规则复用的工具导出。 */
+export const _internal = { ROOT, collectFiles, readLines, rel, SCAN_DIRS, ROOT_EXTS };
+
+// 直接运行时执行检查
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const violations = runRules();
+  if (violations.length === 0) {
+    const active = Object.entries(ENABLED)
+      .filter(([, on]) => on)
+      .map(([id]) => id);
+    console.log(`适应度检查通过（启用规则：${active.join(', ') || '无'}）`);
+    process.exit(0);
+  }
+  for (const v of violations) {
+    console.error(`${v.file}:${v.line}  [${v.rule}] ${v.message}`);
+  }
+  console.error(`\n共 ${violations.length} 处违例。`);
+  process.exit(1);
+}

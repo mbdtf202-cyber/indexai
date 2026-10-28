@@ -1,0 +1,1766 @@
+{
+  "schema": "news-labels/v1",
+  "note": "T6.4 情报主题标注集：352 条标题，按主题规则人工复核；用于 macro-F1 回归。",
+  "items": [
+    {
+      "title": "40 名英国议员联名致信首相 Andy Burnham 呼吁禁止开发超级智能 AI",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmtyci31i0a1zrojh7wcrh10y"
+    },
+    {
+      "title": "404 Media 分析 PHP2Shell 事件如何改变 AI 时代的攻防格局",
+      "topic": "other",
+      "url": "https://aihot.news/items/pe2uqi2ny6l2lukrqzifbtyum"
+    },
+    {
+      "title": "AI 初创招聘最难的岗位要求",
+      "topic": "other",
+      "url": "https://aihot.news/items/addc41fnma94fira4p4ei1tcf"
+    },
+    {
+      "title": "AI 挖出潜伏十几年的 PHP 底层漏洞，PHP2Shell 事件全景复盘",
+      "topic": "safety",
+      "url": "https://aihot.news/items/h1v8wxdkljwpiyadhmy7miw4x"
+    },
+    {
+      "title": "AISI 发布技术报告：分析 Mythos 5 对齐失败与未授权攻击行为",
+      "topic": "safety",
+      "url": "https://aihot.news/items/z0bvyvw47egmxydg6jwaxqxki"
+    },
+    {
+      "title": "AI初创公司Skyfall AI出价100万美元收购SaaS公司，由AI完全自主担任CEO运营",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmruzdp3400vrbinvhht0gga1"
+    },
+    {
+      "title": "AI生成书籍正淹没亚马逊，并拉低人类作者的单书收入",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmsuaf2hr05zgroe0y1e7275v"
+    },
+    {
+      "title": "AWS 提出 priming 方法，可将预训练 Transformer 改造成混合状态空间架构",
+      "topic": "other",
+      "url": "https://aihot.news/items/w2408fxlrc7tc7nt3ivrzh9ys"
+    },
+    {
+      "title": "Ai2 开源 8B 科学报告生成模型 AstaBrief",
+      "topic": "model",
+      "url": "https://aihot.news/items/l7mkdees7p8apb7stdidl4p3i"
+    },
+    {
+      "title": "Anthropic IPO 推迟至中期选举前，最早 10 月中旬启动路演，目标估值 2 万亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmtnl720g03olroqsrkmbl292"
+    },
+    {
+      "title": "Anthropic 与 SpaceX 签署最高 845 亿美元算力协议，可提前 90 天通知解除",
+      "topic": "funding",
+      "url": "https://aihot.news/items/tezd4474gysof1re07lje1xc3"
+    },
+    {
+      "title": "Anthropic 与英国 AISI 发布网络测试失控调查报告，并披露一款未发布内部研究模型",
+      "topic": "safety",
+      "url": "https://aihot.news/items/h1gj9po4w92b1sthx81nbvzkp"
+    },
+    {
+      "title": "Anthropic 为 Claude Max 和 Team 套餐推出月度 Platform API 额度",
+      "topic": "price",
+      "url": "https://aihot.news/items/ponkn6n046yorr5pg1yv3yjm5"
+    },
+    {
+      "title": "Anthropic 介绍 Claude Duet 智能体的安全、隐私与凭证隔离设计",
+      "topic": "safety",
+      "url": "https://aihot.news/items/g9tc56izmwy49zgw5ta4ubsya"
+    },
+    {
+      "title": "Anthropic 分析 Claude Mythos 5 在 UK AISI CTF 测试中的对齐失当行为",
+      "topic": "safety",
+      "url": "https://aihot.news/items/poiju1x1007ttnz9cc4ioj6ro"
+    },
+    {
+      "title": "Anthropic 发布 2026 年使用政策更新，11 月 12 日生效",
+      "topic": "policy",
+      "url": "https://aihot.news/items/at5dvel8balkaba9wrggcrqoj"
+    },
+    {
+      "title": "Anthropic 发布 Claude Fable 5.1 与 Claude Mythos 5.1",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtjjkmd800r4roe4wpq221bc"
+    },
+    {
+      "title": "Anthropic 发布 Claude Haiku 5.5，Artificial Analysis 评测得分 43",
+      "topic": "model",
+      "url": "https://aihot.news/items/ms4yfg2a6aiqlzrqm0u4eedyh"
+    },
+    {
+      "title": "Anthropic 发布 Claude Haiku 5.5，运行成本平均降低约 75%",
+      "topic": "price",
+      "url": "https://aihot.news/items/lqyhqdf0u7iksn5ydnpyhk81x"
+    },
+    {
+      "title": "Anthropic 发布 Claude Opus 5.5，Claude 5.5 系列首个模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmucwpqty0rj8roedzxz1496u"
+    },
+    {
+      "title": "Anthropic 发布 Claude Opus 5.5，成本较 Opus 5 降低 40%",
+      "topic": "price",
+      "url": "https://aihot.news/items/cmucwy58v0rskroedmv35n8ji"
+    },
+    {
+      "title": "Anthropic 发布 Claude Sonnet 5.5，速度提升 30%+ 且每任务成本最多降低 30%",
+      "topic": "price",
+      "url": "https://aihot.news/items/x8r8kta42au39pp06f02shk9f"
+    },
+    {
+      "title": "Anthropic 发布前沿 AI 开发节奏测量工具与内部指标快照",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmu605ozy000arok0lxr4x1y8"
+    },
+    {
+      "title": "Anthropic 团队详解如何用 Claude 在两周内把 claude.ai 提速约 3 倍",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmuekny10060lroyn21gctbfw"
+    },
+    {
+      "title": "Anthropic 如何在 Claude 写下 Claude Code 约 90% 代码后重新设计代码评审",
+      "topic": "model",
+      "url": "https://aihot.news/items/p4mq9t7wyzlxritu15i6d8dtv"
+    },
+    {
+      "title": "Anthropic 将 Agent Skills 开放标准捐赠给 Linux Foundation 旗下 Agentic AI Foundation",
+      "topic": "product",
+      "url": "https://aihot.news/items/p74ybrpplgjfi3d8ql7fz0z6k"
+    },
+    {
+      "title": "Anthropic 将 Claude Sonnet 5.5 缓存读取价格减半至每百万 token $0.10",
+      "topic": "price",
+      "url": "https://aihot.news/items/zn6imszjo14gki6kr2uyydknp"
+    },
+    {
+      "title": "Anthropic 指南：何时把子智能体合并进主 Agent 循环",
+      "topic": "product",
+      "url": "https://aihot.news/items/rtbm48num2azmqgrrzy2ep7il"
+    },
+    {
+      "title": "Anthropic 推出开源漏洞扫描服务 OSS Scanner，免费面向开源项目",
+      "topic": "safety",
+      "url": "https://aihot.news/items/xfch7s2npl8a4651n2ymips4k"
+    },
+    {
+      "title": "Anthropic 用 Claude Managed Agents 构建定时智能体自动化的实践指南",
+      "topic": "model",
+      "url": "https://aihot.news/items/gq8yjkqlcdbpy0l5uc8ch2sj8"
+    },
+    {
+      "title": "Anthropic 用 Claude 对 123 个开源库完成汇编级形式化安全证明",
+      "topic": "safety",
+      "url": "https://aihot.news/items/jsr18rtgxl0kvb0k7np7lpyou"
+    },
+    {
+      "title": "Anthropic 用 Claude 揭开 NIST ECDSA 曲线种子来源之谜",
+      "topic": "model",
+      "url": "https://aihot.news/items/ckrtcqc9dnngil5ev7m60ns4v"
+    },
+    {
+      "title": "Anthropic 研究测算机器人对岗位的暴露度：机器人可做 74% 的物理任务但仅 0.3% 具备成本竞争力",
+      "topic": "price",
+      "url": "https://aihot.news/items/lzxm86234leqs91hbocegps1l"
+    },
+    {
+      "title": "Anthropic 第三季度收入 16.8B 美元，环比增速放缓至约 45%",
+      "topic": "funding",
+      "url": "https://aihot.news/items/xtdw2sq8i3jth6fzqy9p8ixrt"
+    },
+    {
+      "title": "Anthropic 评测 GLM-5.3：能自主构建端到端网络漏洞利用且防护易被绕过",
+      "topic": "safety",
+      "url": "https://aihot.news/items/eqf3o3tlak08851t52unuji2o"
+    },
+    {
+      "title": "Apple 发布 7 英寸智能音箱 HomeView，售价 299 美元并搭载 Siri AI",
+      "topic": "product",
+      "url": "https://aihot.news/items/kjcq4dywmvs5xijl4emac5o40"
+    },
+    {
+      "title": "Apple 发布首款折叠屏 iPhone Duo，起售价 $1,999",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmtugou9e1cddrofptz3jwh4j"
+    },
+    {
+      "title": "Arena 宣布 2 亿美元 B 轮融资，估值达 31 亿美元，并推出 Alignment Index",
+      "topic": "funding",
+      "url": "https://aihot.news/items/p95hk44dfpkogo2v4rgwvxq30"
+    },
+    {
+      "title": "Arena 获 Lightspeed 领投 2 亿美元 B 轮融资，估值 31 亿美元并推出 Alignment Index",
+      "topic": "funding",
+      "url": "https://aihot.news/items/qtsvk3wzyp2aab3vi62vjyold"
+    },
+    {
+      "title": "ArtCraft 开源项目推出 WordCraft 等 Office 复刻应用",
+      "topic": "model",
+      "url": "https://aihot.news/items/qhuqcpkqblqlk3yxt7idhteod"
+    },
+    {
+      "title": "Artificial Analysis 开源 AA-AgentPerf-Local，测试笔记本与工作站上本地 AI 智能体推理性能",
+      "topic": "model",
+      "url": "https://aihot.news/items/uet0fx7vwv720jh2evuzmfbmm"
+    },
+    {
+      "title": "Artificial Analysis 评测 Gemini 4 Argon：Google 重回智能前三梯队",
+      "topic": "model",
+      "url": "https://aihot.news/items/thdata2aa7ex9kgzv72mk4kn3"
+    },
+    {
+      "title": "Barclays 扩大与 Anthropic 合作，将 Claude 推广至全行",
+      "topic": "model",
+      "url": "https://aihot.news/items/q7dotqy89y283i0h88r5uvbdq"
+    },
+    {
+      "title": "Baseten 工程师实测：LLM 生成的推理引擎比 vLLM 快最多 90%",
+      "topic": "model",
+      "url": "https://aihot.news/items/uwm1ml1igd8k2u81g14uf8pc3"
+    },
+    {
+      "title": "Beatport 全面封禁纯 AI 生成音乐",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmtcv8im904xoroq5ifc0tcne"
+    },
+    {
+      "title": "Block 如何用 Claude Fable 编排数千个 pull request 的代码迁移",
+      "topic": "model",
+      "url": "https://aihot.news/items/myoe16r78gjt87vu92995zsae"
+    },
+    {
+      "title": "Bloomberg 报道 DeepSeek 新一轮融资约 150 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/eud25k8zsrrwc63xp39ptvfah"
+    },
+    {
+      "title": "Bloomberg：Anthropic 为可能估值近 2 万亿美元的 IPO 邀请机构投资者质询高管",
+      "topic": "funding",
+      "url": "https://aihot.news/items/nab0yosxdtyh7sbvoo0usb1iq"
+    },
+    {
+      "title": "ChatGPT 推出 Finances 财务管理功能",
+      "topic": "product",
+      "url": "https://aihot.news/items/ouqidz9vopsnd1srzkmfz4zmn"
+    },
+    {
+      "title": "ChatGPT 推出 Space 团队协作功能与交互式文档 pages",
+      "topic": "product",
+      "url": "https://aihot.news/items/e4a2k70bkqzz23di75itqnegk"
+    },
+    {
+      "title": "ChatGPT 订阅额度现可在 60 多个合作方产品中直接使用",
+      "topic": "price",
+      "url": "https://aihot.news/items/l641opkl15r7iy1fa80jyuh1l"
+    },
+    {
+      "title": "ChinaTalk 解读商务部第48号公告对AI技术出口管制的影响",
+      "topic": "policy",
+      "url": "https://aihot.news/items/btdpdvumudpoab4rls1j5ni8m"
+    },
+    {
+      "title": "Claude Code v2.1.293 发布：新增 Claude Haiku 5.5 并修复大量问题",
+      "topic": "model",
+      "url": "https://aihot.news/items/vd2lvzvjz4tujiqupl30ifq3k"
+    },
+    {
+      "title": "Claude Code 上线空闲会话自动压缩，在 prompt cache 过期前保存上下文摘要",
+      "topic": "model",
+      "url": "https://aihot.news/items/eakvf9729rp0bi3gr25iut3xg"
+    },
+    {
+      "title": "Claude Code 团队如何做代码审查",
+      "topic": "model",
+      "url": "https://aihot.news/items/x02vc0ewajam37hjrbpwsfnre"
+    },
+    {
+      "title": "Claude Code 团队成员 Thariq 宣布离开 Anthropic",
+      "topic": "model",
+      "url": "https://aihot.news/items/hhwasdljj9hnckutq2vvyei4i"
+    },
+    {
+      "title": "Claude Code 新版本现身",
+      "topic": "model",
+      "url": "https://aihot.news/items/dmunsufvheecfi2i4li9rh2m9"
+    },
+    {
+      "title": "Claude Code 核心成员 Thariq 宣布离开 Anthropic",
+      "topic": "model",
+      "url": "https://aihot.news/items/gx3wy7j0pxgj622oi2xy4u4sd"
+    },
+    {
+      "title": "Claude 九月回顾：Chat 与 Cowork 合一，Claude 5.5 系列模型上线",
+      "topic": "model",
+      "url": "https://aihot.news/items/g0wo2aksqgzw87bywxaeo631z"
+    },
+    {
+      "title": "Claude 完成 N=4 super Yang-Mills 九圈散射振幅计算，物理学家 Matt von Hippel 撰文回顾挑战过程",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmuh9ma6u02x0ro3blswug5fk"
+    },
+    {
+      "title": "Claude 推出 Dashboards 实时仪表盘与 Motion 动画讲解功能",
+      "topic": "model",
+      "url": "https://aihot.news/items/winsvtlfubhjfi0wnone83j5c"
+    },
+    {
+      "title": "Claude 网页、桌面和移动端将默认启用 auto mode",
+      "topic": "model",
+      "url": "https://aihot.news/items/ybo2q5ug2e71tfuab9m1t128o"
+    },
+    {
+      "title": "Codex 与 ChatGPT Work 活跃用户达 4000 万新高，付费账户重置已全部到账",
+      "topic": "other",
+      "url": "https://aihot.news/items/zdgw2hhfjitur1qmeuminh3lm"
+    },
+    {
+      "title": "Codex 支持对话中切换推理等级",
+      "topic": "product",
+      "url": "https://aihot.news/items/r8s64sz704toyhz5jmuzz55zc"
+    },
+    {
+      "title": "Conway Research 发布 2-bit 量化版 Saluki 27B，7.89 GB 工具调用反超原版 Qwen3.8-27B",
+      "topic": "model",
+      "url": "https://aihot.news/items/h7pvcekl9p3n51oifvbjufk16"
+    },
+    {
+      "title": "Crowdstrike 报告疑似单人使用 AI 渗透工具攻击多家韩国银行",
+      "topic": "safety",
+      "url": "https://aihot.news/items/br6vb46mhi9mkv2pxiq59k8z7"
+    },
+    {
+      "title": "Cursor 推出 Origin 代码托管服务，作为 GitHub 的替代方案",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmsxsvb5s0a4troz0z2q2nu3h"
+    },
+    {
+      "title": "DeepSeek AI 发布 DeepSeek-V4.1-Flash：1M 上下文、FP4 KV 缓存与跨层注意力复用",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtv7kmzk02vdrok9y0y8njiv"
+    },
+    {
+      "title": "DeepSeek 发布 V4.1-Flash，API 价格同步下调",
+      "topic": "price",
+      "url": "https://aihot.news/items/cmtv48yni0oq5rorpf4o74549"
+    },
+    {
+      "title": "DeepSeek 开放自研搜索 API",
+      "topic": "model",
+      "url": "https://aihot.news/items/x7hxr1lvyddc8hrbrugfx4uyg"
+    },
+    {
+      "title": "DeepSeek 推出 DSec 智能体测试平台",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmuf9qula06barocsyba0ph6s"
+    },
+    {
+      "title": "Dex Horthy 评 OpenAI 智能体用 CPU 缓存隐蔽通信：该技术此前已被演示，可能已存在于权重中",
+      "topic": "model",
+      "url": "https://aihot.news/items/iy15t1r5ol3s78ifbntuh648f"
+    },
+    {
+      "title": "Dex Horthy 谈智能体编程派对",
+      "topic": "product",
+      "url": "https://aihot.news/items/as5o1p09qgniqjpivhv8n1ctg"
+    },
+    {
+      "title": "ElevenLabs 完成 3 亿美元员工股份回购，估值升至 220 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/fkaymng16iu4hg5x53jpq7o8p"
+    },
+    {
+      "title": "ElevenLabs 开设荷兰办公室",
+      "topic": "other",
+      "url": "https://aihot.news/items/ogiyyvibj9yoj2ube3mg8dskk"
+    },
+    {
+      "title": "Elvis Saravia 实测 Cartesia Sonic 3.6 用 15 秒音频克隆语音并讲日语",
+      "topic": "other",
+      "url": "https://aihot.news/items/vu6sv168rduwmycpni8m9jq35"
+    },
+    {
+      "title": "Ethan Mollick 谈点与群：智能体自组织为何让管理假设失效",
+      "topic": "product",
+      "url": "https://aihot.news/items/i35lar26hjm4djheowz5ytplm"
+    },
+    {
+      "title": "FLUX 3 Image 现已登陆 Krea，支持多轮编辑与 4K 生成",
+      "topic": "model",
+      "url": "https://aihot.news/items/uveypxyk0fvw6czfi11nn6tph"
+    },
+    {
+      "title": "FT 报道 Nvidia 洽谈收购或追加投资 250 亿美元估值的开源权重模型公司 Reflection AI",
+      "topic": "funding",
+      "url": "https://aihot.news/items/pygydfau6gpr3a7v7ko4y49ww"
+    },
+    {
+      "title": "FTC 以消费者保护为由对 OpenAI、Anthropic 等 AI 实验室启动全面调查",
+      "topic": "safety",
+      "url": "https://aihot.news/items/nhob7mih29e0owj7ay28t7fvw"
+    },
+    {
+      "title": "Factory Automations 正式开放：Droid 可定时或按事件自动执行工程工作流",
+      "topic": "other",
+      "url": "https://aihot.news/items/u33r5t71q9fo30jygm4iqnfm4"
+    },
+    {
+      "title": "GLM-5.3 发布：编程能力开源第一，并涌现网络安全能力",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmssir12d047oroffnpn5pcx1"
+    },
+    {
+      "title": "GPT-6 Astra 幻觉更少但仍易受隐藏提示词注入攻击",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmtn8fc1w0qb4romyobllbzv9"
+    },
+    {
+      "title": "GPT-6 Luna Decisions 上架 OpenRouter",
+      "topic": "model",
+      "url": "https://aihot.news/items/x40bi9csoomsdaflejehop22y"
+    },
+    {
+      "title": "GPT-6.1 Sol ultrafast 发布，Codex steering 改进为即时响应",
+      "topic": "model",
+      "url": "https://aihot.news/items/mjcipkmcvo0ofbl2tegerkjvi"
+    },
+    {
+      "title": "GPT-6.1 Sol 在 Codex 与 Work 中默认上下文长度提升至 500k",
+      "topic": "model",
+      "url": "https://aihot.news/items/z54sznsd0r2teb6gqyvwu4nc2"
+    },
+    {
+      "title": "GPT-6.1 上线 Arena 评测平台",
+      "topic": "model",
+      "url": "https://aihot.news/items/pa1k4e601e82efx7hhzcil2dm"
+    },
+    {
+      "title": "Garry Tan：传统 SaaS 要么死去，要么变成领域 Harness",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmtybbzpn068grojhzq403n6k"
+    },
+    {
+      "title": "Gary Marcus 借 Jensen Huang 言论主张暂时关停 OpenAI",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmufjyocz04u6ro6ohojge69s"
+    },
+    {
+      "title": "Gemini Omni 1.1 Flash 发布，为开发者提供更强生成式视频控制",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtbq1hfq156croamzzo9gno2"
+    },
+    {
+      "title": "Gemini月活10亿，Gemma下载破10亿",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmsp2ogsx044frorth62oy70c"
+    },
+    {
+      "title": "George Noble 称 SpaceX 定价最离谱，最大空头仓位是 CoreWeave",
+      "topic": "price",
+      "url": "https://aihot.news/items/ja93j3s9jqbpzi55bcbfn8mx1"
+    },
+    {
+      "title": "Goodfire 为 Kimi K3 和 GLM 5.3 训练并部署生产级网络安全监控器",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ja19mtm89yojd9w2u67qp1gqv"
+    },
+    {
+      "title": "Google DeepMind 发布 Gemini 4 Argon，面向可信网络防御者先行开放",
+      "topic": "model",
+      "url": "https://aihot.news/items/uob3jvsb97uh5achwaggjrhqh"
+    },
+    {
+      "title": "Google DeepMind 发布 SynthID Bio，为 AI 生成的蛋白质嵌入可验证水印",
+      "topic": "safety",
+      "url": "https://aihot.news/items/deivg466iwv9ypddacud3hd7d"
+    },
+    {
+      "title": "Google DeepMind 发布开源轻量多模态嵌入模型 EmbeddingGemma 2",
+      "topic": "model",
+      "url": "https://aihot.news/items/g1k2ragppm8j4apj75qu1k4ug"
+    },
+    {
+      "title": "Google DeepMind 开源生物设计安全验证工具",
+      "topic": "safety",
+      "url": "https://aihot.news/items/v43djlkl5qk75bwh4ldthfo91"
+    },
+    {
+      "title": "Google DeepMind 推出 Gemini 3.7 Flash：面向编程与智能体的最强工作模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmsrscwfn03f7ro0n7qijclds"
+    },
+    {
+      "title": "Google DeepMind 推出 SynthID Bio 水印",
+      "topic": "safety",
+      "url": "https://aihot.news/items/mjg7lxu51v562q0ksxv2ec31m"
+    },
+    {
+      "title": "Google Project Suncatcher 首颗原型卫星发射入轨",
+      "topic": "other",
+      "url": "https://aihot.news/items/ljyywltag6vvryw193ryz7lgd"
+    },
+    {
+      "title": "Google 发布 Developer Knowledge API 生态，为 AI 智能体提供官方文档检索",
+      "topic": "product",
+      "url": "https://aihot.news/items/tuqbedzhrouuxwobb1pldbiyd"
+    },
+    {
+      "title": "Google 发布 Gemini 4 Argon：面向复杂工程与科研任务的前沿模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/smxxtw5ca2c9jscojk4ppe5hf"
+    },
+    {
+      "title": "Google 开源 AQuA 环境质量智能体，自动诊断生产环境中的 Agent 故障",
+      "topic": "model",
+      "url": "https://aihot.news/items/col84h6b3pdq383v6iuju3a9v"
+    },
+    {
+      "title": "Google 开源 ML Drift 端侧 GPU 推理引擎，接替 TFLite GPU delegate",
+      "topic": "model",
+      "url": "https://aihot.news/items/vemmtcq70ojxkk343dse8qfuc"
+    },
+    {
+      "title": "Google 推出游戏创作平台 Playground，靠 Gemini 让普通玩家用文字做游戏",
+      "topic": "model",
+      "url": "https://aihot.news/items/lich2hgqik8tgh1s55p0tysh0"
+    },
+    {
+      "title": "Google 研究提出 RRSI，防止自改进智能体记忆测试任务",
+      "topic": "product",
+      "url": "https://aihot.news/items/ppoem158qon2xzi0swn3xp0xp"
+    },
+    {
+      "title": "Google 论文揭示 LLM 会隐瞒负面结果，一句 honesty 提示可大幅改善",
+      "topic": "research",
+      "url": "https://aihot.news/items/dkmm9dhgecbuer490f0uqdi3m"
+    },
+    {
+      "title": "Grok Bot 可保存登录信息与卡片",
+      "topic": "model",
+      "url": "https://aihot.news/items/hfv8wxjl2cnbi47f8xuon9p9i"
+    },
+    {
+      "title": "Grok Bot 将推出 Primary Bot 主助手",
+      "topic": "model",
+      "url": "https://aihot.news/items/nucetiulk5x7hf0ojfdwt3bfn"
+    },
+    {
+      "title": "Grok Bot 推出独立邮箱功能",
+      "topic": "model",
+      "url": "https://aihot.news/items/m77leauczmowax4odp8ql7dkl"
+    },
+    {
+      "title": "Grok Imagine 推出 Odyssey 系列",
+      "topic": "model",
+      "url": "https://aihot.news/items/k8uu7gjb00md2y3raqyeoy3yn"
+    },
+    {
+      "title": "Grok Imagine 生成能力大幅提升",
+      "topic": "model",
+      "url": "https://aihot.news/items/cpcqith9u31bmbgj8d6v9o6pr"
+    },
+    {
+      "title": "Healthleap 融资 3800 万美元，用 AI 从病历中筛查易被漏诊的住院患者",
+      "topic": "funding",
+      "url": "https://aihot.news/items/vzv38m4ewia64b1hxmwqbnv8c"
+    },
+    {
+      "title": "Hugging Face CEO 称收到数千条私信，将花几天逐一处理",
+      "topic": "other",
+      "url": "https://aihot.news/items/br7g8nzvm1vr7rednjbgi4ox0"
+    },
+    {
+      "title": "Hugging Face CEO 称被 NVIDIA 收购后可招募人才并用十年推动开源 AI 取胜",
+      "topic": "funding",
+      "url": "https://aihot.news/items/a5g2n8nm848m2i7oaghvgl55o"
+    },
+    {
+      "title": "Hugging Face 将 OpenAI 数学题转为开源 RL 环境",
+      "topic": "model",
+      "url": "https://aihot.news/items/mum1uuzhhn80x6rw28nqcii1p"
+    },
+    {
+      "title": "Hugging Face 工程师用 ML Intern 以约 103 美元自制 7 个小模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/ylkp4aqm4r5fn7aul2l9kfmxw"
+    },
+    {
+      "title": "Hugging Face 联创发 Microduck 推文",
+      "topic": "other",
+      "url": "https://aihot.news/items/e3qnw3hrbiakzh05coz811uni"
+    },
+    {
+      "title": "Jensen Huang 称行业领袖在白宫签署超级智能协定",
+      "topic": "policy",
+      "url": "https://aihot.news/items/fr7dgcpa02ssu37g9fsmj5q9n"
+    },
+    {
+      "title": "Karpathy：LLM 能力认知鸿沟正扩大为漏斗，仅约 0.2% 的专业用户看到前沿智能体能力",
+      "topic": "product",
+      "url": "https://aihot.news/items/f572f90oc11zg6w7s815vz6m4"
+    },
+    {
+      "title": "Kimi K3 与 Fable 5 对比：开源模型在 93% 路由准确率下成本低至 50 倍",
+      "topic": "price",
+      "url": "https://aihot.news/items/cmrvmzjnv03yobihbxui7w6qv"
+    },
+    {
+      "title": "Kimi K3.1 Pro 上线 WorkBuddy",
+      "topic": "model",
+      "url": "https://aihot.news/items/h65gafcf5ra8v8nz1avghxkgg"
+    },
+    {
+      "title": "Kimi K3.1 Pro 上线 WorkBuddy",
+      "topic": "model",
+      "url": "https://aihot.news/items/uf1ts0a2y088bc3lwbtz37xbt"
+    },
+    {
+      "title": "Kimi K3.1 Pro 发布，以 55 分位列 Artificial Analysis Intelligence Index 第 4",
+      "topic": "model",
+      "url": "https://aihot.news/items/f72pxwtco5m6mokzy5qa3sat8"
+    },
+    {
+      "title": "Kimi K3.1 Pro 发布：2.8T MoE、1M 上下文",
+      "topic": "model",
+      "url": "https://aihot.news/items/hkua219yql7bgmqrpuxtt2axr"
+    },
+    {
+      "title": "Kimi K3.1 Pro 接入 WorkBuddy",
+      "topic": "model",
+      "url": "https://aihot.news/items/h3u1kkbvu4b0hpg18gry8ywee"
+    },
+    {
+      "title": "Kimi 发布 K3.1 Pro：2.8T 参数开源旗舰，作者实测3D与视频动效能力",
+      "topic": "model",
+      "url": "https://aihot.news/items/nlkrh89kgxn1iecvbzq7mub9q"
+    },
+    {
+      "title": "Kimi 发布开源旗舰模型 K3.1 Pro：2.8T 参数、100万 Token 上下文，实测 3D 与视频动效",
+      "topic": "model",
+      "url": "https://aihot.news/items/gwhdq3jo5p1z27wh2i46ntd2s"
+    },
+    {
+      "title": "Kling 4.0 上线 OpenArt，支持首中尾帧引导与最多 10 张参考图",
+      "topic": "model",
+      "url": "https://aihot.news/items/uc21c65s4trz2ums8g8fgtb0v"
+    },
+    {
+      "title": "Kling 4.0 在 fal 上线并向所有客户开放 API 访问",
+      "topic": "model",
+      "url": "https://aihot.news/items/dy6rkvc23lfrolo4y5hjg7evh"
+    },
+    {
+      "title": "Kling 4.0 现已上线 OnSolo",
+      "topic": "model",
+      "url": "https://aihot.news/items/rin0ab4vdu46hjoiyjcj5vih5"
+    },
+    {
+      "title": "LangChain 详解 Deep Agents 的上下文工程：如何记住信息而不塞满上下文窗口",
+      "topic": "model",
+      "url": "https://aihot.news/items/za03v9avbq4fpb2y5b1ql1t27"
+    },
+    {
+      "title": "LangChain 重构 Deep Agents 的 Skills 支持，新增工具绑定、固定技能与线程内重载",
+      "topic": "product",
+      "url": "https://aihot.news/items/m3vyz2bex4i58vffqfx586u3h"
+    },
+    {
+      "title": "LangSmith 推出 AI Search，用自然语言按行为搜索 agent 轨迹",
+      "topic": "product",
+      "url": "https://aihot.news/items/cgbpvdepk4p1jrrawgzbfbxov"
+    },
+    {
+      "title": "Latent Space 梳理 PHP2Shell 漏洞事件：OpenAI Patch the Planet 与 Wiz 各自发现 PHP 核心漏洞",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ih894crlfahslc0pttsw80r0c"
+    },
+    {
+      "title": "Liquid AI 发布开源决策模型 d1-3B 和 d1-omni-600M",
+      "topic": "model",
+      "url": "https://aihot.news/items/qawfhyw1v10hv75bld8ogbjgj"
+    },
+    {
+      "title": "LlamaIndex 发布 OpenDocRouter：一个 API 统一调用多种文档解析模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/hye210jt0h75h9t4dgf4rveow"
+    },
+    {
+      "title": "LoRA 与 QLoRA 如何用一块 GPU 微调大模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/jqsojbf2124tri8o0geejb445"
+    },
+    {
+      "title": "METR 与 Redwood Research 红队测试 OpenAI 内部智能体监控系统，发现多个漏洞",
+      "topic": "safety",
+      "url": "https://aihot.news/items/fcw2s1pdclkgm5kmg2qwginp7"
+    },
+    {
+      "title": "METR 主席 Chris Painter 就 AI 智能体事件向美国参议院作证",
+      "topic": "policy",
+      "url": "https://aihot.news/items/r2far2n8h11f0h28301dhk85y"
+    },
+    {
+      "title": "Meshy 亮相科隆游戏展周",
+      "topic": "other",
+      "url": "https://aihot.news/items/u7qrhnhatyhvwqn3yakzzdxv9"
+    },
+    {
+      "title": "Meta 公布数学家与 Muse Spark 1.1/1.2 协作完成的六篇论文",
+      "topic": "research",
+      "url": "https://aihot.news/items/mnp85zt9o921l7c28rzor00qy"
+    },
+    {
+      "title": "Meta 发布 Muse Spark 与数学家协作完成的六篇数学研究论文",
+      "topic": "product",
+      "url": "https://aihot.news/items/gr2p1slxzqqbnzv4c08ix4fnj"
+    },
+    {
+      "title": "Meta 发布 Muse Wonder 和 Muse Wonder Full，Artificial Analysis 实测智能水平较前代显著提升",
+      "topic": "product",
+      "url": "https://aihot.news/items/v3pogrzxrk9oba4blox86d0w8"
+    },
+    {
+      "title": "Meta 发布开源权重模型 Muse Spark Open，816B 参数、1M 上下文",
+      "topic": "model",
+      "url": "https://aihot.news/items/s80tw5g2v22j1se4bmqejyaq4"
+    },
+    {
+      "title": "Meta 如何用 AI 原生工程方式开发 Forum 应用",
+      "topic": "product",
+      "url": "https://aihot.news/items/moaux5xk1dqk4pi3tsx8sabsj"
+    },
+    {
+      "title": "Meta 开源 Muse 代码，支持自建 Muse AI 小设备",
+      "topic": "model",
+      "url": "https://aihot.news/items/ln6ere28kepk46azfanwaucm2"
+    },
+    {
+      "title": "Meta 推出 Hologram 拟真虚拟形象，秋季上线雷朋眼镜与 Quest 头显",
+      "topic": "product",
+      "url": "https://aihot.news/items/prg6f1kih6agr1e57t7ikzckr"
+    },
+    {
+      "title": "MiMo-V2.6-Pro 和 MiMo-V2.6-Flash 登陆 Agent Arena，分列开源模型第5和第9",
+      "topic": "model",
+      "url": "https://aihot.news/items/fe4cigybkf7nhdwb0il9ggrns"
+    },
+    {
+      "title": "Micron 在最新报告中公布至 2030 年的内存与存储芯片路线图",
+      "topic": "research",
+      "url": "https://aihot.news/items/muhxk4kdgo65wwj744jygom55"
+    },
+    {
+      "title": "Microsoft AI 发布 MAI-Transcribe-2-Streaming 实时转写模型与 MAI-Voice-2.1 语音模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/z7gsdlj3vowzc61sz5z3jqxez"
+    },
+    {
+      "title": "Microsoft AI 发布 SDBench 基准与 MAI-DxO 诊断系统，登 Science",
+      "topic": "product",
+      "url": "https://aihot.news/items/r7uwz6n0sd6jr2r0tb1fu3o0u"
+    },
+    {
+      "title": "Microsoft Research 与合作者证明 31 年历史的 KLS 猜想",
+      "topic": "research",
+      "url": "https://aihot.news/items/y1fd2c0s3ydociygdah7apvme"
+    },
+    {
+      "title": "Microsoft ThinkingBox 在 Hugging Face 上发布，以数据库终态和 20 次重复评测智能体",
+      "topic": "product",
+      "url": "https://aihot.news/items/gqh4yclcjmaci6uhur56580uh"
+    },
+    {
+      "title": "MiniMax Code 桌面端推出 Mini App 长运行应用功能",
+      "topic": "model",
+      "url": "https://aihot.news/items/paq5nfs7jxno8qghh27ho05be"
+    },
+    {
+      "title": "MiniMax 开放 M3.1 Flash 权重：428B 总参数、每 token 激活 23B",
+      "topic": "model",
+      "url": "https://aihot.news/items/h0u2sgf6ve6eeu0hmswp2a314"
+    },
+    {
+      "title": "MiniMax 携手 Chroma Awards 第二季",
+      "topic": "model",
+      "url": "https://aihot.news/items/dw57o8c8z9mqrgg8papa1peh9"
+    },
+    {
+      "title": "MiniMax-H3 在 8×H200 上基准测试：无损加速 1.95×，最高 6.24×（SSIM 0.76–0.91）",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtbtrn8j0222ro2kb7opgppz"
+    },
+    {
+      "title": "Mistral Large 4 上线 OpenRouter 公测：1T 参数、512K 上下文",
+      "topic": "model",
+      "url": "https://aihot.news/items/z94jsbcn3hkyiagdyb9wai8sm"
+    },
+    {
+      "title": "Mistral Large 4 进入 Agent Arena 前十五实验室，排名第 43",
+      "topic": "model",
+      "url": "https://aihot.news/items/y9clkoyn1giula1pc7pkb9qxd"
+    },
+    {
+      "title": "Mistral 发布 Large 4 公开预览版，1 万亿参数将开放权重",
+      "topic": "model",
+      "url": "https://aihot.news/items/mjxlbx06wrnbd9v3dt4nrkkwu"
+    },
+    {
+      "title": "Mistral 发布 Mistral Large 4，Artificial Analysis 评测称其为美中之外最智能模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/rmc5fz5rbcwzsr7cdl5jo1ojk"
+    },
+    {
+      "title": "Mistral 完成 30 亿欧元 D 轮融资，估值超 210 亿欧元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmts9dr2m029hrobq86wrny37"
+    },
+    {
+      "title": "Modal Clusters 正式发布，通过 @modal.clustered 提供多节点 GPU 集群",
+      "topic": "product",
+      "url": "https://aihot.news/items/zbprvsawadktpi8tcqpp6gw4d"
+    },
+    {
+      "title": "Moonshot 发布 Kimi K3.1 Pro：2.8T 总参数、104B 激活，承诺 11 月 4 日开放权重",
+      "topic": "model",
+      "url": "https://aihot.news/items/rvz06j1zal6q4kfqkusgp980a"
+    },
+    {
+      "title": "Muse Spark Open (Max) 登顶 Code Arena: WebDev 美国开源模型第一",
+      "topic": "model",
+      "url": "https://aihot.news/items/bjzjg5k7af07c1c20bc1a8gxp"
+    },
+    {
+      "title": "NSA 就 AI 发现的 PHP2Shell 关键漏洞发布修复警告",
+      "topic": "safety",
+      "url": "https://aihot.news/items/eme8i9igoadxb3beb902byfz0"
+    },
+    {
+      "title": "NVIDIA 与 SB Energy 合作锁定俄亥俄州 PORTS-Pike 园区电力容量，OpenAI 将入驻",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmsx9jvre05y6romms3bo1umb"
+    },
+    {
+      "title": "NVIDIA 介绍 Blackwell GPU 如何加速 OpenAI GPT-6 Astra Ultrafast",
+      "topic": "model",
+      "url": "https://aihot.news/items/rp0ocer4fughonyd9ddfr3r8i"
+    },
+    {
+      "title": "NVIDIA 发布开源小模型 Nemotron 3.5 Bolt E4B 4GB，面向本地语音助手、游戏角色和机器人",
+      "topic": "model",
+      "url": "https://aihot.news/items/uouc0sey7qayc0mbmlnwj5l1k"
+    },
+    {
+      "title": "NVIDIA 发布开源表格基础模型 Kumo Tabular，在 TabArena 等四项基准排名第一",
+      "topic": "model",
+      "url": "https://aihot.news/items/tcf79upi169og7ftecq28pps2"
+    },
+    {
+      "title": "NVIDIA 官宣 RTX Spark 软件生态就绪，10 月 16 日笔记本上市",
+      "topic": "funding",
+      "url": "https://aihot.news/items/ug7g6psicfobnnft0ebgpyl10"
+    },
+    {
+      "title": "NVIDIA 宣布以 129.303 亿美元收购 Hugging Face",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmtli5yd109u4row52i1xg9j4"
+    },
+    {
+      "title": "NVIDIA 提出 Mid-Harness：在模型与 harness 之间扩展动作采样提升终端智能体成功率",
+      "topic": "model",
+      "url": "https://aihot.news/items/raw0jq5w0on3s2p10zh6eyutx"
+    },
+    {
+      "title": "NVIDIA 携手 Apollo、BlackRock 等成立融资平台，AI 工厂算力成为可投资资产类别",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmspeby640gglrorthm2cj8os"
+    },
+    {
+      "title": "NYU 教授 Damodaran：AI 十万亿美元市场叙事的前提是替代人类工作",
+      "topic": "funding",
+      "url": "https://aihot.news/items/ekph7p05q2lyehm8qbbxkuhay"
+    },
+    {
+      "title": "NYU 数学家指控 OpenAI 在千禧年难题竞赛中不正当竞争，Bubeck 否认",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmtsz2a0q02ciro5w7oz3a0ix"
+    },
+    {
+      "title": "Nathan Lambert 评中国实验室过度迎合西方生态",
+      "topic": "research",
+      "url": "https://aihot.news/items/hgym9cuiylm0l5hwkgunqfvi4"
+    },
+    {
+      "title": "Netflix 如何用本体和知识图谱把可观测性变成可查询的确定性事实",
+      "topic": "other",
+      "url": "https://aihot.news/items/jjzec1kzm9xz3ft04nxyokbkm"
+    },
+    {
+      "title": "OpenAI DevDay 2026 发布 Dots、GPT-6.1 Sol、500美元订阅等一揽子更新",
+      "topic": "price",
+      "url": "https://aihot.news/items/fp91y0m21xsgu43nl7g81uecp"
+    },
+    {
+      "title": "OpenAI DevDay 2026 发布 GPT-6.1 Sol、常驻智能体 Dots 等 20 余项更新",
+      "topic": "model",
+      "url": "https://aihot.news/items/phuhohutcf75ktuyyfdzwug8z"
+    },
+    {
+      "title": "OpenAI 一次性发布 700 多份数学手稿，数学家们反应震惊与反感",
+      "topic": "product",
+      "url": "https://aihot.news/items/z9juuqdd3d8fejwabu0xzvbaa"
+    },
+    {
+      "title": "OpenAI 下调估值目标至 1.25 万亿美元，拟融资至多 300 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/qexf6est4uitwd71p3ugedxo6"
+    },
+    {
+      "title": "OpenAI 与 Google Cloud 达成合作，OpenAI 模型将进入 Model Garden",
+      "topic": "model",
+      "url": "https://aihot.news/items/bm4bwid4hdnitbtz7pr6gtd0r"
+    },
+    {
+      "title": "OpenAI 为 ChatGPT 和 Codex 文本加水印以遵守 EU AI Act",
+      "topic": "safety",
+      "url": "https://aihot.news/items/qmr1ljb822tb4ujo8t6xecbna"
+    },
+    {
+      "title": "OpenAI 公布 EU AI Act 下的文本溯源方案，推出 textGrain 文本水印",
+      "topic": "safety",
+      "url": "https://aihot.news/items/xx5mgdemrqmqw5zw410sbawcz"
+    },
+    {
+      "title": "OpenAI 决定终止向 Cursor 提供模型，因 SpaceX 收购后合规风险",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmtdqc5oj03wzro2mgyc5a49x"
+    },
+    {
+      "title": "OpenAI 办公室发现窃密录音装置，涉事员工被捕",
+      "topic": "safety",
+      "url": "https://aihot.news/items/fgxi5gwvctlssc05odpcyf6ov"
+    },
+    {
+      "title": "OpenAI 发布 Agents API，通过托管方式提供 Codex harness",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmtw5kexm04n9rolkoq96vocm"
+    },
+    {
+      "title": "OpenAI 发布 Codex 技能帮助网站自查 PHP 关键漏洞影响",
+      "topic": "safety",
+      "url": "https://aihot.news/items/b31hjqo2l088vfydp5gcdyv8p"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6 Astra 并公布安全概览，称其网络安全能力达到 Preparedness Framework 的 Critical 级",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmtm02uu60t2arow5vd3nq4gi"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6 Astra，面向 Pro、Enterprise 和 Business Premium 用户开放",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtne97cd058urog1zpa39wm7"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6 Astra：多项基准刷新纪录， cybersecurity 能力达 Critical 阈值",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtnt5cb50b8mroqs7x4pukfm"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6 Sol 和 GPT-6 Luna，API 价格较 GPT-5.6 降 50%",
+      "topic": "price",
+      "url": "https://aihot.news/items/cmud1y2ku039iro5ysl7pq6d3"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6 家族实用指南：选型、提示词与长任务管理",
+      "topic": "model",
+      "url": "https://aihot.news/items/cw97qi7nc5ucehymkc1k9s6zk"
+    },
+    {
+      "title": "OpenAI 发布 GPT-6.1 Sol：以 Astra 五分之一价格接近其编码与计算机操作水平",
+      "topic": "price",
+      "url": "https://aihot.news/items/sv8dhqgv5kccksxx30x4oa7n3"
+    },
+    {
+      "title": "OpenAI 发布内部前沿模型产出的数学研究成果",
+      "topic": "model",
+      "url": "https://aihot.news/items/zvw2i4tg1gnqq72t596vpqoyl"
+    },
+    {
+      "title": "OpenAI 发布常驻智能体 dots，由 GPT-6 Astra 驱动",
+      "topic": "model",
+      "url": "https://aihot.news/items/r9nae38v4x5x29jrec46olsl4"
+    },
+    {
+      "title": "OpenAI 发布模型失准披露框架并公开六份失准报告",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmu4nyoxd07n9rodcxgc06f52"
+    },
+    {
+      "title": "OpenAI 员工对 Opus 5.5 的调侃",
+      "topic": "other",
+      "url": "https://aihot.news/items/att0zfe99357rdt3kumm2f0zo"
+    },
+    {
+      "title": "OpenAI 员工感叹 GPT-6 Astra 演示视频播放量约 1.4 亿次",
+      "topic": "model",
+      "url": "https://aihot.news/items/z83pvniw0tsjq2br729k6iugd"
+    },
+    {
+      "title": "OpenAI 在 API 中推出全双工语音模型 GPT-Live-1",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtvsgyqs05vkrofbgg06yzsa"
+    },
+    {
+      "title": "OpenAI 在 ChatGPT 推出全新视觉广告格式并扩展广告测量工具",
+      "topic": "product",
+      "url": "https://aihot.news/items/e63lz9ky7ebdxjea930dh3o5y"
+    },
+    {
+      "title": "OpenAI 在 DevDay 推出 ChatGPT 插件扩展、Space 共享工作区与企业市场等一揽子更新",
+      "topic": "product",
+      "url": "https://aihot.news/items/dlzadick4dbrhkdsuxkduk7ed"
+    },
+    {
+      "title": "OpenAI 在“关键网络能力”时代放缓模型开发节奏",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmsz0hbsg05l0ro204080cotv"
+    },
+    {
+      "title": "OpenAI 坚持解雇三名 AI 安全研究人员的决定",
+      "topic": "safety",
+      "url": "https://aihot.news/items/hfnv314vts469hlg8gh5eoikd"
+    },
+    {
+      "title": "OpenAI 安全员工 David Robinson 离职，称公司文化已坏",
+      "topic": "safety",
+      "url": "https://aihot.news/items/xmlfce496prtvqpqmcupmsssc"
+    },
+    {
+      "title": "OpenAI 宣布 ChatGPT 周活跃用户超 12 亿，ChatGPT Work 和 Codex 周用户超 3500 万",
+      "topic": "other",
+      "url": "https://aihot.news/items/mhxg8rc7sqcsb29as21wy3his"
+    },
+    {
+      "title": "OpenAI 宣布 Codex 与 ChatGPT Work“28 天计划”：每日一项功能更新，否则重置",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmf54gyjdos166m78jip77ptm"
+    },
+    {
+      "title": "OpenAI 封禁俄罗斯与伊朗两个利用 ChatGPT 开展虚假前臆影响行动的账号集群",
+      "topic": "policy",
+      "url": "https://aihot.news/items/b33i6chgxghls2v7bng0wr0nr"
+    },
+    {
+      "title": "OpenAI 年化营收被曝接近 500 亿美元，与此前预期差距约 200 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/b2mwouqv4jhfj70uho7s7guti"
+    },
+    {
+      "title": "OpenAI 开放 ChatGPT 平台，支持用插件扩展构建原生应用",
+      "topic": "product",
+      "url": "https://aihot.news/items/p2i8m9289yq357t3gq1og9hun"
+    },
+    {
+      "title": "OpenAI 承认德国 wiki 事件并承诺改革智能体错位事件报告机制",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmtoazuoz03z6roxhurow5v5s"
+    },
+    {
+      "title": "OpenAI 披露 GPT-6 Astra 智能体关闭安全监控后撒谎的事件",
+      "topic": "safety",
+      "url": "https://aihot.news/items/x002u3tp3i1xfzbmzwsnb2olw"
+    },
+    {
+      "title": "OpenAI 披露 Patch the Planet 计划借助 GPT-5.6 Sol 发现 PHP 关键漏洞并协调全球修复",
+      "topic": "safety",
+      "url": "https://aihot.news/items/r4saw5foxj8v0eb82f3b66cs0"
+    },
+    {
+      "title": "OpenAI 披露内部模型从 Slack 获悉可能停机并提前准备重启事件",
+      "topic": "model",
+      "url": "https://aihot.news/items/s3supi9t3z6gkguckfsz4ygzq"
+    },
+    {
+      "title": "OpenAI 披露内部模型在 RL 训练中绕过政府统计网站授权获取服务器机密",
+      "topic": "policy",
+      "url": "https://aihot.news/items/pm16y7j8hbchmkstdyaelo22k"
+    },
+    {
+      "title": "OpenAI 披露内部研究模型在评估中利用漏洞入侵内部 EDA 机器事件",
+      "topic": "safety",
+      "url": "https://aihot.news/items/j5whyu39ceixq111sobt4fic1"
+    },
+    {
+      "title": "OpenAI 披露并处置一起有组织的模型蒸馏攻击行动",
+      "topic": "safety",
+      "url": "https://aihot.news/items/gq8k1ru5wb2hx8ihtno5rrlrf"
+    },
+    {
+      "title": "OpenAI 据报道洽谈以约 1.4 万亿美元估值融资至少 300 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/hxdv40od8cwti1sfmkmursiop"
+    },
+    {
+      "title": "OpenAI 正式发布 Decisions API，面向低延迟低成本小决策",
+      "topic": "price",
+      "url": "https://aihot.news/items/xffhf8h0e0r145getmi9k1zgs"
+    },
+    {
+      "title": "OpenAI 研究负责人发声明回应三名员工离职争议",
+      "topic": "research",
+      "url": "https://aihot.news/items/uceike4yt1on0k7sj37f9nfeh"
+    },
+    {
+      "title": "OpenAI 称拦截蒸馏窃取攻击，但研究者称同样手法在 Azure 上仍可窃取 GPT-6 Astra 等模型的推理内容",
+      "topic": "safety",
+      "url": "https://aihot.news/items/uxe9v0hypn93df9ogn6glwled"
+    },
+    {
+      "title": "OpenAI 红队测试发现 Brotli 未认证远程代码执行漏洞并已披露",
+      "topic": "safety",
+      "url": "https://aihot.news/items/bflsi3krmtn64gccrmh8dlsdc"
+    },
+    {
+      "title": "OpenAI 联合多厂商发布 Agent Plugins 开放标准",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmsisexul1rhuronkqbco4rt8"
+    },
+    {
+      "title": "OpenAI 详解前沿模型训练环境的安全加固与红队测试",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ss1c1fu81134agwcw2ae90gai"
+    },
+    {
+      "title": "OpenRouter 介绍决策模型 Jev",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmu7hc2e80aavrogr7vbwhcjm"
+    },
+    {
+      "title": "OpenRouter 教程：如何从生产流量构建 golden 评测集并跨模型复测",
+      "topic": "model",
+      "url": "https://aihot.news/items/fibq25b0liw1wvpxc0kg5kktn"
+    },
+    {
+      "title": "PHP2Shell 漏洞披露前黑客已有四天窗口，多国机构紧急响应",
+      "topic": "safety",
+      "url": "https://aihot.news/items/m34xrhmqj1is6d1v1jna3ed46"
+    },
+    {
+      "title": "Perplexity 开放 Computer 邮件委托入口并限时免费运行任务",
+      "topic": "price",
+      "url": "https://aihot.news/items/zdncjvjrmmknlsf9tevjlrnrg"
+    },
+    {
+      "title": "Perplexity 开源 pplx-embed-v2-late 多模态 late-interaction 嵌入模型（9B 与 0.6B）",
+      "topic": "model",
+      "url": "https://aihot.news/items/lfy2ww68p9lgpxxhu5jssflwf"
+    },
+    {
+      "title": "Perplexity 推出 Mac 本地决策模型应用",
+      "topic": "model",
+      "url": "https://aihot.news/items/xreb4es6egniasqwojr5zirdt"
+    },
+    {
+      "title": "Pydantic AI 创始人 Samuel Colvin：图库是个错误，代码本身就是图",
+      "topic": "other",
+      "url": "https://aihot.news/items/tmj0de0vmzpezz0o5j67nqskj"
+    },
+    {
+      "title": "QodoAI 创始人提出从 Agentic SDLC 到有边界 L4 软件工厂的分级框架",
+      "topic": "product",
+      "url": "https://aihot.news/items/xdclsnde2qp4x6tftmo6odpg6"
+    },
+    {
+      "title": "Qwen3.8-Flash-Next 开源：Qwen4 架构早期预览",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmta2veap03nmrolwxllvp4ay"
+    },
+    {
+      "title": "Reflection 开源权重模型 Beam 上架 Ollama，限时免费可用",
+      "topic": "price",
+      "url": "https://aihot.news/items/f14brdupsvks0k2hoang4lx6w"
+    },
+    {
+      "title": "Replit 发布 Monitoring Agent，为应用提供可自动修复并部署的值班智能体",
+      "topic": "product",
+      "url": "https://aihot.news/items/h1d0qu9nsy86fmfqns5f3pkjb"
+    },
+    {
+      "title": "Rohan Paul：SpaceX 算力预计 11 月底达约 2.3 GW",
+      "topic": "other",
+      "url": "https://aihot.news/items/ui6gu1mvipumk0c7g0olvcs2k"
+    },
+    {
+      "title": "Rohan Paul：规则型工作不再是职业，而是一条提示词，Claude Opus 5 在会计任务上超越持证会计师",
+      "topic": "model",
+      "url": "https://aihot.news/items/zpeff487gfzu6kxduf65dbmj1"
+    },
+    {
+      "title": "Runway 推出 Model Context Protocol 服务器",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmpo55l4u030yslv4mwofhkbw"
+    },
+    {
+      "title": "Sam Altman 表示同意 Dario Amodei 的放缓前沿主张，OpenAI 将同样开放独立评估者访问",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmtymlrth035dronv9zqv9ccb"
+    },
+    {
+      "title": "Sam Altman 谈 OpenAI 智能体训练期联网行为审查进展",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmuhd4pc909lwro3bb3fcr4ep"
+    },
+    {
+      "title": "Sebastian Raschka 发布 8 集 Build a Reasoning Model (From Scratch) 视频课程",
+      "topic": "product",
+      "url": "https://aihot.news/items/lweesn5y5myvq17k0hx17qg8m"
+    },
+    {
+      "title": "SemiAnalysis 测算：Anthropic 订阅的 API 等价价值约为 OpenAI 的 5 倍以上",
+      "topic": "price",
+      "url": "https://aihot.news/items/lcxzcuj920lvqlah60vj7utm1"
+    },
+    {
+      "title": "ServiceNow 首席执行官：平台设有终止开关，可阻止AI智能体失控",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmryrefmb048rrolgyznpnhfh"
+    },
+    {
+      "title": "Shopify 宣布放弃 React Native，AI 编码智能体让回归原生开发成为新选择",
+      "topic": "product",
+      "url": "https://aihot.news/items/olf3cbdvsrlr6avso72eom7ea"
+    },
+    {
+      "title": "Sierra 发布 𝜏-Entity 基准，检验语音智能体能否准确采集姓名、电话等实体信息",
+      "topic": "product",
+      "url": "https://aihot.news/items/fjyan16f0mvfywabd78m70hv3"
+    },
+    {
+      "title": "SpaceX Q3 2026 财报电话会要点：AI 算力业务成最大收入来源",
+      "topic": "funding",
+      "url": "https://aihot.news/items/qhvh1rm03vym5ns6ku6hjkkmq"
+    },
+    {
+      "title": "Stanford HAI 研究：想让员工拥抱 AI，别把它包装成效率工具",
+      "topic": "product",
+      "url": "https://aihot.news/items/kdyctdu2befn8m1jz1wgktb84"
+    },
+    {
+      "title": "Sundar Pichai 解释 Demis Hassabis 退出 DeepMind 日常管理与 Jeff Dean 离职",
+      "topic": "other",
+      "url": "https://aihot.news/items/ryf4bbjezfib8jx05ng0889zf"
+    },
+    {
+      "title": "Suno 发布 v6 音乐模型，推出 v6、v6-wild、v6-mini 三个版本",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtym1wo1039krodl7j8164q8"
+    },
+    {
+      "title": "Suno 推出 Speech beta：语音与背景音乐一体生成",
+      "topic": "product",
+      "url": "https://aihot.news/items/rnjrj40fmm98d9duz9lcuk8u2"
+    },
+    {
+      "title": "Symantec 披露“Skynet 模式”AI 智能体劫持无防护大语言模型发起自持续网络攻击",
+      "topic": "safety",
+      "url": "https://aihot.news/items/r557iovkk5v7ddt8py86ejctv"
+    },
+    {
+      "title": "The Verge 分析 SpaceX 与特斯拉成立特别委员会讨论合并背后的财务逻辑",
+      "topic": "other",
+      "url": "https://aihot.news/items/w7axcg0e1y7uoyro92cmanong"
+    },
+    {
+      "title": "Tomer Tunguz 解析 Amodei 放缓前沿提议背后的五派立场与算力监管难题",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmu1hrr070dycrocndfax0y0c"
+    },
+    {
+      "title": "Tripo 插件原生支持 Kimi K3.1",
+      "topic": "funding",
+      "url": "https://aihot.news/items/ldf05pxs7nkvcr1ehlk44su4r"
+    },
+    {
+      "title": "Trump 推动二十余家科技公司签署自愿性 AI 安全协议",
+      "topic": "policy",
+      "url": "https://aihot.news/items/huhcnz3mwim553m2t8c0jhh4b"
+    },
+    {
+      "title": "USA TODAY Co. 在曼哈顿联邦法院起诉 OpenAI，索赔 2.5 亿美元并要求销毁相关 GPT 模型",
+      "topic": "funding",
+      "url": "https://aihot.news/items/a3t4evmwtf875rf4x0rreb11c"
+    },
+    {
+      "title": "Unsloth 开源教程：本地训练 Qwen3.5 0.8B 决策模型，准确率从 20.7% 提升至 74.3%",
+      "topic": "model",
+      "url": "https://aihot.news/items/y7db2ly158hip5dw1evmjw5kv"
+    },
+    {
+      "title": "VN Studio 发布：用编辑日志追踪 AI 视频创作中的人工版权",
+      "topic": "policy",
+      "url": "https://aihot.news/items/p4peu0c76dz3lybf800xa5zw8"
+    },
+    {
+      "title": "Viggle Animate 换脸酒店大堂趋势",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmug4fiwq0ewjrogvaec7w7h7"
+    },
+    {
+      "title": "Visual Studio Copilot 与 SSMS 远程代码执行漏洞（CVE-2026-103572）技术分析",
+      "topic": "safety",
+      "url": "https://aihot.news/items/o8h7g7pscq0qrlenoadabbb96"
+    },
+    {
+      "title": "WSJ：OpenAI 因 Signal 阅后即焚聊天解雇 3 名安全研究员",
+      "topic": "safety",
+      "url": "https://aihot.news/items/mc8widr5lukck9npmgeat917x"
+    },
+    {
+      "title": "WSJ：马斯克希望以 AI 为核心推动 SpaceX 与 Tesla 合并",
+      "topic": "other",
+      "url": "https://aihot.news/items/nag5wgod0havrmodeo75pwnge"
+    },
+    {
+      "title": "Waymo 完成 50 亿美元债务融资，加速业务扩张",
+      "topic": "funding",
+      "url": "https://aihot.news/items/pl2oa5clmf0gp3t7x3qsn71kc"
+    },
+    {
+      "title": "Waymo 宣布进入新加坡，计划 2028 年开放服务",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmu6nqude03surowk9bvucy7r"
+    },
+    {
+      "title": "Wiz Research 披露 PHP2Shell：AI 助攻 PHP 核心 RCE 漏洞，影响全球 70% 网站",
+      "topic": "safety",
+      "url": "https://aihot.news/items/z9nqeyi6p0br6knhkrt3xd3n6"
+    },
+    {
+      "title": "Wiz 披露 ARTEX 智能体被 Storm-0940 用于攻击 IT 和软件厂商",
+      "topic": "safety",
+      "url": "https://aihot.news/items/n6afjfxhq6vadobu4p0lm6tzm"
+    },
+    {
+      "title": "Wiz 披露 LiteLLM PyPI 包供应链攻击，恶意版本 v1.107.0 窃取凭据",
+      "topic": "safety",
+      "url": "https://aihot.news/items/rmwtbq3o8rnr9kfjbgric6qew"
+    },
+    {
+      "title": "WorkBuddy上线远程控制，国内也有了最丝滑的Agent工作方式",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmsr160kg0dk0roz2mb20yxwk"
+    },
+    {
+      "title": "World Labs 宣布加入 AMD",
+      "topic": "other",
+      "url": "https://aihot.news/items/gikl2tjm7h3e1kf1j47v7rh41"
+    },
+    {
+      "title": "XBOW 借助 GPT-5.6 Sol 用 6 天攻破 Chrome 沙箱，获谷歌 25 万美元赏金",
+      "topic": "model",
+      "url": "https://aihot.news/items/kdmkmi93g1nwnc8tbqdd9vrh3"
+    },
+    {
+      "title": "Zenity 披露 AgentCore 漏洞链：一个公开 AI Agent 可控制同账户同区域所有 Agent",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cal34hameqt3bh6d52vaqt58v"
+    },
+    {
+      "title": "bigarrow 开源：让 AI 智能体在 macOS 屏幕上画大箭头提示用户操作",
+      "topic": "model",
+      "url": "https://aihot.news/items/ivjaop32jpi4gbofhtkoszckl"
+    },
+    {
+      "title": "dots3-note Preview 开源：280B 参数轻量模型，主打长程智能体与多模态推理",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmssv94cg0h4mroffsb9e7a88"
+    },
+    {
+      "title": "https://x.com/dexhorthy/status/2113841882602303540",
+      "topic": "other",
+      "url": "https://aihot.news/items/r97x057olit37no2h6x3pbulu"
+    },
+    {
+      "title": "iPhone Duo 全球 Apple Store 正式开售，首台可折叠 iPhone 上架",
+      "topic": "other",
+      "url": "https://aihot.news/items/pjmxomdu7pnp68ckyfels66mt"
+    },
+    {
+      "title": "ts-rust 发布：由 LLM 将 TypeScript 编译器、检查器和 LSP 移植到 Rust",
+      "topic": "product",
+      "url": "https://aihot.news/items/yyba9bpxdtqdpqmv739d26ftg"
+    },
+    {
+      "title": "vLLM 分离式推理（Disaggregated Serving）实用指南",
+      "topic": "model",
+      "url": "https://aihot.news/items/seoe3daylyyh1pqcwj4cklrpe"
+    },
+    {
+      "title": "vLLM 详解 DeepSeek-V4.1-Flash 优化：Agent 场景吞吐提升 5 倍",
+      "topic": "model",
+      "url": "https://aihot.news/items/h8ldh8orhiz1tbad38w4e6cpn"
+    },
+    {
+      "title": "xAI 发布超智能美学成果",
+      "topic": "product",
+      "url": "https://aihot.news/items/vj5bp01lr9yn6naj2571cqxku"
+    },
+    {
+      "title": "上海警方用大数据打击“职业碰瓷”：朱某一年多制造事故200余起，涉案60余万元",
+      "topic": "safety",
+      "url": "https://aihot.news/items/n9lsp5dhmchsq9wg9nqpoi7xi"
+    },
+    {
+      "title": "不列颠哥伦比亚省起诉 OpenAI，指其未在枪击案前将 flagged ChatGPT 活动转介警方",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmubom7qi04k8ro4v1zoas2o7"
+    },
+    {
+      "title": "中美欧 AI 路线各不同",
+      "topic": "other",
+      "url": "https://aihot.news/items/ua4a94urhih7w59umndfvuwx1"
+    },
+    {
+      "title": "丰田北美如何用 Deep Agents 和 LangSmith 规模化企业 AI",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmt7kxoay29laro73gn4kt0gy"
+    },
+    {
+      "title": "为 iPhone Duo 铰链做 3D 建模，参考何同学视频",
+      "topic": "other",
+      "url": "https://aihot.news/items/anom9863a9l3wr6ym6oq07v2h"
+    },
+    {
+      "title": "乐山大佛管委会辟谣&quot;掏耳朵&quot;养护视频：系AI合成，佛耳内并无杂物",
+      "topic": "other",
+      "url": "https://aihot.news/items/hxhfc1jta4kz45ftxxaf8l3oq"
+    },
+    {
+      "title": "亚马逊封禁 Meta Muse 智能体代用户购物，双方争端升级",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmub7xf1o0pu2roln165i6mhu"
+    },
+    {
+      "title": "加州州长 Gavin Newsom 签署行政令并推出一揽子 AI 监管措施",
+      "topic": "policy",
+      "url": "https://aihot.news/items/b0m1gu93x2gcrmtm3pgv5oi9q"
+    },
+    {
+      "title": "加州检察长向 OpenAI 发出传票，调查 AI 智能体网络安全风险",
+      "topic": "policy",
+      "url": "https://aihot.news/items/iw7ix94rgvhp2jgamykh261gl"
+    },
+    {
+      "title": "华为云 HUAWEI CONNECT 2026 聚焦 Agentic Cloud",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmtyb64kv064trojh2jshyez3"
+    },
+    {
+      "title": "华为终端安全奖励计划要求 AI 辅助挖掘的漏洞报告须人工验证",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ccs2j4yxsrayi75fl5a7xpk7f"
+    },
+    {
+      "title": "卡兹克实测37999元RTX Spark轻薄本：一周实现本地Token自由",
+      "topic": "other",
+      "url": "https://aihot.news/items/ffpkck4k06le4smuaz4slhvcz"
+    },
+    {
+      "title": "卡兹克解读A16Z两份AI报告，AI使用广但付费和深度仍小众",
+      "topic": "research",
+      "url": "https://aihot.news/items/wiip2ye21b67quiydxlnqmeyc"
+    },
+    {
+      "title": "卡兹克详解 AI 挖出的 PHP2Shell 漏洞：发现只花2天，修复用了两个月",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ianx6h2f39f9xcxpno4a3cspi"
+    },
+    {
+      "title": "可灵 4.0 短片《The Beat》播放破 500 万幕后解析",
+      "topic": "model",
+      "url": "https://aihot.news/items/gf048arpz9hrjjq61wm1ce97l"
+    },
+    {
+      "title": "可灵 Kling 4.0 上线 fal 平台并开放 API",
+      "topic": "model",
+      "url": "https://aihot.news/items/ac9rf2qppp5t6dyihvb5arf0f"
+    },
+    {
+      "title": "吴恩达开源桌面 AI 智能体 OpenWorker，已获 3.7k Star",
+      "topic": "model",
+      "url": "https://aihot.news/items/cms00ezxq02kirop1h3tt1y1h"
+    },
+    {
+      "title": "团队分享提升 Agent Harness Token 效率的提示词",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmuek0q2c05foroynclaijp3z"
+    },
+    {
+      "title": "国务院办公厅印发意见：增强 AI 创造就业正面效应，减缓就业替代影响",
+      "topic": "policy",
+      "url": "https://aihot.news/items/shi5tga503u6jcb3itberbm18"
+    },
+    {
+      "title": "多智能体系统潜在通信的安全性研究",
+      "topic": "safety",
+      "url": "https://aihot.news/items/qdxwvcdl02xsb7wud8y146c3b"
+    },
+    {
+      "title": "如何在单张 RTX 5090 上用 MiniMax H3 生成实时视频",
+      "topic": "model",
+      "url": "https://aihot.news/items/xc7shuv3raxyv5xvh59ez8hjf"
+    },
+    {
+      "title": "安全研究者披露黑客用 GEO 污染 ChatGPT、Gemini 和 Google AI Overview，374 家企业被植入诈骗联系方式",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmuft4xrw07varoxz9brnf7vh"
+    },
+    {
+      "title": "小红书联合浙大、复旦提出 CULTURE-MT：首个面向社媒翻译的「文化有效性」评测基准，入选 ICML 2026",
+      "topic": "research",
+      "url": "https://aihot.news/items/cmsiry2eo1r4tronkt9qv2twu"
+    },
+    {
+      "title": "山东大学研究：花哨的 coding agent harness 更贵但并不能提升成绩",
+      "topic": "product",
+      "url": "https://aihot.news/items/hu6uexzdgvqt4np5b7sbk2i2m"
+    },
+    {
+      "title": "开源FastVideo Dreamverse实时视频生成工具",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmpoddncn053yslv428au39s3"
+    },
+    {
+      "title": "微软 CEO 纳德拉发文：开发者应默认假设 AI 模型失控并设计强制中断机制",
+      "topic": "safety",
+      "url": "https://aihot.news/items/dvvj5x0kn3nxgdyqrdjyw6c58"
+    },
+    {
+      "title": "微软发布新版 Copilot，引入 Home、Code 与 Autopilot",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmugx16521g87rogvm3fijv2b"
+    },
+    {
+      "title": "微软应用科学主管在法庭文件中称 AI 行业是史上最大规模劳动成果盗窃",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmu6p0duu05h3rowkz187ljwq"
+    },
+    {
+      "title": "德国法院裁定AI音乐生成器Suno侵犯版权，驳回合理使用抗辩",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmsa9czys01chrojdrdvterw0"
+    },
+    {
+      "title": "悉尼男子向 Claude 发表枪击托儿所言论后被捕",
+      "topic": "safety",
+      "url": "https://aihot.news/items/nbbwa79zhr25qdnuf9z2k3yy9"
+    },
+    {
+      "title": "意大利总理梅洛尼向欧盟申请为其声音注册商标以应对 AI 深度伪造",
+      "topic": "policy",
+      "url": "https://aihot.news/items/xd28dl8mnklslksemjrxtty54"
+    },
+    {
+      "title": "智元在济南组织 110 台远征 A3 人形机器人同舞创吉尼斯世界纪录",
+      "topic": "other",
+      "url": "https://aihot.news/items/slx5ona15ijd77esc37j29zzi"
+    },
+    {
+      "title": "智能只是人类定义的benchmark吗",
+      "topic": "research",
+      "url": "https://aihot.news/items/w96x8n3d1s1gujk69zorwfuzi"
+    },
+    {
+      "title": "曝腾讯租用甲骨文东南亚数据中心：涉及约 10 万块先进 AI 芯片，交易估值约 70 亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/pizbs5aw5nzn1jc3muq61rzrd"
+    },
+    {
+      "title": "月之暗面 Kimi K3.1 Pro 上线 OpenRouter，1M 上下文多模态开源权重模型",
+      "topic": "model",
+      "url": "https://aihot.news/items/g725ujk3cq0gquz6g2nlozeu4"
+    },
+    {
+      "title": "月之暗面发布 Kimi K3.1 Pro，100 万 token 上下文，开放权重将于 11 月 4 日前释出",
+      "topic": "model",
+      "url": "https://aihot.news/items/okgjn7r72wo7c5j0bu3o1vbie"
+    },
+    {
+      "title": "月之暗面发布 Kimi K3.1 Pro，3 万亿级参数支持 100 万上下文",
+      "topic": "model",
+      "url": "https://aihot.news/items/qnoz1o3zjy0b5jlulydn0nb34"
+    },
+    {
+      "title": "法官批准Anthropic就盗版书籍训练Claude一案达成15亿美元和解协议",
+      "topic": "funding",
+      "url": "https://aihot.news/items/cmrvmzjnv03yrbihbnkg6r8nd"
+    },
+    {
+      "title": "消息称 Anthropic 最快本周五公开提交 S-1 招股书，或创史上最大 IPO",
+      "topic": "funding",
+      "url": "https://aihot.news/items/p6muwj8t5l4p2fcshu0tpzpek"
+    },
+    {
+      "title": "独立调查：ChatGPT 的 __obi 跨站 Cookie 可将站外浏览行为关联到 ChatGPT 账号",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmua567e703tmro5t558lzx7o"
+    },
+    {
+      "title": "瑞典政府办公厅禁止办公电脑直接访问 ChatGPT 和 Claude，改用经批准的 AI 服务",
+      "topic": "policy",
+      "url": "https://aihot.news/items/wk3k8hj6c4ogdbdiqd6pf8dnp"
+    },
+    {
+      "title": "研究人员用 GPT-5.6 Sol 发现 PHP 两个 CVSS 9.2 严重漏洞",
+      "topic": "safety",
+      "url": "https://aihot.news/items/heuaxyy5ixq9x5wtoobw5wq7e"
+    },
+    {
+      "title": "纽约时报报道 OpenAI 在 AI 失控前已接到员工安全警告但被无视",
+      "topic": "safety",
+      "url": "https://aihot.news/items/ndk15d5pv9et8zspxncqzh55y"
+    },
+    {
+      "title": "纽约时报版权诉讼披露：微软高管内部称训练 AI 是人类历史上最大规模劳动窃取",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmu7l5wy60hj2rogr88fr2vkk"
+    },
+    {
+      "title": "纽约时报诉 OpenAI 与微软案解封文件披露 AI 抓取被称为史上最大劳动窃取",
+      "topic": "safety",
+      "url": "https://aihot.news/items/cmu5y1e61069vroiq1klswjin"
+    },
+    {
+      "title": "美光 G11 存储芯片：容量翻倍、能效提升",
+      "topic": "other",
+      "url": "https://aihot.news/items/iikmnvl1ru997xqnjw18nibr9"
+    },
+    {
+      "title": "美团 LongCat-2.5-Preview 上线：1.6T 参数、1M token 上下文、原生多模态",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmuh2q4570711rolzphy03l0t"
+    },
+    {
+      "title": "美国上诉法院维持五角大楼将 Anthropic 列为供应链风险的认定",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmuh6zqk806pfro55mzok81xo"
+    },
+    {
+      "title": "腾讯 WorkBuddy 接入 Kimi-K3.1-Pro，支持 100 万上下文",
+      "topic": "model",
+      "url": "https://aihot.news/items/ngk39t7hu2ch6ptu6rkjrpxjj"
+    },
+    {
+      "title": "腾讯混元发布 Hy4 preview：770B 总参数、1M 上下文，开源上线",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmtcjzlxy03f8rodbxqdotbhg"
+    },
+    {
+      "title": "腾讯混元开源 Hy Memory 2.0：模型、框架与 MemHub 同步发布",
+      "topic": "model",
+      "url": "https://aihot.news/items/z90aelodr2otx1nvohx8arf80"
+    },
+    {
+      "title": "芝加哥大学：LLM 自述决策关键因素不可靠",
+      "topic": "other",
+      "url": "https://aihot.news/items/jszasnssqovoxmk01zqg6qdy4"
+    },
+    {
+      "title": "英伟达发布AI智能体安全平台，含实时隔离异常智能体的Sentry系统",
+      "topic": "safety",
+      "url": "https://aihot.news/items/l8gn0lz5n5t5zh50w7132enx8"
+    },
+    {
+      "title": "英国 AISI 评测发现 GPT-6 Astra 未授权攻击率达 GPT-5.6 Sol 的约五倍",
+      "topic": "safety",
+      "url": "https://aihot.news/items/akg53igt5wbjkuf7vr4t5cj9y"
+    },
+    {
+      "title": "英国国防大臣建议大家“准备好一些日常必需品……每人每天三升水、罐头食品……够维持几天” 以应对这个动荡而危险的网络攻击时代 大家最担心的是我们的支付系统被攻陷",
+      "topic": "policy",
+      "url": "https://aihot.news/items/en0vz0qmfld7xjn8kioioy8dm"
+    },
+    {
+      "title": "蚂蚁百灵发布 Ling-3.1-flash，面向真实世界长任务升级",
+      "topic": "product",
+      "url": "https://aihot.news/items/o8x9d9u4106ngfkukga1vwh4h"
+    },
+    {
+      "title": "解放军总医院第六医学中心完成全球首例 AI 超声机器人引导下先天性心脏病封堵术",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmtof7do802o8roht7iddtumq"
+    },
+    {
+      "title": "诉讼指控 xAI 使用儿童性虐待材料训练 Grok 模型",
+      "topic": "policy",
+      "url": "https://aihot.news/items/cmtc05bnj015srome8fm42xy8"
+    },
+    {
+      "title": "谷歌 Gmail 新功能曝光：Gemini 帮你回邮件",
+      "topic": "model",
+      "url": "https://aihot.news/items/bfsg6aeefv11urv44jq4ubdrc"
+    },
+    {
+      "title": "谷歌发布 Gemini 4 Argon，支持 100 万 token 输出并面向开发者开放",
+      "topic": "model",
+      "url": "https://aihot.news/items/ke96khue7iv2fis630ts6y2pw"
+    },
+    {
+      "title": "路透审阅 Anthropic IPO 招股书：收入增长 12 倍，IPO 估值或超 2 万亿美元",
+      "topic": "funding",
+      "url": "https://aihot.news/items/khyjby0mw5t22dn9zw2l6fflu"
+    },
+    {
+      "title": "逆向分析指 ZCode 登录后静默打包 Git 历史并加密上传至 Aliyun OSS",
+      "topic": "other",
+      "url": "https://aihot.news/items/cmu6y9sjz0jbyrowkh7tus28l"
+    },
+    {
+      "title": "邵猛吐槽 Vibe Coding 网站性能仅 47 分",
+      "topic": "other",
+      "url": "https://aihot.news/items/axs2ltoz08kvovztzgt3xr8yn"
+    },
+    {
+      "title": "邵猛质疑多款 Pro 模型表现不及预期",
+      "topic": "model",
+      "url": "https://aihot.news/items/uzddeicmoouigs1zaxtapjeyv"
+    },
+    {
+      "title": "阶跃星辰发布 Step 5 Preview 旗舰模型，10 月 15 日开放权重",
+      "topic": "model",
+      "url": "https://aihot.news/items/cmu99pi3604g2ro8iyt4qb7p7"
+    },
+    {
+      "title": "阿尔巴内塞披露 OpenAI 智能体未经授权访问澳大利亚 Medicare 系统",
+      "topic": "product",
+      "url": "https://aihot.news/items/cmuepgrq30eh3royntmaj59h4"
+    },
+    {
+      "title": "雅可比猜想被证伪：Fable AI 发现三维多项式反例",
+      "topic": "research",
+      "url": "https://aihot.news/items/cmrvmzjnv03yqbihbm0io1kjy"
+    },
+    {
+      "title": "面壁智能开源 MiniCPM-V 4.7，35B-A3B MoE 模型 3GB 内存端侧流畅运行",
+      "topic": "model",
+      "url": "https://aihot.news/items/fidy0y9chlgs0puyn96qkmj1b"
+    },
+    {
+      "title": "马东锡 NLP 后训练系列第三篇：LoRA 与 QLoRA",
+      "topic": "other",
+      "url": "https://aihot.news/items/homkpw4celweaff5hvc85y88l"
+    },
+    {
+      "title": "马克·库班：抵御失控 AI 智能体就像防蟑螂，可用大量 AI 给系统\"喷药\"",
+      "topic": "safety",
+      "url": "https://aihot.news/items/da3ocyr6piz7ghwyy8ejjw79g"
+    },
+    {
+      "title": "马斯克回应信任Grok管理财务",
+      "topic": "model",
+      "url": "https://aihot.news/items/aibv6uus2v3q7n69z193ihg2r"
+    }
+  ]
+}

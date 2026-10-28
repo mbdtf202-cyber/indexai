@@ -1,0 +1,215 @@
+{
+  "schema": "curated.toolkit/v1",
+  "items": [
+    {
+      "id": "baoyu-design",
+      "repo": "JimLiu/baoyu-design",
+      "use": "design",
+      "title": "baoyu-design",
+      "why": "把 Claude 的设计方法论和工艺标准搬进本地 Agent：先确认方向再动手，产出单文件 HTML，能在 Cursor / Claude Code 里跑。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "huashu-design",
+      "repo": "alchaincyf/huashu-design",
+      "use": "design",
+      "title": "花叔 Design 3.0",
+      "why": "中文语境下最完整的 agent 设计 skill：一句话拿回可交付的网页 / App 原型 / 可编辑稿。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "anatomy",
+      "repo": "wheresryan22/anatomy",
+      "use": "design",
+      "title": "Anatomy",
+      "why": "机器与复杂系统的等距交互插图，直接生成带 WebGL 效果的 SVG。技术讲解配图终于不用手画。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "gzh-design-skill",
+      "repo": "isjiamu/gzh-design-skill",
+      "use": "design",
+      "title": "公众号排版",
+      "why": "Markdown 一键变成能直接粘进公众号编辑器的 HTML：6 套主题 + 主题生成器 + 双关卡校验，不用再手动调间距。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "ip-as-logo",
+      "repo": "s1dashu/ip-as-logo-skill",
+      "use": "design",
+      "title": "IP as Logo",
+      "why": "生成极简、圆润、能直接上公司的吉祥物 IP。做品牌第一版不需要插画师。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "scroll-craft",
+      "repo": "nateherkai/scroll-craft",
+      "use": "design",
+      "title": "Scroll Craft",
+      "why": "做高端滚动叙事网站的完整工作流：引擎 + 参考 + 验证工具，不是给你一段 CSS 就完事。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "effective-html",
+      "repo": "plannotator/effective-html",
+      "use": "design",
+      "title": "Effective HTML",
+      "why": "线框、原型、图表、图解——专注「有用的 HTML 制品」，输出自包含、能直接给人看。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "taste-skill",
+      "repo": "Leonxlnx/taste-skill",
+      "use": "design",
+      "title": "Taste",
+      "why": "给编码 Agent 装审美：艺术指导、排版、留白。专治「功能全对但就是难看」。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "sepia",
+      "repo": "Nanako0129/sepia",
+      "use": "writing",
+      "title": "Sepia",
+      "why": "去 AI 味不去词汇，而是修叙事架构——虚构先补故事结构，专业文本按场景换规则。有行为评测跑在 CI 上。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "simple-english",
+      "repo": "AminBlg/SimpleEnglish",
+      "use": "writing",
+      "title": "SimpleEnglish",
+      "why": "用 ASD-STE100 航空维修手册那套受控语言写文档，1983 年用到现在，就是怕人误读。技术文档的降噪器。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "answer-me-with-html",
+      "repo": "QingYunA/answer-me-with-html",
+      "use": "writing",
+      "title": "Answer me with HTML",
+      "why": "复杂问题别用一屏终端文字回答，生成一页能读的 HTML：可离线、单文件、带讲解视频。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "dashi-ppt",
+      "repo": "chuspeeism/dashi-ppt-skill",
+      "use": "content",
+      "title": "Dashi PPT",
+      "why": "生成浏览器里可直接编辑的演示稿，导出 HTML / PDF / PPTX。改字不用回到代码。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "shuohao-skills",
+      "repo": "eternityspring/shuohao-skills",
+      "use": "content",
+      "title": "硕昊短剧",
+      "why": "AI 短剧全链路：拆角色、排大纲、出场景道具设定、写剧本、切分镜。中文内容生产里少见的完整流水线。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "huashu-art-motion",
+      "repo": "alchaincyf/huashu-art-motion",
+      "use": "content",
+      "title": "花叔 Art Motion",
+      "why": "35 种艺术风格 + 9 种解说语法的动画 skill，用代码让画面动起来，不是套模板。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "security-audit",
+      "repo": "cloudflare/security-audit-skill",
+      "use": "engineering",
+      "title": "Security Audit",
+      "why": "Cloudflare 出的多阶段安全审计 skill：每个结论都要独立验证、可机器读取，不是让模型自由发挥编漏洞。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "last30days",
+      "repo": "mvanhorn/last30days-skill",
+      "use": "research",
+      "title": "last30days",
+      "why": "跨 Reddit / X / YouTube 扫近 30 天讨论。做选题和竞品分析时，比搜索引擎给的是一手体感。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "geo-sleuth",
+      "repo": "Oldcircle/geo-sleuth",
+      "use": "research",
+      "title": "Geo Sleuth",
+      "why": "看照片猜地点，而且把推理过程摊开：OSM 几何、等高线天际线、卫星图、街景逐条对。OSINT 里最硬的一类活。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "social-media-research",
+      "repo": "ScrapeCreators/social-media-research-skills",
+      "use": "research",
+      "title": "社媒研究",
+      "why": "TikTok / IG / YouTube / Reddit / X / LinkedIn 的异常贴挖掘、评论采矿、竞品拆解、广告库比对。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "magpie",
+      "repo": "yetone/magpie",
+      "use": "tool",
+      "title": "Magpie",
+      "why": "一个入口调所有模型：Codex 走 DeepSeek、Claude Code 走别的供应商，配一次到处能用。省钱不用改工作流。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "headroom",
+      "repo": "headroomlabs-ai/headroom",
+      "use": "tool",
+      "title": "Headroom",
+      "why": "工具输出、日志、RAG 片段先压一遍再进上下文。长任务省 token 最直接的一招。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    },
+    {
+      "id": "genoffice",
+      "repo": "genspark-ai/genoffice",
+      "use": "tool",
+      "title": "GenOffice",
+      "why": "开源 AI Office：Docs / Sheets / Slides / PDF 全带内置 agent，还有 CLI 和 skill 接口。",
+      "verified_at": "2026-10-25",
+      "review_by": "2027-01-23",
+      "evidence": []
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "models": [
+    {"id": "test-model-1", "name": "Test Model A", "vendor": "TestVendor", "input": 0.5, "output": 2.0, "free": 0}
+  ],
+  "meta": {"generated_at": "2026-10-20T00:00:00Z"}
+}

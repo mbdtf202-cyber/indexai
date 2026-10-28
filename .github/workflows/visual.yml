@@ -1,0 +1,62 @@
+name: visual
+
+# 截图对比（T5.5 · S9.8）。
+# 基线只允许在这个工作流里生成：Playwright 官方 Linux 容器，字体渲染与 CI 一致。
+# 本机生成的截图只作为审美评审输入，不提交。
+on:
+  workflow_dispatch:
+    inputs:
+      update_baselines:
+        description: '生成并提交截图基线（首次运行必须勾选）'
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'site/**'
+      - 'test/visual/**'
+      - 'playwright.visual.config.js'
+
+permissions:
+  contents: write
+
+jobs:
+  visual:
+    name: visual
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Compare screenshots
+        if: ${{ !inputs.update_baselines }}
+        run: npx playwright test -c playwright.visual.config.js
+
+      - name: Update baselines
+        if: ${{ inputs.update_baselines }}
+        run: npx playwright test -c playwright.visual.config.js --update-snapshots
+
+      - name: Commit baselines
+        if: ${{ inputs.update_baselines }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add test/visual/__screenshots__
+          git commit -m "test(visual): 更新截图基线" || echo "no baseline changes"
+          git push origin HEAD:${{ github.ref_name }}

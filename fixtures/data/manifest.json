@@ -1,0 +1,132 @@
+{
+  "schema_version": "manifest/v1",
+  "generated_at": "2026-10-24",
+  "layers": [
+    {
+      "layer": "models",
+      "file": "layer-models.json",
+      "served_file": "layer-models.json",
+      "hash": "84e362a133dd42b135d38a9918e3e23af4a2c21267c1c80ff672f0811558ade2",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 80,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "events",
+      "file": "layer-events.json",
+      "served_file": "layer-events.json",
+      "hash": "d4755fa7a28da7a5bb400a879b9024d5d7be90c1c5d3f447802d7c1dcd900364",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 60,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "news",
+      "file": "layer-news.json",
+      "served_file": "layer-news.json",
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 0,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "bench",
+      "file": "layer-bench.json",
+      "served_file": "layer-bench.json",
+      "hash": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 0,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "relays",
+      "file": "layer-relays.json",
+      "served_file": "layer-relays.json",
+      "hash": "360394e57f448c1f45ec013e8a779893509c192d288a550288f7460a7500003c",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 3,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "subs",
+      "file": "layer-subs.json",
+      "served_file": "layer-subs.json",
+      "hash": "7071ed2b051e40007ffb83cba3f5c4369c3384beba39a7308d2a9c9ce986fb62",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 12,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "offers",
+      "file": "layer-offers.json",
+      "served_file": "layer-offers.json",
+      "hash": "c30fc0f8e9398c8896c9baf088724757e6ffe9ffcc9664124908cab7af3e6d97",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 37,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    },
+    {
+      "layer": "resources",
+      "file": "layer-resources.json",
+      "served_file": "layer-resources.json",
+      "hash": "e39d182c552eaa17e1806c6659972e6f489ffddc5acf3dd8c726af83dc544779",
+      "status": "ok",
+      "as_of": "2026-10-24",
+      "last_ok": "2026-10-24",
+      "count": 3,
+      "gate": {
+        "verdict": "ok",
+        "reasons": []
+      },
+      "stale_days": 0
+    }
+  ],
+  "summary": {
+    "total": 8,
+    "ok": 8,
+    "warn": 0,
+    "stale": 0
+  }
+}
