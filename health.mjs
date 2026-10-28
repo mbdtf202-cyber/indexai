@@ -65,8 +65,9 @@ export const LAYERS = {
 export const EVENT_SOURCES = {
   devpost:  { min: 67,  warnBelow: 106, label: '活动源 Devpost' },  // 实测 192；红线 35%，警戒 55%
   luma:     { min: 168, warnBelow: 264, label: '活动源 Luma' },     // 实测 480；同上
-  // Devfolio 只收 AI 相关的未截止场次，量小但真实（实测 9 条）。红线放到 3，防整源归零。
-  devfolio: { min: 3,   warnBelow: 6,   label: '活动源 Devfolio' },
+  // main 的 collect.mjs 不采集 Devfolio（只有 ralph/work 的新采集端接入）；门禁必须允许它为 0，
+  // 否则每天都会在健康检查处整轮拒绝写盘，线上数据永远停在旧版本。
+  devfolio: { min: 0,   warnBelow: 0,   label: '活动源 Devfolio', optional: true },
   aios:     { min: 0,   warnBelow: 0,   label: '活动源 AIOS', optional: true },
 };
 
