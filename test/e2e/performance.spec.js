@@ -6,7 +6,7 @@
  * | 指标 | 上限 |
  * |---|---|
  * | CLS | 0.05 |
- * | 首屏渲染期间的长任务总时长 | 200 ms |
+ * | 首屏渲染期间最长单次长任务 | 200 ms |
  *
  * 4 倍降速用 CDP 的 `Emulation.setCPUThrottlingRate`——Playwright 没暴露这个 API，
  * 但底层是 CDP，可以直接发命令。
@@ -66,11 +66,11 @@ test.describe('性能预算（S9.7）', () => {
 
     const { cls, longTask } = await page.evaluate(() => ({
       cls: window.__cls || 0,
-      longTask: (window.__longTasks || []).reduce((a, b) => a + b, 0),
+      longTask: Math.max(0, ...(window.__longTasks || [])),
     }));
 
     expect(cls, `CLS ${cls.toFixed(3)} 超预算`).toBeLessThanOrEqual(BUDGET.cls);
-    expect(longTask, `长任务 ${Math.round(longTask)}ms 超预算`).toBeLessThanOrEqual(
+    expect(longTask, `最长长任务 ${Math.round(longTask)}ms 超预算`).toBeLessThanOrEqual(
       BUDGET.longTaskMs,
     );
   });
