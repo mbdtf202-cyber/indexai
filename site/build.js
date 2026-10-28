@@ -27,7 +27,7 @@ import { createHash } from 'node:crypto';
 
 import { computeChanges, countByType, describeChange } from '../pipeline/derive/changes-engine.mjs';
 import { renderAtom } from '../pipeline/derive/atom.mjs';
-import { join, dirname, resolve, sep } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -181,9 +181,7 @@ for (const name of DATA_FILES) {
 const newsShardMonths = (() => {
   /* T4.1 把归档迁到了 data 分支的 news/。构建时它在 .data/news/，
    * 也可能在 --data 指定的目录旁。两处都找。 */
-  const candidates = dataDir.includes(`${sep}fixtures${sep}`)
-    ? [join(dataDir, 'news'), join(ROOT, 'news')] // fixtures 构建与 CI：用仓库里的月度归档
-    : [join(dataDir, 'news'), join(ROOT, '.data', 'news')]; // 真实数据：用 data 分支的归档
+  const candidates = [join(dataDir, 'news')];
 
   for (const dir of candidates) {
     try {
