@@ -2312,7 +2312,7 @@ e2e 28 项全过。
 
 `npm run verify`：lint → typecheck → invariants → 996 项 unit/golden/contract（965 通过、0 失败、30 skip、1 todo）→ build → e2e **99 项全过**。DOM 快照更新 7 个（`compare` / `events` / `method` / `relays` / `narrow-relays` / `signals` / `tools`），差异全部来自本轮 a11y 修改：排序表头去掉 `role="button"`、计数徽章去掉 `opacity`、时间轴 aria-label 加月份、代码块加 `tabindex`。
 
-**截图基线**：2026-10-28 用 `mcr.microsoft.com/playwright:v1.64.1-noble` Linux 容器生成 60 张视口截图（16 MB，`test/visual/__screenshots__/`），并在同一容器里复跑 60 项全部通过；`visual.yml` 首次触发时会直接复用这批基线。
+**截图基线**：2026-10-28 用 `mcr.microsoft.com/playwright:v1.64.1-noble` Linux 容器生成 60 张视口截图（16 MB，`test/visual/__screenshots__/`）；PR #2 的 `visual` 工作流已实际跑通（1m37s，60 项截图对比全过）。
 
 ### [x] T5.6 Design Tokens
 
@@ -2850,7 +2850,7 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 - **情报与社区**：原始出处、7 个官方 feed + HN、48 小时事件聚类、352 条主题标注集（T6.4）。
 - **交互与数据**：报错/投稿三个 issue forms、全站搜索、免费额度结构化与价值排序、订阅官网价第二渠道（T6.10/T6.11/T6.12）。
 
-**验证**：`npm run verify` 全绿；1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），e2e 103 项全过。当前分支 `ralph/work`，本里程碑的 PR 需在有 GitHub 凭据的环境按规则 6 创建（本机未 push）。
+**验证**：`npm run verify` 全绿；1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），e2e 103 项全过。PR #2 已创建（`ralph/work` → `main`），等待人工审阅合并。
 
 **留给 M7**：T7.1 要等 Node 26 进入 LTS 且日期在 2026-10-28 之后；T7.2 下次执行 2026-11-24；T7.3 可做但需要真实 8 周状态历史；T7.4 等 H8 自定义域名。
 
@@ -2868,7 +2868,7 @@ JSON-LD 被内联脚本扫描器误判。S10.1 明确豁免（它不执行代码
 
 - `.node-version` → `26`（实际本机下载并使用 v26.12.1）；`package.json` 的 `engines.node` → `>=26`；`AGENTS.md` 的本机路径示例同步为 v26.12.1。
 - 在 Node 26.12.1 下跑 `npm run verify`，全绿：1032 项 unit/golden/contract（1002 通过、0 失败、30 skip），build，e2e 103 项全过。
-- CI 的 `actions/setup-node` 通过 `node-version-file` 自动跟随 `.node-version`，无需改 workflow。
+- CI 的 `actions/setup-node` 通过 `node-version-file` 自动跟随 `.node-version`；PR #2 的 GitHub Actions `verify` 已通过（2m47s）。
 
 ### [ ] T7.2 月度审计（周期任务）
 
