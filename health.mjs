@@ -41,7 +41,7 @@ export const LAYERS = {
   resources:     { min: 12,  warnBelow: 16,  shrink: 0.80, label: '工具箱' },     // 实测 21
   bench:         { min: 120, warnBelow: 140, shrink: 0.75, label: '评测' },       // 实测 155
   signals:       { min: 8,   warnBelow: 12,  shrink: 0.70, label: '一手信号' },   // 实测 21
-  aaModels:      { min: 150, warnBelow: 200, shrink: 0.70, label: 'AA 智能指数' }, // 实测 266
+  aaModels:      { min: 60,  warnBelow: 80,  shrink: 0.30, label: 'AA 智能指数' }, // 2026-11 新版页面：282 个模型里只有 99 个带数值智能指数（旧 /api/v2/data 已于 11-04 停用）；旧基线 266 失效
   orApps:        { min: 10,  warnBelow: 15,  shrink: 0.60, label: 'OR 应用榜' },  // 实测 25
   orModels:      { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'OR 模型榜' },  // 实测 20
   hnSignals:     { min: 8,   warnBelow: 12,  shrink: 0.60, label: 'HN 民间声量' }, // 实测 16
